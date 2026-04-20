@@ -92,32 +92,70 @@ nodeclass.eks.amazonaws.com/inferentia   eksworkshop-eks-auto-202501030632263297
 
 
 
-##### Step 3: Deploy the vLLM application Pod
+##### Step 3: Load the Mistral-7B Model onto the FSx for ONTAP Volume
 
-:::alert{header="Important" type="info"}
-To save you time in the lab, the Mistral-7B model has already been downloaded & compiled using the AWS Neuron SDK, so that you can deploy it on the AWS Inferentia Accelerated Computes nodes for this workshop.
+:::alert{header="Important — Why is this step needed?" type="info"}
+Unlike FSx for Lustre, which can transparently import data from an S3 bucket on first access, **FSx for NetApp ONTAP does not have native S3 data repository integration**. This means the model data must be explicitly downloaded and written to the ONTAP-backed persistent volume before the vLLM inference pod can use it. We accomplish this using a Kubernetes Job that downloads the Mistral-7B-Instruct-v0.3 model from HuggingFace directly onto the PVC.
 :::
 
-You will now deploy the vLLM pod, which will provide model serving capability through its inference endpoint. Once the vLLM Pod is online, it will load the Mistral-7B LLM model data (29GB) into its memory from the FSx for Lustre file-system that it is stored on.
+1. Apply the Model Loading Job manifest. This Job will download the Mistral-7B-Instruct-v0.3 model from HuggingFace and store it on the `ontap-model-claim` PVC that you created in Module 1.
 
-1. Run the below commands to update the mistral-fsxl.yaml with your AWS environment variables.
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+cd /home/participant/environment/eks/FSxONTAP
+kubectl apply -f model-loading-job.yaml
+:::
+
+2. The model download will take several minutes depending on network speed. Wait for the Job to complete by running the following command. This will block until the Job finishes successfully (or time out after 30 minutes).
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+kubectl wait --for=condition=complete job/model-download --timeout=1800s
+:::
+
+You should see an output similar to:
+
+:::code{showCopyAction=false showLineNumbers=false language=bash}
+job.batch/model-download condition met
+:::
+
+:::alert{header="Note" type="info"}
+If the Job fails, Kubernetes will automatically retry it (up to 3 times) thanks to the `restartPolicy: OnFailure` and `backoffLimit: 3` configuration. You can check the Job status and pod logs with:
+`kubectl get job model-download` and `kubectl logs job/model-download`
+:::
+
+3. Verify that the model data has been successfully downloaded to the persistent volume. Run a quick check to confirm the model files are present:
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+kubectl run model-check --rm -it --restart=Never \
+  --image=public.ecr.aws/amazonlinux/amazonlinux:2023 \
+  --overrides='{"spec":{"containers":[{"name":"model-check","image":"public.ecr.aws/amazonlinux/amazonlinux:2023","command":["ls","-la","/work-dir/Mistral-7B-Instruct-v0.3/"],"volumeMounts":[{"name":"persistent-storage","mountPath":"/work-dir"}]}],"volumes":[{"name":"persistent-storage","persistentVolumeClaim":{"claimName":"ontap-model-claim"}}]}}' \
+  -- ls -la /work-dir/Mistral-7B-Instruct-v0.3/
+:::
+
+You should see the model weight files (e.g., `model-00001-of-00003.safetensors`), tokenizer files, and configuration files listed in the output. This confirms the model is ready for the vLLM inference pod.
+
+
+##### Step 4: Deploy the vLLM application Pod
+
+You will now deploy the vLLM pod, which will provide model serving capability through its inference endpoint. Once the vLLM Pod is online, it will load the Mistral-7B LLM model data (29GB) into its memory from the FSx for NetApp ONTAP volume where it was stored by the Model Loading Job in the previous step.
+
+1. Run the below commands to update the mistral-ontap.yaml with your AWS environment variables.
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 cd /home/participant/environment/eks/genai
 :::
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
-FSX_LUSTRE_AZ=$(aws fsx describe-file-systems  --region $AWS_REGION --query 'FileSystems[0].SubnetIds[0]' --output text | xargs -I {} aws ec2 describe-subnets --subnet-ids {} --query 'Subnets[0].AvailabilityZone' --output text)
+FSX_ONTAP_AZ=$(aws fsx describe-file-systems --region $AWS_REGION --query "FileSystems[?FileSystemType=='ONTAP'].SubnetIds[0]" --output text | head -1 | xargs -I {} aws ec2 describe-subnets --subnet-ids {} --query 'Subnets[0].AvailabilityZone' --output text)
 :::
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
-sed -i'' -e "s/FSX_LUSTRE_AZ/$FSX_LUSTRE_AZ/g" mistral-fsxl.yaml
+sed -i'' -e "s/FSX_ONTAP_AZ/$FSX_ONTAP_AZ/g" mistral-ontap.yaml
 :::
 
 2. Run the below command to deploy the vLLM Pod.
 
 
-::code[kubectl apply -f mistral-fsxl.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+::code[kubectl apply -f mistral-ontap.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
 
 3. Now run the below command, and you will see the Inferentia node count increase to 1, as we have deployed a pod that requires the accelerated compute node. Note that the increase to a value of 1 can take 30 seconds to update.
@@ -128,17 +166,17 @@ sed -i'' -e "s/FSX_LUSTRE_AZ/$FSX_LUSTRE_AZ/g" mistral-fsxl.yaml
 :::
 
 
-3. Run the below command to inspect the vLLM's mistral-fsxl.yaml deployment file.
+4. Run the below command to inspect the vLLM's mistral-ontap.yaml deployment file.
 
-::code[cat mistral-fsxl.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+::code[cat mistral-ontap.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
 :::alert{header="Note" type="info"}
-You will notice a single pod deployment request, with a request for a single AWS Inferentia Neuron core, persistent storage using the PVC you created previously (fsx-lustre-claim), and also some model parameters.  
+You will notice a single pod deployment request, with a request for a single AWS Inferentia Neuron core, persistent storage using the PVC you created previously (`ontap-model-claim`), and also some model parameters. The model was loaded onto this PVC by the Model Loading Job in Step 3.
 :::
 
 
 :::code[]{language=yaml showLineNumbers=true showCopyAction=false}
-# mistral-fsxl.yaml
+# mistral-ontap.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -162,39 +200,57 @@ spec:
               - key: topology.kubernetes.io/zone
                 operator: In
                 values:
-                - FSX_LUSTRE_AZ                                 # <<<<< Replace with your FSx Lustre AZ
+                - FSX_ONTAP_AZ                                  # <<<<< Replace with your FSx ONTAP AZ
       tolerations:
       - key: "aws.amazon.com/neuron"
         operator: "Exists"
         effect: "NoSchedule"
       containers:
       - name: inference-server
-        image: public.ecr.aws/u3r1l1j7/eks-genai:neuronrayvllm-100G-root
+        image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04
         resources:                                             # <<<<< Here you can specify Neuron Resources just like CPU and Memory
           requests:
             aws.amazon.com/neuron: 1                           # <<<<< Neuron Resources Request
           limits:
             aws.amazon.com/neuron: 1                           # <<<<< Neuron Resources Limits
+        env:
+        - name: VLLM_NEURON_FRAMEWORK
+          value: "neuronx-distributed-inference"
+        - name: MODEL_ID
+          value: /work-dir/Mistral-7B-Instruct-v0.3/          # <<<<< Model path on ONTAP volume
+        volumeMounts:
+        - name: persistent-storage
+          mountPath: "/work-dir"                               # <<<<< FSx for ONTAP PVC mount
+        - name: shm-volume
+          mountPath: /dev/shm                                  # <<<<< Shared memory for compilation
 (...)
+      volumes:
+      - name: persistent-storage
+        persistentVolumeClaim:
+          claimName: ontap-model-claim                         # <<<<< FSx for ONTAP PVC
+      - name: shm-volume
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Gi
 :::
 
 
-4. You can monitor the vLLM pod creation by running the following command periodically, until you see it transitioning to `Running`, and when its at the 7 minute mark (and the vLLM is online and the model has been loaded into memory)
+5. You can monitor the vLLM pod creation by running the following command periodically, until you see it transitioning to `Running`, and when its at the 7 minute mark (and the vLLM is online and the model has been loaded into memory)
 
 ::code[kubectl get pod]{language=bash showLineNumbers=false showCopyAction=true}
 
 ![vllm_pod](/static/images/vllm_pod_1.png)
 
 
-5. While you are waiting for the vLLM pod to deploy, lets go check out the EKS NodePools by navigating to the [Amazon EKS cluster Console](https://console.aws.amazon.com/eks)
+6. While you are waiting for the vLLM pod to deploy, lets go check out the EKS NodePools by navigating to the [Amazon EKS cluster Console](https://console.aws.amazon.com/eks)
 
-6. Click on your cluster name (i.e. eksworkshop)
+7. Click on your cluster name (i.e. eksworkshop)
 
-7. Click on the   **Compute** tab, you will see there is now a new AWS Inferentia **inf2.xlarge** compute node
+8. Click on the   **Compute** tab, you will see there is now a new AWS Inferentia **inf2.xlarge** compute node
 
 ![inf2_node](/static/images/inf2_node.png)
 
-8. Click on the **Node name**, where it will show you the capacity allocation and Pod details relating to the inf2.xlarge compute node
+9. Click on the **Node name**, where it will show you the capacity allocation and Pod details relating to the inf2.xlarge compute node
 
 
 ### Summary

@@ -8,36 +8,30 @@ echo $AWS_REGION
 echo $CLUSTER_NAME
 aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
 
-
-rm fsx-csi-driver.json
+rm trident-csi-driver.json
 
 cd /home/participant/environment/eks/genai
 
 helm uninstall -n kube-system neuron-helm-chart
 
-kubectl delete -f mistral-fsxl.yaml
+kubectl delete -f mistral-ontap.yaml
 kubectl delete -f open-webui.yaml
-kubectl delete -f inferentia_nodepool.yaml 
-kubectl get nodepool,ec2nodeclass 
+kubectl delete -f inferentia_nodepool.yaml
+kubectl get nodepool,ec2nodeclass
 
 kubectl get ing
 
-cd /home/participant/environment/eks/FSxL
-kubectl delete sa fsx-csi-controller-sa
-kubectl delete -f fsxL-claim.yaml
-kubectl delete -f fsxL-persistent-volume.yaml
+# --- Ordered ONTAP resource teardown ---
+cd /home/participant/environment/eks/FSxONTAP
 
-cd /home/participant/environment/download
-kubectl delete -f check.yaml
-kubeclt delete deploy sysprep-check
-kubectl delete pvc fsx-lustre-claim-check 
-kubectl delete pv fsx-pv-check 
-
-kubectl delete -f sysprep.yaml
-kubectl delete job sysprep
-kubectl delete pvc fsx-lustre-claim-sysprep 
-kubectl delete pv fsx-pv-sysprep 
+kubectl delete job model-download --ignore-not-found
+kubectl delete -f ontap-pvc.yaml --ignore-not-found
+kubectl delete -f ontap-storage-class.yaml --ignore-not-found
+kubectl delete -f trident-backend-config.yaml --ignore-not-found
+kubectl delete -f fsx-ontap-secret.yaml --ignore-not-found
 
 kubectl get pv,pvc
-helm uninstall -n kube-system aws-fsx-csi-driver 
+
+helm uninstall trident-operator -n trident
+
 rm -rf /home/participant/environment/eks/download

@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-mistral-inf2-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-mistral-inf2-server
+  template:
+    metadata:
+      labels:
+        app: vllm-mistral-inf2-server
+    spec:
+      schedulerName: my-scheduler
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                      - FSX_ONTAP_AZ # Replace with your FSx ONTAP AZ
+      tolerations:
+        - key: "aws.amazon.com/neuron"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: inference-server
+          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04
+          resources:
+            requests:
+              aws.amazon.com/neuron: 1
+            limits:
+              aws.amazon.com/neuron: 1
+          args:
+            - python
+            - -m
+            - vllm.entrypoints.openai.api_server
+            - --model=$(MODEL_ID)
+            - --max-num-seqs=4
+            - --max-model-len=10240
+            - --tensor-parallel-size=2
+            - --port=8000
+            - --device=neuron
+            - --override-neuron-config={"enable_bucketing":false}
+            - --host=0.0.0.0
+            - --served-model-name=mistralai/Mistral-7B-Instruct-v0.3
+          env:
+            - name: VLLM_NEURON_FRAMEWORK
+              value: "neuronx-distributed-inference"
+            - name: MODEL_ID
+              value: /work-dir/Mistral-7B-Instruct-v0.3/
+            - name: NEURON_COMPILE_CACHE_URL
+              value: /work-dir/Mistral-7B-Instruct-v0.3/neuron-cache/
+            - name: PORT
+              value: "8000"
+            - name: NEURON_COMPILED_ARTIFACTS
+              value: /work-dir/Mistral-7B-Instruct-v0.3/neuron-cache/
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          volumeMounts:
+            - name: persistent-storage
+              mountPath: "/work-dir"
+            - name: shm-volume
+              mountPath: /dev/shm
+
+          # livenessProbe: Ensures the container is still running properly. Restarts after 18 mins if it continues to fail after initial delay of 3 min
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 180
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 30
+            successThreshold: 1
+
+          # readinessProbe: Checks if the application is ready to accept traffic after initial delay of 3 min
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 180
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+      volumes:
+        - name: persistent-storage
+          persistentVolumeClaim:
+            claimName: ontap-model-claim
+        - name: shm-volume
+          emptyDir:
+            medium: Memory
+            sizeLimit: 4Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-mistral7b-service
+  labels:
+    app: vllm-mistral-inf2-server
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "/metrics"
+spec:
+  selector:
+    app: vllm-mistral-inf2-server
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8000

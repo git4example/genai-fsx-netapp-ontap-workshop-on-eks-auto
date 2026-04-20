@@ -12,11 +12,11 @@ Errors or corrections? Contact ppariksh@amazon.com, akbariw@amazon.com, ameenamz
 In this workshop, you will learn how you can:
 1. Deploy a Generative AI chatbot application by deploying:
 - A vLLM and an Open WebUI Pod on an Amazon EKS cluster
-- Storing and accessing the Mistral-7B model on an Amazon FSx for Lustre file-system (Persistent Volume).
+- Storing and accessing the Mistral-7B model on an Amazon FSx for NetApp ONTAP file system (Persistent Volume).
 - Leverage AWS Inferentia Accelerator as your accelerated compute, to power your Generative AI workload
 - Deploy a Grafana dashboard to view Inference workload metrics
 2. Let EKS Auto Mode scale the number of EKS managed nodes based on Pod requests, enabling operational efficiency at-scale.
-3. Configure Amazon FSx for Lustre and Amazon S3, as your performant and scalable data layer to host your model and training data
+3. Configure Amazon FSx for NetApp ONTAP with the NetApp Astra Trident CSI driver, as your performant and scalable data layer to host your model and training data
 
 
 
@@ -67,12 +67,24 @@ To provide text generation inference capability with an OpenAI-compatible endpoi
 #### How to consume the Inference Service
 You can connect to the Inference Service using the **"Open WebUI"** application, which is designed to consume the OpenAI-compatible endpoint provided by the vLLM-hosted Mistral-7B-Instruct model that you will deploy in the workshop. The Open WebUI application allows users to interact with the LLM model through a chat-based interface. To use the Open WebUI application, simply deploy the application container, and connect to the WebUI URL that is provided and start chatting with the LLM model. The WebUI application will handle the communication with the VLLM-hosted Mistral-7B-Instruct model, providing a seamless user experience
 
-#### What is Amazon FSx for Lustre
-[**Amazon FSx for Lustre**](https://docs.aws.amazon.com/fsx/latest/LustreGuide/what-is.html) is a fully managed service that provides a high-performance parallel file system for workloads where speed matters (i.e. Machine Learning, analytics, high performance compute). FSx for Lustre provides sub-millisecond latency access to data, and the ability to scale to TB/s of throughput and millions of IOPS. FSx for Lustre also integrates with [**Amazon S3**](https://aws.amazon.com/s3/), making it easy for you to store, access and process vast amounts of cloud data with a Lustre high-performance file system. When linked to an S3 bucket, an FSx for Lustre file system transparently presents the objects in the S3 bucket, as files on a file-system to the end user. Files updated on the FSx for Lustre file-system can be automatically exported to the linked S3 bucket, and vice-versa updates to objects within an S3 bucket can be reflected back to the linked FSx for Lustre file-system.
+#### What is Amazon FSx for NetApp ONTAP
+[**Amazon FSx for NetApp ONTAP**](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/what-is-fsx-ontap.html) is a fully managed shared storage service built on the NetApp ONTAP file system. FSx for ONTAP provides feature-rich, fast, and flexible shared file storage that is broadly accessible from Linux, Windows, and macOS compute instances running on AWS or on-premises.
+
+Key concepts of FSx for NetApp ONTAP include:
+
+- **File systems**: The primary resource in FSx for ONTAP. You specify the SSD storage capacity and throughput when creating a file system. A file system can contain one or more Storage Virtual Machines (SVMs).
+- **Storage Virtual Machines (SVMs)**: An SVM is an isolated file server within a file system. Each SVM has its own set of administrative credentials and endpoints for accessing data. SVMs serve data to clients and contain one or more volumes.
+- **Volumes**: Logical data containers within an SVM. Volumes are where your data is stored and organized. They are mountable via NFS, SMB, or iSCSI protocols.
+- **NFS access**: FSx for ONTAP volumes can be accessed via NFS (Network File System), which is the most common protocol for shared read-write access in Kubernetes environments.
+- **Snapshots**: FSx for ONTAP supports point-in-time snapshots of volumes, enabling you to create instant backups and restore data quickly without consuming additional storage for unchanged data.
+- **Data tiering**: FSx for ONTAP automatically tiers infrequently accessed data from high-performance SSD storage to a lower-cost capacity pool, optimizing storage costs while maintaining performance for active data.
+
+#### What is NetApp Astra Trident
+[**NetApp Astra Trident**](https://docs.netapp.com/us-en/trident/index.html) is an open-source Container Storage Interface (CSI) driver that provides dynamic and static storage provisioning for Kubernetes using NetApp storage backends, including Amazon FSx for NetApp ONTAP. Trident integrates natively with Kubernetes, enabling you to create PersistentVolumes backed by ONTAP volumes using standard Kubernetes StorageClass and PersistentVolumeClaim resources. In this workshop, Trident is installed via Helm and configured with a TridentBackendConfig resource that connects to the pre-provisioned FSx for ONTAP file system and SVM.
 
 
 #### Storing and accessing your model and training data
-In this workshop the **Mistral-7B-Instruct** LLM model data is stored in an Amazon S3 bucket [**Amazon S3**](https://aws.amazon.com/s3/), which is linked to an [**Amazon FSx for Lustre File system S3**](https://aws.amazon.com/fsx/lustre/). The vLLM Inference engine Pod deployment uses a Persistent Volume (PV) that is backed by an FSx for Lustre instance. When the vLLM Pod starts-up, it will load the LLM Model data (into its memory) from the FSx for Lustre file-system. The LLM model data will be served directly from the FSx file system, if it is already cached there. If its not cached on the FSx file-system, then FSx instance will transparently pull it into its file-system from the linked S3 linked bucket, and serve it to the vLLM.
+In this workshop the **Mistral-7B-Instruct** LLM model data is loaded onto an [**Amazon FSx for NetApp ONTAP**](https://aws.amazon.com/fsx/netapp-ontap/) volume using a Kubernetes Job that downloads the model from HuggingFace. Unlike FSx for Lustre, which can transparently import data from a linked S3 bucket, FSx for ONTAP requires an explicit model loading step. A Kubernetes Job runs before the vLLM inference pod starts, downloading the model files and writing them to the FSx for ONTAP-backed PersistentVolume. The vLLM Inference engine Pod deployment uses a PersistentVolumeClaim (PVC) that is dynamically provisioned by the NetApp Astra Trident CSI driver, backed by an FSx for ONTAP volume. When the vLLM Pod starts up, it loads the LLM model data (into its memory) directly from the FSx for ONTAP file system via NFS.
 
 
 #### Accelerating your Compute

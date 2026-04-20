@@ -13,7 +13,7 @@ In this section, you will log-in to the vLLM Pod, inspect the Mistral-7B  model,
 
 1. Navigate to back to your VSCode IDE terminal and change to your working directory.
 
-::code[cd /home/participant/environment/eks/FSxL]{language=bash showLineNumbers=false showCopyAction=true}
+::code[cd /home/participant/environment/eks/FSxONTAP]{language=bash showLineNumbers=false showCopyAction=true}
 
 2. Now lets log into the vLLM Pod, first we need to get the pod name by running the following command
 
@@ -29,7 +29,7 @@ From the output, copy the name shown in your environment that starts with **vllm
 
 
 
-4. We will now inspect the layout of the model data on the vLLM. When you run the below command you will see a mount point called **work-dir**, which is the mount location of your Persistent Volume Claim (backed by FSx for Lustre file system).
+4. We will now inspect the layout of the model data on the vLLM. When you run the below command you will see a mount point called **work-dir**, which is the mount location of your Persistent Volume Claim (backed by your FSx for NetApp ONTAP volume, served via NFS).
 
 
 ::code[df -h]{showCopyAction=true showLineNumbers=false language=bash}
@@ -47,7 +47,7 @@ ls -ll
 You can see the Mistral-7B Model is stored here.
 
 :::alert{header="Note" type="info"}
-**All the files you see listed under */work-dir* are actually stored in your S3 bucket initially**. When you spin-up an FSx for Lustre file-system and link it to an S3-bucket, the FSx for Lustre file-system will import the file metadata (file list) of the S3 bucket, and generate a file system view of the contents of the S3 bucket for you. When you access a file for the first time through the Lustre file-system, FSx for Lustre pulls that file from the S3 bucket into the file-system, where that data will be cached on the Lustre file-system for future access. Subsequent access to that data will be served directly from the FSx for Lustre file system, providing you with sub-millisecond access and high throughput performance to the data.
+**All the files you see listed under */work-dir* were downloaded to the FSx for NetApp ONTAP volume by the Model Loading Kubernetes Job** that ran earlier in the workshop. The Job used the `huggingface-cli` tool to download the Mistral-7B-Instruct-v0.3 model directly from HuggingFace and wrote the files to the ONTAP-backed Persistent Volume. The vLLM pod mounts this same volume via NFS, giving it direct access to the model data. FSx for NetApp ONTAP serves the data over NFS (TCP 2049), providing low-latency, high-throughput access to the model files from the Persistent Volume.
 :::
 
 
@@ -56,7 +56,7 @@ You can see the Mistral-7B Model is stored here.
 Lets have a look at what the model data structure looks like.
 
 :::code{showCopyAction=true showLineNumbers=true language=bash}
-cd Mistral-7B-Instruct-v0.2/
+cd Mistral-7B-Instruct-v0.3/
 ls -ll
 :::
 

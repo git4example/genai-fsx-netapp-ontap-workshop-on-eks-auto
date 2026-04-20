@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: AWS CloudFormation template to create a VSCode environment, EKS Cluster, FSxL setup with eksctl,kubectl and Terraform.
+Description: AWS CloudFormation template to create a VSCode environment, EKS Cluster, FSx for NetApp ONTAP setup with eksctl,kubectl and Terraform.
 Metadata:
   Author:
     Description: Parikshit Patel <ppariksh@amazon.com>
@@ -982,6 +982,37 @@ Resources:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonQDeveloperAccess
         - !Sub arn:${AWS::Partition}:iam::aws:policy/ReadOnlyAccess
         - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess # Added For workshop
+      Policies:
+        - PolicyName: FSxONTAPOperations
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - fsx:DescribeFileSystems
+                  - fsx:DescribeVolumes
+                  - fsx:DescribeStorageVirtualMachines
+                  - fsx:CreateVolume
+                  - fsx:DeleteVolume
+                  - fsx:UpdateVolume
+                  - fsx:TagResource
+                  - fsx:UntagResource
+                  - fsx:CreateStorageVirtualMachine
+                  - fsx:CreateFileSystem
+                  - fsx:DeleteFileSystem
+                  - fsx:UpdateFileSystem
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - iam:CreateServiceLinkedRole
+                Resource: '*'
+                Condition:
+                  StringLike:
+                    iam:AWSServiceName: fsx.amazonaws.com
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:trident-fsx-*
 
   VSCodeInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -1107,6 +1138,18 @@ Resources:
           FromPort: 80
           ToPort: 80
           SourcePrefixListId: !FindInMap [AWSRegions2PrefixListID, !Ref 'AWS::Region', PrefixList]
+
+  FSxONTAPSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for FSx for NetApp ONTAP - allows NFS access
+      VpcId: !GetAtt VSCodeInstance.VpcId
+      SecurityGroupIngress:
+        - Description: Allow NFS (TCP 2049) for FSx for ONTAP access from VPC CIDR
+          IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          CidrIp: 10.0.0.0/16
 
   VSCodeHealthCheckLambdaRole:
     Type: AWS::IAM::Role
@@ -1289,8 +1332,8 @@ Resources:
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${VSCodeSSMDoc}
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${WorkshopPreparationDocument}
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${DownloadWorkshopAssetsSSMDocument}
-                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${CreateFSxLBucketAndUploadModel}
-                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${CreateVPCEKSClusterAndFSxL}
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${CreateFSxONTAPResources}
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${CreateVPCEKSClusterAndFSxONTAP}
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${CreateEKSClusterResource}
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${DestroyTerraformResources}
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${DummyDeleteInfraDocument}
@@ -1970,28 +2013,28 @@ Resources:
                   echo "Verify s5cmd installation"
                   sudo -u ${VSCodeUser} --login s5cmd help
 
-  RunCreateFSxLBucketAndUploadModel:
+  RunCreateFSxONTAPResources:
     DependsOn: [RunDownloadWorkshopAssetsSSMDocument]
     Type: Custom::RunSSMDocLambda
     Properties:
       ServiceToken: !GetAtt RunSSMDocLambda.Arn
       ServiceTimeout: 3600
       InstanceId: !Ref VSCodeInstance
-      DocumentName: !Ref CreateFSxLBucketAndUploadModel
+      DocumentName: !Ref CreateFSxONTAPResources
       DeleteDocumentName: ""
       MonitoringSQSQueue: !GetAtt SSMCommandMonitorQueue.QueueUrl
       LambdaArn: !GetAtt RunSSMDocLambda.Arn
-      CloudWatchLogGroupName: !Sub /aws/ssm/${CreateFSxLBucketAndUploadModel}
+      CloudWatchLogGroupName: !Sub /aws/ssm/${CreateFSxONTAPResources}
       VSCodePassword: !GetAtt SecretPlaintext.password
       LinuxFlavor: !If [IsAL2023, 'al2023', 'ubuntu']
 
-  CreateFSxLBucketAndUploadModel:
+  CreateFSxONTAPResources:
     Type: AWS::SSM::Document
     Properties:
       DocumentType: Command
       Content:
         schemaVersion: '2.2'
-        description: Create FSx Lustre S3 bucket and upload ML model files for workshop
+        description: Initialize Terraform and create FSx for NetApp ONTAP file system, SVM, and volume for workshop
         parameters:
           LinuxFlavor:
             type: String
@@ -1999,10 +2042,9 @@ Resources:
           VSCodePassword:
             type: String
             default: !Ref AWS::StackId
-        # all mainSteps scripts are in in /var/lib/amazon/ssm/<instanceid>/document/orchestration/<uuid>/<StepName>/_script.sh
         mainSteps:
           - action: aws:runShellScript
-            name: CreateFSxLBucketAndUploadModel
+            name: CreateFSxONTAPResources
             precondition:
               StringEquals:
                 - '{{ LinuxFlavor }}'
@@ -2024,50 +2066,47 @@ Resources:
                 cd /home/${VSCodeUser}/environment/terraform/
                 terraform init
 
-                # Create bucket before copy 
-                echo "Creating FSx Lustre Bucket"
-                terraform apply -target="module.fsx-lustre-bucket" -auto-approve 
+                # Create FSx for ONTAP file system, SVM, and volume
+                echo "Creating FSx for ONTAP resources"
+                terraform apply -target="aws_fsx_ontap_file_system.fsx_ontap" -target="aws_fsx_ontap_storage_virtual_machine.fsx_ontap_svm" -target="aws_fsx_ontap_volume.fsx_ontap_volume" -auto-approve
 
-                # Copy model to fsx bucket
-                export S3_BUCKET=$(aws s3 ls | grep fsx-lustre | grep -v fsx-lustre-2ndregion | awk '{print$3}')
-                echo "Bucket name: $S3_BUCKET"
+                # Verify FSx ONTAP file system is available
+                echo "Verifying FSx ONTAP file system status..."
+                FSX_ONTAP_ID=$(terraform output -raw fsx_ontap_id)
+                echo "FSx ONTAP File System ID: $FSX_ONTAP_ID"
 
-                aws configure set default.s3.max_concurrent_requests 20
-                aws configure set default.s3.signature_version s3v4
+                FSX_STATUS=$(aws fsx describe-file-systems --file-system-ids "$FSX_ONTAP_ID" --region ${AWS::Region} --query 'FileSystems[0].Lifecycle' --output text)
+                echo "FSx ONTAP File System Status: $FSX_STATUS"
 
-                # Copy model to FSxL S3 bucket
-                echo "Starting model upload @ $(date)"
-                sudo -u ${VSCodeUser} --login s5cmd sync --delete "${Assets}Mistral-7B-Instruct-v0.2/*" "s3://$S3_BUCKET/Mistral-7B-Instruct-v0.2/" 
+                if [ "$FSX_STATUS" != "AVAILABLE" ]; then
+                  echo "ERROR: FSx ONTAP file system is not in AVAILABLE state. Current status: $FSX_STATUS"
+                  exit 1
+                fi
 
-                # Verify object counts
-                echo "Source bucket object counts:"
-                aws s3 ls --summarize --human-readable --recursive ${Assets}Mistral-7B-Instruct-v0.2
-                echo "Destination bucket object counts:"
-                aws s3 ls --summarize --human-readable --recursive s3://$S3_BUCKET/Mistral-7B-Instruct-v0.2
-                echo "End model upload @ $(date)"
+                echo "FSx ONTAP resources created successfully."
   
-  RunCreateVPCEKSClusterAndFSxL:
-    DependsOn: [RunCreateFSxLBucketAndUploadModel]
+  RunCreateVPCEKSClusterAndFSxONTAP:
+    DependsOn: [RunCreateFSxONTAPResources]
     Type: Custom::RunSSMDocLambda
     Properties:
       ServiceToken: !GetAtt RunSSMDocLambda.Arn
       ServiceTimeout: 3600
       InstanceId: !Ref VSCodeInstance
-      DocumentName: !Ref CreateVPCEKSClusterAndFSxL
+      DocumentName: !Ref CreateVPCEKSClusterAndFSxONTAP
       DeleteDocumentName: ""
       MonitoringSQSQueue: !GetAtt SSMCommandMonitorQueue.QueueUrl 
       LambdaArn: !GetAtt RunSSMDocLambda.Arn
-      CloudWatchLogGroupName: !Sub /aws/ssm/${CreateVPCEKSClusterAndFSxL}
+      CloudWatchLogGroupName: !Sub /aws/ssm/${CreateVPCEKSClusterAndFSxONTAP}
       VSCodePassword: !GetAtt SecretPlaintext.password
       LinuxFlavor: !If [IsAL2023, 'al2023', 'ubuntu']
 
-  CreateVPCEKSClusterAndFSxL:
+  CreateVPCEKSClusterAndFSxONTAP:
     Type: AWS::SSM::Document
     Properties:
       DocumentType: Command
       Content:
         schemaVersion: '2.2'
-        description: Create VPC infrastructure and EKS cluster with FSx Lustre filesystem
+        description: Create VPC infrastructure and EKS cluster with FSx for NetApp ONTAP file system
         parameters:
           LinuxFlavor:
             type: String
@@ -2075,10 +2114,9 @@ Resources:
           VSCodePassword:
             type: String
             default: !Ref AWS::StackId
-        # all mainSteps scripts are in in /var/lib/amazon/ssm/<instanceid>/document/orchestration/<uuid>/<StepName>/_script.sh
         mainSteps:
           - action: aws:runShellScript
-            name: CreateVPCEKSClusterAndFSxL
+            name: CreateVPCEKSClusterAndFSxONTAP
             precondition:
               StringEquals:
                 - '{{ LinuxFlavor }}'
@@ -2099,13 +2137,13 @@ Resources:
                   ls -la
                   terraform apply -target="module.vpc" --auto-approve 
 
-                  # Create EKS Cluster and FSx Filesystem
-                  echo '=== Create EKS Cluster and FSx Filesystem ==='
+                  # Create EKS Cluster and FSx for ONTAP File System
+                  echo '=== Create EKS Cluster and FSx for ONTAP File System ==='
                   echo 'EKS Cluster version - ${EKSClusterVersion} will be created in region ${AWS::Region}'
-                  terraform apply -target="aws_fsx_lustre_file_system.fsx_lustre" -target="module.eks" --auto-approve
+                  terraform apply -target="aws_fsx_ontap_file_system.fsx_ontap" -target="aws_fsx_ontap_storage_virtual_machine.fsx_ontap_svm" -target="aws_fsx_ontap_volume.fsx_ontap_volume" -target="module.eks" --auto-approve
 
   RunCreateEKSClusterResource:
-    DependsOn: [RunCreateVPCEKSClusterAndFSxL]
+    DependsOn: [RunCreateVPCEKSClusterAndFSxONTAP]
     Type: Custom::RunSSMDocLambda
     Properties:
       ServiceToken: !GetAtt RunSSMDocLambda.Arn
@@ -2125,7 +2163,7 @@ Resources:
       DocumentType: Command
       Content:
         schemaVersion: '2.2'
-        description: Apply complete Terraform configuration and run sysprep jobs for EKS cluster setup
+        description: Apply complete Terraform configuration and validate FSx for ONTAP resources for EKS cluster setup
         parameters:
           LinuxFlavor:
             type: String
@@ -2133,7 +2171,6 @@ Resources:
           VSCodePassword:
             type: String
             default: !Ref AWS::StackId
-        # all mainSteps scripts are in in /var/lib/amazon/ssm/<instanceid>/document/orchestration/<uuid>/<StepName>/_script.sh
         mainSteps:
           - action: aws:runShellScript
             name: CreateEKSClusterResource
@@ -2157,77 +2194,64 @@ Resources:
                   echo "Applying Terraform configuration..."
                   terraform apply --auto-approve
 
-                  # echo "Waiting for 60 seconds to allow ALB controller to start..."
-                  # sleep 60
+                  # ===== QUICK VALIDATION: Verify FSx ONTAP resources are AVAILABLE =====
+                  echo "Performing quick validation of FSx ONTAP resources..."
 
-                  # echo "Applying Terraform configuration again..."
-                  # terraform apply --auto-approve
+                  FSX_ONTAP_ID=$(terraform output -raw fsx_ontap_id 2>/dev/null || echo "")
 
-                  # ===== QUICK VALIDATION: Verify DRA is AVAILABLE =====
-                  echo "Performing quick validation of DRA status..."
-
-                  DRA_ID=$(terraform state show aws_fsx_data_repository_association.fsx_lustre_association | grep " id " | head -n 1 | awk '{print $3}' | tr -d '"')
-
-                  if [ -z "$DRA_ID" ]; then
-                    echo "WARNING: Could not retrieve DRA ID from Terraform state"
+                  if [ -z "$FSX_ONTAP_ID" ]; then
+                    echo "WARNING: Could not retrieve FSx ONTAP File System ID from Terraform output"
                   else
-                    echo "DRA ID: $DRA_ID"
+                    echo "FSx ONTAP File System ID: $FSX_ONTAP_ID"
                     
-                    # Quick check with short timeout (should already be AVAILABLE)
-                    max_wait=60
+                    max_wait=120
                     elapsed=0
-                    check_interval=10
+                    check_interval=15
                     
                     while [ $elapsed -lt $max_wait ]; do
-                      DRA_STATUS=$(aws fsx describe-data-repository-associations \
-                        --association-ids "$DRA_ID" \
+                      FSX_STATUS=$(aws fsx describe-file-systems \
+                        --file-system-ids "$FSX_ONTAP_ID" \
                         --region ${AWS::Region} \
-                        --query 'Associations[0].Lifecycle' \
+                        --query 'FileSystems[0].Lifecycle' \
                         --output text 2>/dev/null)
                       
-                      echo "DRA $DRA_ID status: $DRA_STATUS"
+                      echo "FSx ONTAP $FSX_ONTAP_ID status: $FSX_STATUS"
                       
-                      if [ "$DRA_STATUS" == "AVAILABLE" ]; then
-                        echo "✓ DRA is AVAILABLE"
+                      if [ "$FSX_STATUS" == "AVAILABLE" ]; then
+                        echo "✓ FSx ONTAP file system is AVAILABLE"
                         break
-                      elif [ "$DRA_STATUS" == "FAILED" ]; then
-                        echo "ERROR: DRA is in FAILED state"
+                      elif [ "$FSX_STATUS" == "FAILED" ]; then
+                        echo "ERROR: FSx ONTAP file system is in FAILED state"
                         exit 1
                       fi
                       
-                      echo "Waiting for DRA status confirmation..."
+                      echo "Waiting for FSx ONTAP file system to become available..."
                       sleep $check_interval
                       elapsed=$((elapsed + check_interval))
                     done
                     
-                    if [ "$DRA_STATUS" != "AVAILABLE" ]; then
-                      echo "WARNING: DRA status check timed out. Status: $DRA_STATUS"
+                    if [ "$FSX_STATUS" != "AVAILABLE" ]; then
+                      echo "WARNING: FSx ONTAP status check timed out. Status: $FSX_STATUS"
                       echo "Proceeding anyway since Terraform apply succeeded..."
                     fi
                   fi
+
+                  # Validate SVM is available
+                  SVM_NAME=$(terraform output -raw svm_name 2>/dev/null || echo "")
+                  if [ -n "$SVM_NAME" ]; then
+                    echo "SVM Name: $SVM_NAME"
+                    echo "✓ SVM created successfully"
+                  fi
+
+                  # Validate ONTAP volume junction path
+                  JUNCTION_PATH=$(terraform output -raw ontap_volume_junction_path 2>/dev/null || echo "")
+                  if [ -n "$JUNCTION_PATH" ]; then
+                    echo "ONTAP Volume Junction Path: $JUNCTION_PATH"
+                    echo "✓ ONTAP volume created successfully"
+                  fi
                   # ===== END VALIDATION =====
 
-                  echo "Running sysprep job"
-                  terraform apply -var="create_one_off_job=true" --auto-approve
-                  
-                  echo "Deleting FSx Lustre sysprep resources...Deleting sysprep sysprep job, pv, pvc and fsx csi driver"
-
-                  echo "Deleting with create_one_off_job=false --> kubernetes_job.sysprep, kubectl_manifest.sysprep_pvc, kubectl_manifest.sysprep_pv, helm_release.fsx_csi_driver..."
-                  terraform apply -var="create_one_off_job=false" --auto-approve 
-
-                  # echo "Destroying kubernetes_job.sysprep..."
-                  # terraform destroy --target kubernetes_job.sysprep --auto-approve 
-                 
-                  # echo "Destroying kubectl_manifest.sysprep_pvc..."
-                  # terraform destroy --target kubectl_manifest.sysprep_pvc --auto-approve 
-
-                  # echo "Destroying kubectl_manifest.sysprep_pv..."
-                  # terraform destroy --target kubectl_manifest.sysprep_pv --auto-approve 
-
-                  # echo "Destroying helm_release.fsx_csi_driver..."
-                  # terraform destroy --target helm_release.fsx_csi_driver --auto-approve 
-
-                  echo "Cleanup completed."
+                  echo "FSx ONTAP infrastructure setup completed."
 
   RunDestroyTerraformResources:
     Type: Custom::RunSSMDocLambda
@@ -2286,22 +2310,14 @@ Resources:
                 aws kms delete-alias --alias-name alias/eks/eksworkshop
 
                 # Commented out individual resource deletion commands:
-                # echo "Deleting kubernetes_job.sysprep"
-                # terraform destroy --target kubernetes_job.sysprep --auto-approve -lock=false
-                # echo "Deleting kubectl_manifest.sysprep_pvc"
-                # terraform destroy --target kubectl_manifest.sysprep_pvc --auto-approve -lock=false
-                # echo "Deleting kubectl_manifest.sysprep_pv"
-                # terraform destroy --target kubectl_manifest.sysprep_pv --auto-approve -lock=false
-                # echo "Deleting kubectl_manifest.nodepool_sysprep"
-                # terraform destroy --target kubectl_manifest.nodepool_sysprep --auto-approve -lock=false
-                # echo "Deleting kubectl_manifest.ec2nodeclass_sysprep"
-                # terraform destroy --target kubectl_manifest.ec2nodeclass_sysprep --auto-approve -lock=false
-                # echo "Deleting helm_release.fsx_csi_driver"
-                # terraform destroy --target helm_release.fsx_csi_driver --auto-approve -lock=false
-                # echo "Deleting module.fsx-lustre-bucket"
-                # terraform destroy --target="module.fsx-lustre-bucket"  --auto-approve -lock=false
-                # echo "Deleting aws_fsx_lustre_file_system.fsx_lustre"
-                # terraform destroy --target="aws_fsx_lustre_file_system.fsx_lustre" -target="module.eks" --auto-approve -lock=false
+                # echo "Deleting aws_fsx_ontap_volume.fsx_ontap_volume"
+                # terraform destroy --target aws_fsx_ontap_volume.fsx_ontap_volume --auto-approve -lock=false
+                # echo "Deleting aws_fsx_ontap_storage_virtual_machine.fsx_ontap_svm"
+                # terraform destroy --target aws_fsx_ontap_storage_virtual_machine.fsx_ontap_svm --auto-approve -lock=false
+                # echo "Deleting aws_fsx_ontap_file_system.fsx_ontap"
+                # terraform destroy --target aws_fsx_ontap_file_system.fsx_ontap --auto-approve -lock=false
+                # echo "Deleting module.eks"
+                # terraform destroy --target="module.eks" --auto-approve -lock=false
                 # echo "Deleting VPC"
                 # terraform destroy --target="module.vpc" --auto-approve -lock=false
 
@@ -2345,3 +2361,9 @@ Outputs:
   Password:
     Description: VSCode-Server Password
     Value: !GetAtt SecretPlaintext.password
+  FSxONTAPSecurityGroupId:
+    Description: Security Group ID for FSx for ONTAP NFS access
+    Value: !Ref FSxONTAPSecurityGroup
+  FSxONTAPSecurityGroupDescription:
+    Description: FSx for ONTAP security group allows NFS (TCP 2049) access
+    Value: !GetAtt FSxONTAPSecurityGroup.GroupId

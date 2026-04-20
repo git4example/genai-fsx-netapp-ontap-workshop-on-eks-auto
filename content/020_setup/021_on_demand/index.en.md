@@ -27,7 +27,6 @@ Below is an EXAMPLE of a broad IAM policy that you could use, which includes all
             "Effect": "Allow",
             "Action": [
                 "sts:GetCallerIdentity",
-                "s3:*",
                 "cloudformation:*",
                 "ec2:*",
                 "eks:*",
@@ -50,9 +49,8 @@ Below is an EXAMPLE of a broad IAM policy that you could use, which includes all
 
 The below workshop automated deployment script handles setup tasks including:
 - Tool installation (AWS CLI, Docker, Git, jq)
-- Repository cloning\
-- Creating of AWS resources: Amazon EKS cluster, Amazon EC2 instance, Amazon S3 bucket
-- Mistral-7B model download to S3 bucket
+- Repository cloning
+- Creating of AWS resources: Amazon EKS cluster, Amazon EC2 instance, Amazon FSx for NetApp ONTAP file system
 - Deployment of the VSCode IDE terminal (which you will use to interact with the workshop)
 - CloudFormation stack deployment with monitoring
 - Deployment validation and access information
@@ -65,11 +63,9 @@ chmod +x quick-deploy-on-demand.sh
 ./quick-deploy-on-demand.sh
 ```
 
-2. A few minutes into the deployment, the script will ask you to enter a unique name for an S3 bucket that will be created to host the downloaded Mistral-7B model and workshop artifacts.
-
 **Deployment time will take approx:** ~45 minutes (complete infrastructure deployment)
 
-3. Wait until you see the following output on your screen before progressing to the next step of **Part 3 : Use VScode IDE to access workshop**
+2. Wait until you see the following output on your screen before progressing to the next step of **Part 3 : Use VScode IDE to access workshop**
 
 ![ondemand_setup_complete](/static/images/ondemand_setup_complete.png)
 
@@ -97,7 +93,7 @@ cd genai-fsx-workshop-on-eks-auto/static/scripts
 **Cleanup Features**:
 - Interactive confirmation for each cleanup step
 - CloudFormation stack deletion with progress monitoring
-- Optional S3 bucket and contents removal
+- FSx for ONTAP file system and related resource removal
 - Local files and temporary data cleanup
 - Verification commands to confirm resource removal
 

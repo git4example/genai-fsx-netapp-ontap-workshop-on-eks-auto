@@ -1,110 +1,136 @@
 ---
-title : "Create Persistent Volume on EKS Cluster"
+title : "Create StorageClass and PVC for Dynamic Provisioning"
 weight : 120
 ---
 -------------------------------------------------------------
 
 ## Overview
 
-There are two methods for creating Persistent Volumes
-- **Static Provisioning** -  The admin creates the backend storage entity, creates the PV, and the user makes a claim (PVC) for this PV to be used in their Pod(s).
+With the Trident CSI driver deployed and the backend configured, you can now set up **dynamic provisioning** for your FSx for ONTAP storage. Dynamic provisioning means you do not need to manually create a PersistentVolume (PV) — instead, you define a **StorageClass** that tells Trident how to provision volumes, and then create a **PersistentVolumeClaim (PVC)** that references that StorageClass. Trident automatically creates the underlying ONTAP volume and the corresponding PV when the PVC is applied.
 
-- **Dynamic Provisioning** - The user requests a PVC, and a PV (and its backed storage entity) is automatically created by the CSI driver based on the users requirements. This method doesn't require a separate process for an admin to pre-create
+This is simpler than the static provisioning approach (where an admin must manually create the PV with specific volume handles, DNS names, and mount names), and it is the recommended pattern for FSx for ONTAP with Trident.
 
+In this section you will:
+1. Apply a StorageClass that uses the `csi.trident.netapp.io` provisioner
+2. Apply a PersistentVolumeClaim that requests 100 GiB of ReadWriteMany storage
+3. Verify that the StorageClass is created, the PVC is Bound, and the Trident backend is healthy
 
-In this lab section, we will use **Static Provisioning** to create a Persistent Volume (PV) definition for the FSx for Lustre Instance that we have already provisioned for you to use in this workshop. This FSx instance is linked to an Amazon S3 bucket that is hosting the Mistral-7B model.Then you will create a Persistent Volume Claim (PVC) to the Persistent Volume, so that you can use this storage volume within the vLLM Pod (that you will deploy in this workshop) to access the Mistral-7B model data.
+##### Step 1: Navigate to the working directory
 
-##### Step 1: Setup environment variables
+1. Run the below command to change to the correct working directory for the FSx for ONTAP manifests.
 
-1. Run the below command to change to the correct working directly, so you can run the commands for this exercise
+::code[cd /home/participant/environment/eks/FSxONTAP]{language=bash showLineNumbers=false showCopyAction=true}
 
-::code[cd /home/participant/environment/eks/FSxL]{language=bash showLineNumbers=false showCopyAction=true}
+##### Step 2: Create the StorageClass
 
-2. Run the below commands in your VSCode IDE terminal to populated the variables with the FSx Lustre Instance details (that we have pre-created for you)
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-FSXL_VOLUME_ID=$(aws fsx describe-file-systems --query 'FileSystems[].FileSystemId' --output text)
-DNS_NAME=$(aws fsx describe-file-systems --query 'FileSystems[].DNSName' --output text)
-MOUNT_NAME=$(aws fsx describe-file-systems --query 'FileSystems[].LustreConfiguration.MountName' --output text)
-:::
-
-##### Step 2: Create Persistent Volume definition
-
-Lets take a look at a Persistent Volume (PV) yaml file definition (fsxL-persistent-volume.yaml) that has our placeholder variables in it. We have already created a 1200GiB FSx for Lustre instance for this workshop. So in this Persistent Volume definition you will simply configure the details of the 1200GiB FSx for Lustre instance so it can be registered as an EKS Cluster resource using a name of 'fsx-pv'.
+The StorageClass defines how Trident provisions new ONTAP volumes. Let's take a look at the StorageClass manifest (`ontap-storage-class.yaml`):
 
 :::code[]{language=yaml showLineNumbers=true showCopyAction=false}
-# fsxL-persistent-volume.yaml
-apiVersion: v1
-kind: PersistentVolume
+# ontap-storage-class.yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
 metadata:
-  name: fsx-pv
-spec:
-  persistentVolumeReclaimPolicy: Retain
-  capacity:
-    storage: 1200Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  mountOptions:
-    - flock
-  csi:
-    driver: fsx.csi.aws.com
-    volumeHandle: FSXL_VOLUME_ID
-    volumeAttributes:
-      dnsname: DNS_NAME
-      mountname: MOUNT_NAME
+  name: ontap-nas-sc
+provisioner: csi.trident.netapp.io
+parameters:
+  backendType: "ontap-nas"
+  provisioningType: "thin"
+  snapshots: "true"
+allowVolumeExpansion: true
+mountOptions:
+  - nfsvers=4.1
 :::
 
-1. Run the below commands to replace `FSXL_VOLUME_ID`,  `DNS_NAME`,  and `MOUNT_NAME` with the actual values of the FSx Lustre instance.
+Key points about this StorageClass:
+- **provisioner**: `csi.trident.netapp.io` — tells Kubernetes to use the Trident CSI driver
+- **backendType**: `ontap-nas` — provisions NFS-based volumes on the ONTAP backend
+- **provisioningType**: `thin` — uses thin provisioning so storage is allocated on demand
+- **snapshots**: `true` — enables snapshot support for volumes created by this class
+- **allowVolumeExpansion**: `true` — allows you to resize volumes after creation
+- **nfsvers=4.1** — uses NFS version 4.1 for improved performance and security
 
+1. Apply the StorageClass manifest:
 
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-sed -i'' -e "s/FSXL_VOLUME_ID/$FSXL_VOLUME_ID/g" fsxL-persistent-volume.yaml
-sed -i'' -e "s/DNS_NAME/$DNS_NAME/g" fsxL-persistent-volume.yaml
-sed -i'' -e "s/MOUNT_NAME/$MOUNT_NAME/g" fsxL-persistent-volume.yaml
+::code[kubectl apply -f ontap-storage-class.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+
+2. Verify the StorageClass has been created:
+
+::code[kubectl get storageclass ontap-nas-sc]{language=bash showLineNumbers=false showCopyAction=true}
+
+::::expand{header="You should see the results as below, click to expand"}
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=false}
+NAME           PROVISIONER                RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+ontap-nas-sc   csi.trident.netapp.io      Delete          Immediate           true                   10s
 :::
 
-2. You can view the output of the Persistent Volume definition with our FSx instance details. You can see we have created a 1200GiB FSx for Lustre file system for you, and its Instance ID and DNS Name.
+::::
 
-::code[cat fsxL-persistent-volume.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+##### Step 3: Create the PersistentVolumeClaim
 
+Now create a PersistentVolumeClaim (PVC) that references the StorageClass. When you apply this PVC, Trident will automatically provision an ONTAP volume and create the corresponding PV — no manual PV creation is needed.
 
-3. Let's create the PersistentVolume (PV) configuration for the FSx for Lustre instance in this EKS cluster:
-
-::code[kubectl apply -f fsxL-persistent-volume.yaml]{language=bash showLineNumbers=false showCopyAction=true}
-
-4. Check the PV called "fsx-pv" is created
-
-::code[kubectl get pv]{language=bash showLineNumbers=false showCopyAction=true}
-
-##### Step 3: Create the Persistent Volume Claim
-
-We will now create a PersistentVolumeClaim (PVC) so that EKS Pods can use this storage volume for their data. We will bind the PVC to the PV definition that we defined in the previous step. Note that we are directly referencing the pre-provisioned PV using the **volumeName** value of **fsx-pv**:  Below is contents of the PVC claim file (fsxL-claim.yaml) that we will deploy.
+Let's look at the PVC manifest (`ontap-pvc.yaml`):
 
 :::code[]{language=yaml showLineNumbers=true showCopyAction=false}
-# fsxL-claim.yaml
+# ontap-pvc.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: fsx-lustre-claim
+  name: ontap-model-claim
 spec:
   accessModes:
     - ReadWriteMany
-  storageClassName: ""
+  storageClassName: ontap-nas-sc
   resources:
     requests:
-      storage: 1200Gi
-  volumeName: fsx-pv
+      storage: 100Gi
 :::
 
-1. Create a Persistent Volume Claim (PVC) to the Persistent Volume (PV) that you created previously :
+Key points about this PVC:
+- **name**: `ontap-model-claim` — this is the name that the vLLM deployment and model loading Job will reference
+- **accessModes**: `ReadWriteMany` — allows multiple pods to mount the volume concurrently (needed so both the model loading Job and the vLLM pod can access the data)
+- **storageClassName**: `ontap-nas-sc` — references the StorageClass you just created, which tells Kubernetes to use Trident for provisioning
+- **storage**: `100Gi` — sufficient for the Mistral-7B model (~29 GiB compiled) with room for cache artifacts
 
-::code[kubectl apply -f fsxL-claim.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+1. Apply the PVC manifest:
 
-2. Run the below command to verify that the PersistentVolumeClaim that we made, is bound to the PersistentVolume of **fsx-pv** that we defined. In the output you can see that the **persistentvolumeclaim/fsx-lustre-claim** is showing as bound to the **Volume** of **fsx-pv**
+::code[kubectl apply -f ontap-pvc.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
-::code[kubectl get pvc]{language=bash showLineNumbers=false showCopyAction=true}
+2. Verify that the PVC is **Bound**. When the status shows `Bound`, Trident has successfully provisioned an ONTAP volume and created the PV automatically.
+
+::code[kubectl get pvc ontap-model-claim]{language=bash showLineNumbers=false showCopyAction=true}
+
+::::expand{header="You should see the results as below, click to expand"}
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=false}
+NAME                STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+ontap-model-claim   Bound    pvc-abcd1234-ef56-7890-abcd-ef1234567890   100Gi      RWX            ontap-nas-sc   15s
+:::
+
+::::
+
+:::alert{header="Note" type="info"}
+Notice that the **VOLUME** column shows a PV name that was automatically generated by Trident (e.g., `pvc-abcd1234-...`). You did not need to create this PV manually — Trident handled it for you based on the StorageClass and backend configuration.
+:::
+
+##### Step 4: Verify the Trident backend is healthy
+
+As a final check, confirm that the Trident backend is still registered and healthy after provisioning the volume.
+
+::code[kubectl get tridentbackendconfig -n trident]{language=bash showLineNumbers=false showCopyAction=true}
+
+::::expand{header="You should see the results as below, click to expand"}
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=false}
+NAME               BACKEND NAME   BACKEND UUID                           PHASE   STATUS
+backend-ontap-nas  fsx-ontap      12345678-abcd-efgh-ijkl-123456789abc   Bound   Success
+:::
+
+::::
+
+The **STATUS** should show `Success` and the **PHASE** should show `Bound`, confirming that Trident is connected to your FSx for ONTAP file system and is ready to serve storage requests.
 
 ## Summary
 
-In this section you have successfully created a Persistent Volume (PV) definition for the FSx for Lustre instance, which is storing the Mistral-7B LLM model data. You have also created the corresponding Persistent Volume Claim (PVC) to that PV, so this PVC can be used by the vLLM Pod deployment for storage access to the Mistral-7B LLM model data.
+In this section you have created a StorageClass (`ontap-nas-sc`) that configures Trident to provision thin-provisioned NFS volumes on your FSx for ONTAP backend, and a PersistentVolumeClaim (`ontap-model-claim`) that dynamically provisioned a 100 GiB volume. Trident automatically created the PersistentVolume and the underlying ONTAP volume — no manual PV creation was required. This PVC will be used by the model loading Job and the vLLM deployment in the next module to store and access the Mistral-7B model data.

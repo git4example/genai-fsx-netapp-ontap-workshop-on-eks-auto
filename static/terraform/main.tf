@@ -21,10 +21,6 @@ terraform {
   }
 }
 
-# variable "region2" {
-#   type = string 
-# }
-
 provider "aws" {
   region = "us-east-1"
   alias  = "virginia"
@@ -35,10 +31,7 @@ provider "aws" {
   alias  = "region1"
 }
 
-provider "aws" {
-  region = "us-east-2" #var.region2
-  alias  = "region2"
-}
+# Region 2 provider removed — no longer needed without S3 cross-region replication
 
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
@@ -440,7 +433,7 @@ module "vpc" {
 
 
 ################################################################################
-# Lustre S3 Buckets
+# Random string for unique naming
 ################################################################################
 resource "random_string" "random" {
   length  = 12
@@ -449,189 +442,114 @@ resource "random_string" "random" {
   numeric = true
 }
 
+################################################################################
+# Security Group for FSx ONTAP
+################################################################################
 
-# Region 1 Bucket
-module "fsx-lustre-bucket" {
-  source        = "terraform-aws-modules/s3-bucket/aws"
-  version       = "4.1.2"
-  force_destroy = true
-
-  providers = {
-    aws = aws.region1
-  }
-
-  bucket_prefix = "fsx-lustre-${random_string.random.id}"
-  tags          = local.tags
-}
-
-
-# Region 2 Bucket
-module "fsx-lustre-bucket-2ndregion" {
-  source        = "terraform-aws-modules/s3-bucket/aws"
-  version       = "4.1.2"
-  force_destroy = true
-
-  providers = {
-    aws = aws.region2
-  }
-
-  bucket_prefix = "fsx-lustre-2ndregion-${random_string.random.id}"
-  tags          = local.tags
-}
-
-## S3 Cross region replication Role :
-resource "aws_iam_role" "s3-cross-region-replication-role" {
-  name = "s3-cross-region-replication-role-${random_string.random.id}"
-
-  # Terraform's "jsonencode" function converts a
-  # Terraform expression result to valid JSON syntax.
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Sid    = ""
-        Principal = {
-          Service = "s3.amazonaws.com"
-        }
-      },
-    ]
-  })
-  tags = local.tags
-}
-
-
-resource "aws_iam_policy" "s3-cross-region-replication-policy" {
-  name = "s3-cross-region-replication-policy-${random_string.random.id}"
-
-  policy = <<POLICY
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": [
-        "s3:GetReplicationConfiguration",
-        "s3:ListBucket"
-      ],
-      "Effect": "Allow",
-      "Resource": [
-        "arn:aws:s3:::${module.fsx-lustre-bucket.s3_bucket_id}"
-      ]
-    },
-    {
-      "Action": [
-        "s3:GetObjectVersion",
-        "s3:GetObjectVersionAcl",
-        "s3:GetObjectVersionForReplication",
-        "s3:GetObjectVersionTagging"
-      ],
-      "Effect": "Allow",
-      "Resource": [
-        "arn:aws:s3:::${module.fsx-lustre-bucket.s3_bucket_id}/*"
-      ]
-    },
-    {
-      "Action": [
-        "s3:ReplicateObject",
-        "s3:ReplicateDelete",
-        "s3:ReplicateTags"
-      ],
-      "Effect": "Allow",
-      "Resource": "arn:aws:s3:::${module.fsx-lustre-bucket-2ndregion.s3_bucket_id}/*"
-    }
-  ]
-}
-POLICY
-  tags   = local.tags
-}
-
-resource "aws_iam_policy_attachment" "s3-cross-region-replication-policy-attachment" {
-  name       = "s3-bucket-replication-${random_string.random.id}"
-  roles      = [aws_iam_role.s3-cross-region-replication-role.name]
-  policy_arn = aws_iam_policy.s3-cross-region-replication-policy.arn
-}
-
-## Security Group for Lustre
-
-resource "aws_security_group" "FSxLSecurityGroup01" {
-  name        = "FSxLSecurityGroup01"
+resource "aws_security_group" "fsx_ontap_sg" {
+  name        = "FSxONTAPSecurityGroup"
   provider    = aws.region1
-  description = "Security Group for FSx for Lustre Storage Access"
+  description = "Security Group for FSx for ONTAP NFS Access"
   vpc_id      = module.vpc.vpc_id
 
   ingress {
-    description = "Allow Lustre traffic between FSx for Lustre file servers"
-    from_port   = 988
-    to_port     = 988
-    protocol    = "tcp"
-    cidr_blocks = [local.vpc_cidr]
+    description     = "Allow NFS traffic from EKS worker nodes"
+    from_port       = 2049
+    to_port         = 2049
+    protocol        = "tcp"
+    security_groups = [module.eks.cluster_security_group_id]
   }
 
   ingress {
-    description = "Allows Lustre traffic between FSx for Lustre file servers"
-    from_port   = 1018
-    to_port     = 1023
+    description = "Allow NFS traffic from VPC CIDR"
+    from_port   = 2049
+    to_port     = 2049
     protocol    = "tcp"
     cidr_blocks = [local.vpc_cidr]
   }
 
   egress {
-    description = "Allows Lustre traffic between FSx for Lustre file servers"
+    description = "Allow all outbound traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = [local.vpc_cidr]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = local.tags
 }
 
 ################################################################################
-# FSx Lustre filesystem for static provisioning
+# FSx for ONTAP File System
 ################################################################################
 
-resource "aws_fsx_lustre_file_system" "fsx_lustre" {
-  provider                    = aws.region1
-  file_system_type_version    = "2.15"
-  storage_capacity            = 1200
-  deployment_type             = "PERSISTENT_2"
-  per_unit_storage_throughput = 250
-  subnet_ids                  = [module.vpc.private_subnets[0]]
-  security_group_ids          = [aws_security_group.FSxLSecurityGroup01.id]
-  tags                        = local.tags
+resource "random_password" "svm_password" {
+  length           = 16
+  special          = true
+  override_special = "@_"
+}
+
+resource "aws_secretsmanager_secret" "fsx_ontap_svm_password" {
+  name_prefix             = "trident-fsx-ontap-svm-"
+  recovery_window_in_days = 0
+  tags                    = local.tags
+}
+
+resource "aws_secretsmanager_secret_version" "fsx_ontap_svm_password" {
+  secret_id     = aws_secretsmanager_secret.fsx_ontap_svm_password.id
+  secret_string = random_password.svm_password.result
+}
+
+resource "aws_fsx_ontap_file_system" "fsx_ontap" {
+  provider             = aws.region1
+  storage_capacity     = 1024
+  subnet_ids           = [module.vpc.private_subnets[0]]
+  deployment_type      = "SINGLE_AZ_1"
+  throughput_capacity  = 256
+  security_group_ids   = [aws_security_group.fsx_ontap_sg.id]
+  preferred_subnet_id  = module.vpc.private_subnets[0]
+
+  tags = merge(local.tags, {
+    Name = "${local.name}-fsx-ontap"
+  })
+
   depends_on = [
-    module.fsx-lustre-bucket,
-    aws_security_group.FSxLSecurityGroup01
+    module.vpc,
+    aws_security_group.fsx_ontap_sg
   ]
 }
 
+resource "aws_fsx_ontap_storage_virtual_machine" "fsx_ontap_svm" {
+  file_system_id             = aws_fsx_ontap_file_system.fsx_ontap.id
+  name                       = "${local.name}-svm"
+  svm_admin_password         = random_password.svm_password.result
 
-resource "aws_fsx_data_repository_association" "fsx_lustre_association" {
-  file_system_id                   = aws_fsx_lustre_file_system.fsx_lustre.id
-  data_repository_path             = "s3://${module.fsx-lustre-bucket.s3_bucket_id}"
-  file_system_path                 = "/"
-  batch_import_meta_data_on_create = true
-
-  s3 {
-    auto_export_policy {
-      events = ["NEW", "CHANGED", "DELETED"]
-    }
-
-    auto_import_policy {
-      events = ["NEW", "CHANGED", "DELETED"]
-    }
-  }
-
-  timeouts {
-    create = "15m"
-    update = "15m"
-    delete = "15m"
-  }
+  tags = merge(local.tags, {
+    Name = "${local.name}-svm"
+  })
 
   depends_on = [
-    module.fsx-lustre-bucket,
-    aws_fsx_lustre_file_system.fsx_lustre
+    aws_fsx_ontap_file_system.fsx_ontap
+  ]
+}
+
+resource "aws_fsx_ontap_volume" "fsx_ontap_volume" {
+  name                       = "model"
+  junction_path              = "/model"
+  size_in_megabytes          = 102400 # 100 GiB
+  storage_virtual_machine_id = aws_fsx_ontap_storage_virtual_machine.fsx_ontap_svm.id
+  storage_efficiency_enabled = true
+
+  tiering_policy {
+    name = "AUTO"
+  }
+
+  tags = merge(local.tags, {
+    Name = "${local.name}-ontap-volume"
+  })
+
+  depends_on = [
+    aws_fsx_ontap_storage_virtual_machine.fsx_ontap_svm
   ]
 }
 
@@ -653,6 +571,14 @@ resource "kubectl_manifest" "neuron-healthcheck-system-namespace" {
 }
 
 
+################################################################################
+# Data source for FSx ONTAP subnet AZ lookup
+################################################################################
+
+data "aws_subnet" "fsx_ontap_subnet" {
+  id = module.vpc.private_subnets[0]
+}
+
 #---------------------------------------------------------------
 # Outputs
 #---------------------------------------------------------------
@@ -665,4 +591,34 @@ output "configure_kubectl" {
 output "eks_node_iam_role_name" {
   description = "IAM role name for EKS nodes"
   value       = module.eks.node_iam_role_name
+}
+
+output "fsx_ontap_id" {
+  description = "FSx for ONTAP file system ID"
+  value       = aws_fsx_ontap_file_system.fsx_ontap.id
+}
+
+output "svm_management_lif" {
+  description = "SVM management LIF DNS name"
+  value       = aws_fsx_ontap_storage_virtual_machine.fsx_ontap_svm.endpoints[0].management[0].dns_name
+}
+
+output "svm_name" {
+  description = "SVM name"
+  value       = aws_fsx_ontap_storage_virtual_machine.fsx_ontap_svm.name
+}
+
+output "svm_nfs_lif" {
+  description = "NFS data LIF IP address"
+  value       = aws_fsx_ontap_storage_virtual_machine.fsx_ontap_svm.endpoints[0].nfs[0].ip_addresses
+}
+
+output "ontap_volume_junction_path" {
+  description = "ONTAP volume junction path"
+  value       = aws_fsx_ontap_volume.fsx_ontap_volume.junction_path
+}
+
+output "fsx_ontap_az" {
+  description = "Availability zone of the FSx ONTAP file system"
+  value       = data.aws_subnet.fsx_ontap_subnet.availability_zone
 }

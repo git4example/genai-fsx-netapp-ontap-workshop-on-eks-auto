@@ -44,7 +44,7 @@ You can also see when vLLM Pod and the Mistral model has been loaded into the vL
 
 
 
-5. You have now successfully deployed a Generative AI Chatbot as a containerized application running on Amazon EKS, with the cached Mistral-7B model hosted on Amazon FSx Lustre, and the compute powered by AWS Inferentia Accelerators.
+5. You have now successfully deployed a Generative AI Chatbot as a containerized application running on Amazon EKS, with the cached Mistral-7B model hosted on Amazon FSx for NetApp ONTAP, and the compute powered by AWS Inferentia Accelerators.
 
 -------------------------
 
@@ -126,4 +126,4 @@ You can give the Chatbot context for prompts by attaching files directly to the 
 
 
 ### Summary
-You have now completed this module, and have deployed your own Generative-AI Chatbot using an Open WebUI client to interface to vLLM inference engine, which is serving the Mistral-7B LLM, from an FSx for Lustre based Persistent Volume. You have also seen the different Generative-AI output capabilities of the model by running different prompt scenarios.
+You have now completed this module, and have deployed your own Generative-AI Chatbot using an Open WebUI client to interface to vLLM inference engine, which is serving the Mistral-7B LLM, from an FSx for NetApp ONTAP-backed Persistent Volume. You have also seen the different Generative-AI output capabilities of the model by running different prompt scenarios.
