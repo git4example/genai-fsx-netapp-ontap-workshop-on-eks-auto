@@ -977,16 +977,7 @@ Resources:
             Action:
               - sts:AssumeRole
       ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonQDeveloperAccess
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/ReadOnlyAccess
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEKSClusterPolicy
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/IAMFullAccess
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonVPCFullAccess
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEKS_CNI_Policy
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
       Policies:
         - PolicyName: FSxONTAPOperations
           PolicyDocument:
