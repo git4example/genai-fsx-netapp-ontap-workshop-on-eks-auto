@@ -981,7 +981,9 @@ Resources:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy
         - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonQDeveloperAccess
         - !Sub arn:${AWS::Partition}:iam::aws:policy/ReadOnlyAccess
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess # Added For workshop
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEKSClusterPolicy
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/IAMFullAccess
       Policies:
         - PolicyName: FSxONTAPOperations
           PolicyDocument:

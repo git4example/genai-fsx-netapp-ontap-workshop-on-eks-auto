@@ -168,7 +168,7 @@ Here's a broad IAM policy that you may includes all the required permissions for
 }
 ```
 
-Alternative for simplicity, you may like to use AWS managed policies: `AdministratorAccess` 
+Alternative for simplicity, you may like to use AWS managed policies: `ReadOnlyAccess`, `AmazonEKSClusterPolicy`, and the scoped inline policy defined in `contentspec.yaml` 
 
 
 ### Part 2 : Automated Workshop Deployment
