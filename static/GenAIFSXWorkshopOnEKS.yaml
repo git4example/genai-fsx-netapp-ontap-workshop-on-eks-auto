@@ -212,6 +212,76 @@ Mappings:
       PrefixList: pl-82a045eb
 
 Resources:
+### CloudTrail for IAM Access Analyzer Policy Generation
+  PolicyGenCloudTrailBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub cloudtrail-policy-gen-${AWS::AccountId}
+      LifecycleConfiguration:
+        Rules:
+          - Id: AutoDelete
+            Status: Enabled
+            ExpirationInDays: 7
+
+  PolicyGenCloudTrailBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PolicyGenCloudTrailBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AWSCloudTrailAclCheck
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:GetBucketAcl
+            Resource: !GetAtt PolicyGenCloudTrailBucket.Arn
+          - Sid: AWSCloudTrailWrite
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub ${PolicyGenCloudTrailBucket.Arn}/AWSLogs/${AWS::AccountId}/*
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: bucket-owner-full-access
+
+  PolicyGenCloudTrail:
+    Type: AWS::CloudTrail::Trail
+    DependsOn: PolicyGenCloudTrailBucketPolicy
+    Properties:
+      TrailName: workshop-policy-gen
+      S3BucketName: !Ref PolicyGenCloudTrailBucket
+      IsLogging: true
+      IsMultiRegionTrail: true
+      IncludeGlobalServiceEvents: true
+      EnableLogFileValidation: true
+
+  AccessAnalyzerPolicyGenRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: AccessAnalyzerPolicyGen
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: access-analyzer.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudTrailS3Access
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt PolicyGenCloudTrailBucket.Arn
+                  - !Sub ${PolicyGenCloudTrailBucket.Arn}/*
+
 ### VSCode Resources
   SecretPlaintextLambdaRole:
     Type: AWS::IAM::Role
@@ -2363,3 +2433,12 @@ Outputs:
   FSxONTAPSecurityGroupDescription:
     Description: FSx for ONTAP security group allows NFS (TCP 2049) access
     Value: !GetAtt FSxONTAPSecurityGroup.GroupId
+  CloudTrailArn:
+    Description: CloudTrail ARN for IAM Access Analyzer policy generation
+    Value: !GetAtt PolicyGenCloudTrail.Arn
+  AccessAnalyzerRoleArn:
+    Description: IAM role ARN for Access Analyzer to read CloudTrail S3 bucket
+    Value: !GetAtt AccessAnalyzerPolicyGenRole.Arn
+  VSCodeInstanceRoleArn:
+    Description: VSCode instance role ARN (target for policy generation)
+    Value: !GetAtt VSCodeInstanceRole.Arn
