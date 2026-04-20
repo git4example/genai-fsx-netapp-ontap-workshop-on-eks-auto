@@ -1,0 +1,98 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "EKSAccess",
+            "Effect": "Allow",
+            "Action": [
+                "eks:DescribeCluster",
+                "eks:ListClusters",
+                "eks:AccessKubernetesApi",
+                "eks:ListNodegroups",
+                "eks:DescribeNodegroup"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "FSxONTAPAccess",
+            "Effect": "Allow",
+            "Action": [
+                "fsx:DescribeFileSystems",
+                "fsx:DescribeVolumes",
+                "fsx:DescribeStorageVirtualMachines",
+                "fsx:DescribeSnapshots",
+                "fsx:CreateSnapshot",
+                "fsx:CreateVolume",
+                "fsx:DeleteVolume",
+                "fsx:UpdateVolume",
+                "fsx:TagResource",
+                "fsx:UntagResource"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "EC2Describe",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeSubnets",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeVpcs",
+                "ec2:DescribeInstances",
+                "ec2:DescribeNetworkInterfaces"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "IAMForEksctl",
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreatePolicy",
+                "iam:GetPolicy",
+                "iam:CreateRole",
+                "iam:GetRole",
+                "iam:AttachRolePolicy",
+                "iam:PutRolePolicy",
+                "iam:CreateServiceLinkedRole",
+                "iam:TagRole",
+                "iam:PassRole"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "CloudFormationForEksctl",
+            "Effect": "Allow",
+            "Action": [
+                "cloudformation:DescribeStacks",
+                "cloudformation:ListStacks",
+                "cloudformation:CreateStack",
+                "cloudformation:DeleteStack"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "SecretsManagerForTrident",
+            "Effect": "Allow",
+            "Action": [
+                "secretsmanager:GetSecretValue"
+            ],
+            "Resource": "arn:aws:secretsmanager:*:*:secret:trident-fsx-*"
+        },
+        {
+            "Sid": "STSAccess",
+            "Effect": "Allow",
+            "Action": [
+                "sts:AssumeRole",
+                "sts:GetCallerIdentity"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ELBDescribe",
+            "Effect": "Allow",
+            "Action": [
+                "elasticloadbalancing:Describe*"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
