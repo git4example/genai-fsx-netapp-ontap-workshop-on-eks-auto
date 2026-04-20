@@ -468,6 +468,14 @@ resource "aws_security_group" "fsx_ontap_sg" {
     cidr_blocks = [local.vpc_cidr]
   }
 
+  ingress {
+    description = "Allow ONTAP management API (HTTPS) from VPC CIDR"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [local.vpc_cidr]
+  }
+
   egress {
     description = "Allow all outbound traffic"
     from_port   = 0

@@ -1,0 +1,8 @@
+Update root index and fix SVM secret name mismatch
+
+- Replace Lustre references with FSx for NetApp ONTAP in root index
+- Update title to reference FSx for NetApp ONTAP
+- Fix Secrets Manager secret name: Terraform creates with prefix
+  'trident-fsx-ontap-svm-' not 'trident-fsx-secret'
+- Update install.sh and Module 1 content to dynamically discover
+  the secret name using list-secrets with prefix filter

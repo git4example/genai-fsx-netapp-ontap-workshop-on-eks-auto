@@ -124,7 +124,7 @@ As a final check, confirm that the Trident backend is still registered and healt
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=false}
 NAME               BACKEND NAME   BACKEND UUID                           PHASE   STATUS
-backend-ontap-nas  fsx-ontap      12345678-abcd-efgh-ijkl-123456789abc   Bound   Success
+backend-ontap-nas  fsx-ontap-nas  12345678-abcd-efgh-ijkl-123456789abc   Bound   Success
 :::
 
 ::::

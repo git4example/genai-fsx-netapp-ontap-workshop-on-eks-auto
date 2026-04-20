@@ -11,6 +11,7 @@ In this module you will deploy and integrate the **NetApp Astra Trident CSI driv
 
 
 ![lab-architecture](/static/images/fsxl_lab.png)
+<!-- TODO: Replace with FSx for ONTAP architecture diagram -->
 
 ---
 

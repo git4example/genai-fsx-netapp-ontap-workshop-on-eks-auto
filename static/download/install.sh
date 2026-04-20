@@ -115,11 +115,14 @@ SVM_NAME=$(echo $SVM_INFO | jq -r '.[1]')
 echo "SVM Management LIF: $SVM_MGMT_LIF"
 echo "SVM Name: $SVM_NAME"
 
-# Get SVM password from Secrets Manager
-SVM_PASSWORD=$(aws secretsmanager get-secret-value --secret-id trident-fsx-secret --query "SecretString" --output text 2>/dev/null)
-if [ -z "$SVM_PASSWORD" ]; then
-    echo "WARNING: Could not retrieve SVM password from Secrets Manager (trident-fsx-secret). Using placeholder."
+# Get SVM password from Secrets Manager (Terraform creates with prefix trident-fsx-ontap-svm-)
+SECRET_NAME=$(aws secretsmanager list-secrets --query "SecretList[?starts_with(Name,'trident-fsx-ontap-svm-')].Name" --output text 2>/dev/null)
+if [ -z "$SECRET_NAME" ]; then
+    echo "WARNING: Could not find SVM password secret (trident-fsx-ontap-svm-*). Using placeholder."
     SVM_PASSWORD="SVM_PASSWORD"
+else
+    SVM_PASSWORD=$(aws secretsmanager get-secret-value --secret-id $SECRET_NAME --query "SecretString" --output text 2>/dev/null)
+    echo "SVM Password retrieved from secret: $SECRET_NAME"
 fi
 
 # --- Populate ONTAP templates ---

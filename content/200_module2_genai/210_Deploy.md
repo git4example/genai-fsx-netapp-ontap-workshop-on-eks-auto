@@ -107,6 +107,10 @@ kubectl apply -f model-loading-job.yaml
 
 2. The model download will take several minutes depending on network speed. Wait for the Job to complete by running the following command. This will block until the Job finishes successfully (or time out after 30 minutes).
 
+:::alert{header="Expected time" type="info"}
+The Mistral-7B model is approximately 15 GB. The download typically completes in **4–6 minutes**. You can monitor progress with `kubectl logs job/model-download -f`.
+:::
+
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl wait --for=condition=complete job/model-download --timeout=1800s
 :::

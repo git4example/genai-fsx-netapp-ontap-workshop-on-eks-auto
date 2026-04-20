@@ -1216,6 +1216,11 @@ Resources:
           FromPort: 2049
           ToPort: 2049
           CidrIp: 10.0.0.0/16
+        - Description: Allow ONTAP management API (HTTPS 443) for Trident CSI driver
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 10.0.0.0/16
 
   VSCodeHealthCheckLambdaRole:
     Type: AWS::IAM::Role

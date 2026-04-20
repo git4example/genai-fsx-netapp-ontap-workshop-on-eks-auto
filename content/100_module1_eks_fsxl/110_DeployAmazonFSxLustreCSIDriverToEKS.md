@@ -142,19 +142,46 @@ trident-operator-7c94b5f9cf-x9z2k    1/1     Running   0          50s
 
 Now that the Trident CSI driver is running, you need to configure it to connect to your pre-provisioned FSx for ONTAP file system and SVM. This is done by creating a Kubernetes Secret with the SVM credentials and a TridentBackendConfig resource.
 
-7. First, create the Secret containing the SVM `vsadmin` credentials. The `SVM_PASSWORD` placeholder will be replaced by the install script with the actual password from your environment.
+7. First, retrieve the SVM password from AWS Secrets Manager. The secret was created by Terraform with a name starting with `trident-fsx-ontap-svm-`.
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-kubectl apply -f /home/participant/environment/eks/FSxONTAP/fsx-ontap-secret.yaml
+SECRET_NAME=$(aws secretsmanager list-secrets --query "SecretList[?starts_with(Name,'trident-fsx-ontap-svm-')].Name" --output text --region $AWS_REGION)
+SVM_PASSWORD=$(aws secretsmanager get-secret-value --secret-id $SECRET_NAME --query "SecretString" --output text --region $AWS_REGION)
+echo "SVM Password retrieved from secret: $SECRET_NAME"
 :::
 
-8. Next, apply the TridentBackendConfig resource. The `SVM_MGMT_LIF` and `SVM_NAME` placeholders will have been replaced by the install script with the actual values from your FSx for ONTAP file system.
+8. Replace the `SVM_PASSWORD` placeholder in the Secret manifest with the actual password.
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-kubectl apply -f /home/participant/environment/eks/FSxONTAP/trident-backend-config.yaml
+cd /home/participant/environment/eks/FSxONTAP
+sed -i'' -e "s/SVM_PASSWORD/$SVM_PASSWORD/g" fsx-ontap-secret.yaml
 :::
 
-9. Verify that the Trident backend has been registered successfully.
+9. Apply the Secret containing the SVM `vsadmin` credentials.
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl apply -f fsx-ontap-secret.yaml
+:::
+
+10. Next, retrieve the SVM management LIF and SVM name from your FSx for ONTAP file system, and update the TridentBackendConfig manifest.
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+FSX_ID=$(aws fsx describe-file-systems --query "FileSystems[?FileSystemType=='ONTAP'].FileSystemId" --output text --region $AWS_REGION)
+SVM_MGMT_LIF=$(aws fsx describe-storage-virtual-machines --filters "Name=file-system-id,Values=$FSX_ID" --query "StorageVirtualMachines[0].Endpoints.Management.DNSName" --output text --region $AWS_REGION)
+SVM_NAME=$(aws fsx describe-storage-virtual-machines --filters "Name=file-system-id,Values=$FSX_ID" --query "StorageVirtualMachines[0].Name" --output text --region $AWS_REGION)
+echo "SVM Management LIF: $SVM_MGMT_LIF"
+echo "SVM Name: $SVM_NAME"
+:::
+
+11. Replace the placeholders in the TridentBackendConfig manifest and apply it.
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+sed -i'' -e "s/SVM_MGMT_LIF/$SVM_MGMT_LIF/g" trident-backend-config.yaml
+sed -i'' -e "s/SVM_NAME/$SVM_NAME/g" trident-backend-config.yaml
+kubectl apply -f trident-backend-config.yaml
+:::
+
+12. Verify that the Trident backend has been registered successfully.
 
 ::code[kubectl get tridentbackendconfig -n trident]{language=bash showLineNumbers=false showCopyAction=true}
 
@@ -162,7 +189,7 @@ kubectl apply -f /home/participant/environment/eks/FSxONTAP/trident-backend-conf
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=false}
 NAME               BACKEND NAME   BACKEND UUID                           PHASE   STATUS
-backend-ontap-nas  fsx-ontap      12345678-abcd-efgh-ijkl-123456789abc   Bound   Success
+backend-ontap-nas  fsx-ontap-nas  12345678-abcd-efgh-ijkl-123456789abc   Bound   Success
 :::
 
 ::::

@@ -13,6 +13,9 @@ spec:
         app: vllm-mistral-inf2-server
     spec:
       schedulerName: my-scheduler
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -22,53 +25,47 @@ spec:
                     operator: In
                     values:
                       - FSX_ONTAP_AZ # Replace with your FSx ONTAP AZ
+      nodeSelector:
+        eks.amazonaws.com/instance-family: inf2
       tolerations:
         - key: "aws.amazon.com/neuron"
           operator: "Exists"
           effect: "NoSchedule"
       containers:
         - name: inference-server
-          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04
-          resources:
-            requests:
-              aws.amazon.com/neuron: 1
-            limits:
-              aws.amazon.com/neuron: 1
+          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.16.0-neuronx-py312-sdk2.29.0-ubuntu24.04
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
           args:
-            - python
-            - -m
-            - vllm.entrypoints.openai.api_server
-            - --model=$(MODEL_ID)
-            - --max-num-seqs=4
-            - --max-model-len=10240
-            - --tensor-parallel-size=2
-            - --port=8000
-            - --device=neuron
-            - --override-neuron-config={"enable_bucketing":false}
-            - --host=0.0.0.0
+            - mistralai/Mistral-7B-Instruct-v0.3
             - --served-model-name=mistralai/Mistral-7B-Instruct-v0.3
+            - --trust-remote-code
+            # Mistral specific
+            - --enable-auto-tool-choice
+            - --tool-call-parser=mistral
+            - --tokenizer-mode=mistral
+            - --load-format=mistral
+            - --config-format=mistral
+            # Neuron specific
+            - --tensor-parallel-size=2
+            - --gpu-memory-utilization=0.95
+            - --max-num-seqs=3
+            - --max-model-len=8192
+            - --no-enable-prefix-caching
           env:
-            - name: VLLM_NEURON_FRAMEWORK
-              value: "neuronx-distributed-inference"
-            - name: MODEL_ID
-              value: /work-dir/Mistral-7B-Instruct-v0.3/
-            - name: NEURON_COMPILE_CACHE_URL
-              value: /work-dir/Mistral-7B-Instruct-v0.3/neuron-cache/
-            - name: PORT
-              value: "8000"
             - name: NEURON_COMPILED_ARTIFACTS
               value: /work-dir/Mistral-7B-Instruct-v0.3/neuron-cache/
           ports:
             - name: http
               containerPort: 8000
               protocol: TCP
-          volumeMounts:
-            - name: persistent-storage
-              mountPath: "/work-dir"
-            - name: shm-volume
-              mountPath: /dev/shm
-
-          # livenessProbe: Ensures the container is still running properly. Restarts after 18 mins if it continues to fail after initial delay of 3 min
           livenessProbe:
             httpGet:
               path: /health
@@ -76,10 +73,8 @@ spec:
             initialDelaySeconds: 180
             periodSeconds: 30
             timeoutSeconds: 10
-            failureThreshold: 30
+            failureThreshold: 24
             successThreshold: 1
-
-          # readinessProbe: Checks if the application is ready to accept traffic after initial delay of 3 min
           readinessProbe:
             httpGet:
               path: /health
@@ -89,14 +84,27 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
             successThreshold: 1
+          resources:
+            requests:
+              cpu: 2
+              memory: 16Gi
+              aws.amazon.com/neuroncore: 2
+            limits:
+              aws.amazon.com/neuroncore: 2
+              memory: 24Gi
+          volumeMounts:
+            - name: persistent-storage
+              mountPath: /work-dir
+            - name: persistent-storage
+              mountPath: /root/.cache/huggingface
+              subPath: cache/huggingface
+            - name: persistent-storage
+              mountPath: /root/.cache/neuron
+              subPath: cache/neuron
       volumes:
         - name: persistent-storage
           persistentVolumeClaim:
             claimName: ontap-model-claim
-        - name: shm-volume
-          emptyDir:
-            medium: Memory
-            sizeLimit: 4Gi
 ---
 apiVersion: v1
 kind: Service
