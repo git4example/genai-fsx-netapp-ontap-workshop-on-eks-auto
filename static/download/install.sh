@@ -71,7 +71,7 @@ helm repo add netapp-trident https://netapp.github.io/trident-helm-chart
 helm repo update
 
 helm install trident-operator netapp-trident/trident-operator \
-    --version 100.2502.1 \
+    --version 100.2602.0 \
     --set cloudProvider="AWS" \
     --set cloudIdentity="'eks.amazonaws.com/role-arn: ${ROLE_ARN}'" \
     --namespace trident \
@@ -153,7 +153,7 @@ kubectl get nodepool,ec2nodeclass inferentia
 helm upgrade --install neuron-helm-chart \
     oci://public.ecr.aws/neuron/neuron-helm-chart \
     --namespace kube-system \
-    --version 1.2.0 \
+    --version 1.5.0 \
     -f ./helm-values/neuron-values.yaml
 
 # Update AZ in mistral-ontap.yaml and deploy vLLM

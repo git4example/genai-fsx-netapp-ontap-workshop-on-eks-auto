@@ -200,7 +200,7 @@ module "eks" {
 
 module "eks_blueprints_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "1.21.0"
+  version = "1.23.0"
 
   providers = {
     aws = aws.region1
@@ -322,7 +322,7 @@ resource "aws_secretsmanager_secret_version" "grafana" {
 #---------------------------------------------------------------
 module "data_addons" {
   source  = "aws-ia/eks-data-addons/aws"
-  version = "1.37.2" # ensure to update this to the latest/desired version
+  version = "1.38.0" # ensure to update this to the latest/desired version
 
   oidc_provider_arn = module.eks.oidc_provider_arn
 
