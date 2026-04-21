@@ -237,6 +237,9 @@ Resources:
               Service: cloudtrail.amazonaws.com
             Action: s3:GetBucketAcl
             Resource: !GetAtt PolicyGenCloudTrailBucket.Arn
+            Condition:
+              StringEquals:
+                aws:SourceArn: !Sub arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/workshop-policy-gen
           - Sid: AWSCloudTrailWrite
             Effect: Allow
             Principal:
@@ -245,7 +248,7 @@ Resources:
             Resource: !Sub ${PolicyGenCloudTrailBucket.Arn}/AWSLogs/${AWS::AccountId}/*
             Condition:
               StringEquals:
-                s3:x-amz-acl: bucket-owner-full-access
+                aws:SourceArn: !Sub arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/workshop-policy-gen
 
   PolicyGenCloudTrail:
     Type: AWS::CloudTrail::Trail
