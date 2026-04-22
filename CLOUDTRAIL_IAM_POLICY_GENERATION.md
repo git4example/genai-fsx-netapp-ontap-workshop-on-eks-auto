@@ -138,6 +138,11 @@ AccessAnalyzerPolicyGenRole:
               Resource:
                 - !GetAtt PolicyGenCloudTrailBucket.Arn
                 - !Sub ${PolicyGenCloudTrailBucket.Arn}/*
+            - Effect: Allow
+              Action:
+                - cloudtrail:GetTrail
+              Resource:
+                - !Sub arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/workshop-policy-gen
 ```
 
 ### 6. Stack Outputs (commit `9bbfd84`, lines 2441–2450)

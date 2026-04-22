@@ -284,6 +284,11 @@ Resources:
                 Resource:
                   - !GetAtt PolicyGenCloudTrailBucket.Arn
                   - !Sub ${PolicyGenCloudTrailBucket.Arn}/*
+              - Effect: Allow
+                Action:
+                  - cloudtrail:GetTrail
+                Resource:
+                  - !Sub arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/workshop-policy-gen
 
 ### VSCode Resources
   SecretPlaintextLambdaRole:
