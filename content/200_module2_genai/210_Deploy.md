@@ -19,7 +19,7 @@ cd /home/participant/environment/terraform
 helm upgrade --install neuron-helm-chart \
     oci://public.ecr.aws/neuron/neuron-helm-chart \
     --namespace kube-system \
-    --version 1.2.0 \
+    --version 1.5.0 \
     -f ./helm-values/neuron-values.yaml
 :::
 
@@ -27,8 +27,8 @@ You should see an output similar to the one below.
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
 Release "neuron-helm-chart" does not exist. Installing it now.
-Pulled: public.ecr.aws/neuron/neuron-helm-chart:1.2.0
-Digest: sha256:892b10353badc5e970519bfef42441f72c69ff48437f43a49948e18e4fef87c3
+Pulled: public.ecr.aws/neuron/neuron-helm-chart:1.5.0
+Digest: sha256:...
 NAME: neuron-helm-chart
 LAST DEPLOYED: Thu Jul 24 01:57:53 2025
 NAMESPACE: kube-system
@@ -95,10 +95,12 @@ nodeclass.eks.amazonaws.com/inferentia   eksworkshop-eks-auto-202501030632263297
 ##### Step 3: Load the Mistral-7B Model onto the FSx for ONTAP Volume
 
 :::alert{header="Important — Why is this step needed?" type="info"}
-Unlike FSx for Lustre, which can transparently import data from an S3 bucket on first access, **FSx for NetApp ONTAP does not have native S3 data repository integration**. This means the model data must be explicitly downloaded and written to the ONTAP-backed persistent volume before the vLLM inference pod can use it. We accomplish this using a Kubernetes Job that downloads the Mistral-7B-Instruct-v0.3 model from HuggingFace directly onto the PVC.
+Unlike FSx for Lustre, which can transparently import data from an S3 bucket on first access, **FSx for NetApp ONTAP does not have native S3 data repository integration**. This means the model data must be explicitly downloaded and written to the ONTAP-backed persistent volume before the vLLM inference pod can use it. We accomplish this using a Kubernetes Job that downloads a **pre-compiled** Mistral-7B-Instruct-v0.3 model (with Neuron compiled artifacts) from HuggingFace directly onto the PVC. Using pre-compiled artifacts means vLLM can skip the Neuron compilation step and start serving immediately.
+
+This is a **one-time operation**. Once the model data is on the FSx for ONTAP volume, it persists across pod restarts and redeployments. If the vLLM pod is deleted and recreated, it will load the model directly from the volume without needing to download it again. This is one of the key benefits of using persistent storage like FSx for ONTAP for inference workloads — the model is loaded once and reused by any pod that mounts the same volume.
 :::
 
-1. Apply the Model Loading Job manifest. This Job will download the Mistral-7B-Instruct-v0.3 model from HuggingFace and store it on the `ontap-model-claim` PVC that you created in Module 1.
+1. Apply the Model Loading Job manifest. This Job will download the pre-compiled Mistral-7B-Instruct-v0.3 model (including Neuron compiled artifacts) from HuggingFace and store it on the `ontap-model-claim` PVC that you created in Module 1.
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 cd /home/participant/environment/eks/FSxONTAP
@@ -108,7 +110,7 @@ kubectl apply -f model-loading-job.yaml
 2. The model download will take several minutes depending on network speed. Wait for the Job to complete by running the following command. This will block until the Job finishes successfully (or time out after 30 minutes).
 
 :::alert{header="Expected time" type="info"}
-The Mistral-7B model is approximately 15 GB. The download typically completes in **4–6 minutes**. You can monitor progress with `kubectl logs job/model-download -f`.
+The pre-compiled Mistral-7B model is approximately 29 GB. The download typically completes in **4–6 minutes**. You can monitor progress with `kubectl logs job/model-download -f`.
 :::
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
@@ -140,7 +142,7 @@ You should see the model weight files (e.g., `model-00001-of-00003.safetensors`)
 
 ##### Step 4: Deploy the vLLM application Pod
 
-You will now deploy the vLLM pod, which will provide model serving capability through its inference endpoint. Once the vLLM Pod is online, it will load the Mistral-7B LLM model data (29GB) into its memory from the FSx for NetApp ONTAP volume where it was stored by the Model Loading Job in the previous step.
+You will now deploy the vLLM pod, which will provide model serving capability through its inference endpoint. Once the vLLM Pod is online, it will load the pre-compiled Mistral-7B model from the FSx for NetApp ONTAP volume. Because the model includes pre-compiled Neuron artifacts, vLLM skips the compilation step and starts serving in approximately 3 - 5 minutes (compared to 15+ minutes without pre-compiled artifacts).
 
 1. Run the below commands to update the mistral-ontap.yaml with your AWS environment variables.
 
@@ -175,7 +177,7 @@ sed -i'' -e "s/FSX_ONTAP_AZ/$FSX_ONTAP_AZ/g" mistral-ontap.yaml
 ::code[cat mistral-ontap.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
 :::alert{header="Note" type="info"}
-You will notice a single pod deployment request, with a request for a single AWS Inferentia Neuron core, persistent storage using the PVC you created previously (`ontap-model-claim`), and also some model parameters. The model was loaded onto this PVC by the Model Loading Job in Step 3.
+You will notice a single pod deployment request, with a request for 2 AWS Inferentia NeuronCores, persistent storage using the PVC you created previously (`ontap-model-claim`), and also some model parameters. The model (including pre-compiled Neuron artifacts) was loaded onto this PVC by the Model Loading Job in Step 3. The `NEURON_COMPILED_ARTIFACTS` environment variable tells vLLM where to find the pre-compiled model, allowing it to skip the compilation step.
 :::
 
 
@@ -205,37 +207,38 @@ spec:
                 operator: In
                 values:
                 - FSX_ONTAP_AZ                                  # <<<<< Replace with your FSx ONTAP AZ
+      nodeSelector:
+        eks.amazonaws.com/instance-family: inf2
       tolerations:
       - key: "aws.amazon.com/neuron"
         operator: "Exists"
         effect: "NoSchedule"
       containers:
       - name: inference-server
-        image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04
+        image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.16.0-neuronx-py312-sdk2.29.0-ubuntu24.04
+        command: ["vllm", "serve"]
+        args:
+        - /work-dir/Mistral-7B-Instruct-v0.3                  # <<<<< Local model path on ONTAP volume
+        - --served-model-name=mistralai/Mistral-7B-Instruct-v0.3
+        - --tensor-parallel-size=2
+        - --max-num-seqs=3
+        - --max-model-len=8192
         resources:                                             # <<<<< Here you can specify Neuron Resources just like CPU and Memory
           requests:
-            aws.amazon.com/neuron: 1                           # <<<<< Neuron Resources Request
+            aws.amazon.com/neuroncore: 2                       # <<<<< Neuron Resources Request
           limits:
-            aws.amazon.com/neuron: 1                           # <<<<< Neuron Resources Limits
+            aws.amazon.com/neuroncore: 2                       # <<<<< Neuron Resources Limits
         env:
-        - name: VLLM_NEURON_FRAMEWORK
-          value: "neuronx-distributed-inference"
-        - name: MODEL_ID
-          value: /work-dir/Mistral-7B-Instruct-v0.3/          # <<<<< Model path on ONTAP volume
+        - name: NEURON_COMPILED_ARTIFACTS
+          value: /work-dir/Mistral-7B-Instruct-v0.3           # <<<<< Pre-compiled artifacts path
         volumeMounts:
         - name: persistent-storage
           mountPath: "/work-dir"                               # <<<<< FSx for ONTAP PVC mount
-        - name: shm-volume
-          mountPath: /dev/shm                                  # <<<<< Shared memory for compilation
 (...)
       volumes:
       - name: persistent-storage
         persistentVolumeClaim:
           claimName: ontap-model-claim                         # <<<<< FSx for ONTAP PVC
-      - name: shm-volume
-        emptyDir:
-          medium: Memory
-          sizeLimit: 4Gi
 :::
 
 

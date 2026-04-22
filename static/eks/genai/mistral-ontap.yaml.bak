@@ -44,7 +44,7 @@ spec:
               type: RuntimeDefault
           command: ["vllm", "serve"]
           args:
-            - /work-dir/Mistral-7B-Instruct-v0.3
+            - mistralai/Mistral-7B-Instruct-v0.3
             - --served-model-name=mistralai/Mistral-7B-Instruct-v0.3
             - --trust-remote-code
             # Mistral specific
@@ -61,7 +61,7 @@ spec:
             - --no-enable-prefix-caching
           env:
             - name: NEURON_COMPILED_ARTIFACTS
-              value: /work-dir/Mistral-7B-Instruct-v0.3
+              value: /work-dir/Mistral-7B-Instruct-v0.3/neuron-cache/
           ports:
             - name: http
               containerPort: 8000
@@ -95,6 +95,12 @@ spec:
           volumeMounts:
             - name: persistent-storage
               mountPath: /work-dir
+            - name: persistent-storage
+              mountPath: /root/.cache/huggingface
+              subPath: cache/huggingface
+            - name: persistent-storage
+              mountPath: /root/.cache/neuron
+              subPath: cache/neuron
       volumes:
         - name: persistent-storage
           persistentVolumeClaim:

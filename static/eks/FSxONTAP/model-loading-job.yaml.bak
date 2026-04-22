@@ -16,7 +16,7 @@ spec:
         command:
         - hf
         - download
-        - "Hello2pariksit/Mistral-7B-Instruct-v0.3-neuron"
+        - "mistralai/Mistral-7B-Instruct-v0.3"
         - "--local-dir"
         - "/work-dir/Mistral-7B-Instruct-v0.3"
         volumeMounts:
