@@ -169,7 +169,7 @@ Set the instance/compute role to `AdministratorAccess` so every API call the wor
 
 ### Step 2 — Deploy the Stack
 
-The CloudFormation stack creates the CloudTrail trail, S3 bucket, and Access Analyzer role automatically.
+The CloudFormation stack creates the CloudTrail trail, S3 bucket, and Access Analyzer role **first** (all other resources have `DependsOn: PolicyGenCloudTrail`), then provisions the rest of the workshop infrastructure. This ensures CloudTrail captures every API call from the beginning.
 
 ### Step 3 — Run the Full Workshop
 

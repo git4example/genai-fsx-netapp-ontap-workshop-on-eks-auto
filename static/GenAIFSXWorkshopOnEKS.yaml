@@ -293,6 +293,7 @@ Resources:
 ### VSCode Resources
   SecretPlaintextLambdaRole:
     Type: AWS::IAM::Role
+    DependsOn: PolicyGenCloudTrail
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -1017,6 +1018,7 @@ Resources:
       ReceiveMessageWaitTimeSeconds: 20
 
   VSCodeSecret:
+    DependsOn: PolicyGenCloudTrail
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -1043,6 +1045,7 @@ Resources:
 
   VSCodeInstanceRole:
     Type: AWS::IAM::Role
+    DependsOn: PolicyGenCloudTrail
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -1199,6 +1202,7 @@ Resources:
 
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    DependsOn: PolicyGenCloudTrail
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -1215,6 +1219,7 @@ Resources:
 
   FSxONTAPSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    DependsOn: PolicyGenCloudTrail
     Properties:
       GroupDescription: Security group for FSx for NetApp ONTAP - allows NFS access
       VpcId: !GetAtt VSCodeInstance.VpcId
@@ -1232,6 +1237,7 @@ Resources:
 
   VSCodeHealthCheckLambdaRole:
     Type: AWS::IAM::Role
+    DependsOn: PolicyGenCloudTrail
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
