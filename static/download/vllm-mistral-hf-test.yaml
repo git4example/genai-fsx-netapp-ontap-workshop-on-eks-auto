@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-mistral-hf-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-mistral-hf-test
+  template:
+    metadata:
+      labels:
+        app: vllm-mistral-hf-test
+    spec:
+      schedulerName: my-scheduler
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      nodeSelector:
+        eks.amazonaws.com/instance-family: inf2
+      tolerations:
+        - key: "aws.amazon.com/neuron"
+          operator: "Exists"
+          effect: "NoSchedule"
+      initContainers:
+        - name: model-download
+          image: public.ecr.aws/parikshit/huggingface-cli:slim
+          command:
+            - hf
+            - download
+            - "Hello2pariksit/Mistral-7B-Instruct-v0.3-neuron"
+            - "--local-dir"
+            - "/models/Mistral-7B-Instruct-v0.3-neuron"
+          volumeMounts:
+            - name: model-store
+              mountPath: /models
+      containers:
+        - name: vllm
+          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.16.0-neuronx-py312-sdk2.29.0-ubuntu24.04
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
+          args:
+            - /models/Mistral-7B-Instruct-v0.3-neuron
+            - --served-model-name=mistral-7b-neuron
+            - --trust-remote-code
+            - --enable-auto-tool-choice
+            - --tool-call-parser=mistral
+            - --tokenizer-mode=mistral
+            - --load-format=mistral
+            - --config-format=mistral
+            - --tensor-parallel-size=2
+            - --gpu-memory-utilization=0.95
+            - --max-num-seqs=3
+            - --max-model-len=8192
+            - --no-enable-prefix-caching
+          env:
+            - name: NEURON_COMPILED_ARTIFACTS
+              value: /models/Mistral-7B-Instruct-v0.3-neuron
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 300
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 180
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 40
+            successThreshold: 1
+          resources:
+            requests:
+              cpu: 2
+              memory: 16Gi
+              aws.amazon.com/neuroncore: 2
+            limits:
+              aws.amazon.com/neuroncore: 2
+              memory: 24Gi
+          volumeMounts:
+            - name: model-store
+              mountPath: /models
+      volumes:
+        - name: model-store
+          emptyDir:
+            sizeLimit: 40Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-mistral-hf-test-service
+  labels:
+    app: vllm-mistral-hf-test
+spec:
+  selector:
+    app: vllm-mistral-hf-test
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8000
