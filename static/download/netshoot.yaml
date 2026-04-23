@@ -32,7 +32,7 @@ spec:
   volumes:
   - name: fsx
     persistentVolumeClaim:
-      claimName: fsx-lustre-claim
+      claimName: ontap-model-claim
   restartPolicy: Never
   tolerations:
   - key: aws.amazon.com/neuron

@@ -251,14 +251,6 @@ module "eks_blueprints_addons" {
   #   }]
   # }
 
-  ## fsx CSI driver can be installed here in fugure as needed.
-  # enable_aws_fsx_csi_driver = true
-  # aws_fsx_csi_driver = {
-  #   namespace     = "aws-fsx-csi-driver"
-  #   chart_version = "1.11.0"
-  #   role_policies = <ADDITIONAL_IAM_POLICY_ARN>
-  # }
-
   #---------------------------------------
   # Prommetheus and Grafana stack
   #---------------------------------------

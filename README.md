@@ -94,20 +94,22 @@ In this workshop the **Mistral-7B-Instruct** model is stored in an Amazon S3 buc
 └── static
     ├── GenAIFSXWorkshopOnEKS.yaml
     ├── download
-    │   ├── check.yaml
-    │   ├── download-upload.yaml
-    │   └── sysprep.yaml
+    │   ├── cleanup.sh
+    │   ├── install.sh
+    │   ├── model-loading-job.yaml.bak
+    │   ├── netshoot.yaml
+    │   └── vllm-mistral-hf-test.yaml
     ├── eks
-    │   ├── FSxL
-    │   │   ├── fsxL-claim.yaml
-    │   │   ├── fsxL-dynamic-claim.yaml
-    │   │   ├── fsxL-persistent-volume.yaml
-    │   │   ├── fsxL-storage-class.yaml
-    │   │   ├── pod.yaml
-    │   │   └── pod_performance.yaml
+    │   ├── FSxONTAP
+    │   │   ├── fsx-ontap-secret.yaml
+    │   │   ├── model-loading-job.yaml
+    │   │   ├── ontap-pvc.yaml
+    │   │   ├── ontap-storage-class.yaml
+    │   │   └── trident-backend-config.yaml
     │   └── genai
     │       ├── inferentia_nodepool.yaml
-    │       ├── mistral-fsxl.yaml
+    │       ├── mistral-ontap.yaml
+    │       ├── observability/
     │       └── open-webui.yaml
     ├── images
     │   ├── [ workshop images .. ]
@@ -115,9 +117,9 @@ In this workshop the **Mistral-7B-Instruct** model is stored in an Amazon S3 buc
     │   └── vllm_pod_1.png
     ├── scripts
     │   ├── cleanup-on-demand.sh
-    │   ├── cleanup-sponsored.sh
     │   ├── quick-deploy-on-demand.sh
-    │   └── quick-deploy-sponsored.sh
+    │   ├── terraform-cleanup.sh
+    │   └── terraform-deploy.sh
     └── terraform
         ├── helm-values
         │   ├── neuron-values.yaml

@@ -83,8 +83,6 @@ This file tracks all version-pinned software components in this workshop for mai
 | `static/eks/genai/open-webui.yaml` | Open WebUI container image |
 | `static/eks/FSxONTAP/model-loading-job.yaml` | HuggingFace CLI image |
 | `static/download/install.sh` | Neuron Helm chart version, Trident operator version |
-| `static/download/vllm-mistral-7b-v03.yaml` | Legacy vLLM image (test/reference file) |
-| `static/eks/genai/mistral-fsxl.yaml` | Legacy vLLM image (pre-ONTAP migration) |
 
 ---
 
