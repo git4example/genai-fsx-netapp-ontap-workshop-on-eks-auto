@@ -34,7 +34,7 @@ This file tracks all version-pinned software components in this workshop for mai
 | Component | Image Tag | File | Notes |
 |---|---|---|---|
 | **vLLM Neuron** | `0.16.0-neuronx-py312-sdk2.29.0-ubuntu24.04` | `static/eks/genai/mistral-ontap.yaml` | ✅ Current (SDK 2.29) |
-| **Neuron Scheduler** | `2.29.94.0` | `static/terraform/helm-values/neuron-values.yaml` | ✅ Updated from 2.28.4.0 |
+| **Neuron Scheduler** | `2.29.148.0` | `static/terraform/helm-values/neuron-values.yaml` | ✅ Updated from 2.28.4.0 |
 | **kube-scheduler (EKS Distro)** | `v1.35.2-eks-1-35-8` | `static/terraform/helm-values/neuron-values.yaml` | ✅ Updated from v1.33.4-eks-1-33-13 |
 | **Neuron Monitor** | `1.9.0` | `static/eks/genai/observability/neuron-monitor.yaml` | ✅ Updated from 1.3.0 |
 | **Open WebUI** | `latest-slim` | `static/eks/genai/open-webui.yaml` | Unpinned (`latest` tag) |
@@ -57,7 +57,7 @@ This file tracks all version-pinned software components in this workshop for mai
 | EKS Data Addons | 1.37.2 | 1.38.0 | `static/terraform/main.tf` |
 | Neuron Helm Chart | 1.2.0 | 1.5.0 | `static/download/install.sh` |
 | Trident Operator | 100.2502.1 | 100.2602.0 | `static/download/install.sh` |
-| Neuron Scheduler | 2.28.4.0 | 2.29.94.0 | `static/terraform/helm-values/neuron-values.yaml` |
+| Neuron Scheduler | 2.28.4.0 | 2.29.148.0 | `static/terraform/helm-values/neuron-values.yaml` |
 | kube-scheduler (EKS Distro) | v1.33.4-eks-1-33-13 | v1.35.2-eks-1-35-8 | `static/terraform/helm-values/neuron-values.yaml` |
 | Neuron Monitor | 1.3.0 | 1.9.0 | `static/eks/genai/observability/neuron-monitor.yaml` |
 

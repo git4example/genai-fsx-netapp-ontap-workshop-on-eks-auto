@@ -2,7 +2,7 @@ scheduler:
   enabled: true
   image:
     repository: public.ecr.aws/neuron/neuron-scheduler
-    tag: "2.29.94.0"
+    tag: "2.29.148.0"
   customScheduler:
     image:
       repository: public.ecr.aws/eks-distro/kubernetes/kube-scheduler
