@@ -1075,10 +1075,23 @@ Resources:
           PolicyDocument:
             Version: 2012-10-17
             Statement:
-              # ---------- EKS lifecycle ----------
+              # ---------- EKS lifecycle + read ----------
               - Sid: EKSLifecycle
                 Effect: Allow
                 Action:
+                  - eks:DescribeCluster
+                  - eks:ListClusters
+                  - eks:DescribeAddon
+                  - eks:DescribeAddonVersions
+                  - eks:ListAddons
+                  - eks:DescribeNodegroup
+                  - eks:ListNodegroups
+                  - eks:DescribeFargateProfile
+                  - eks:ListFargateProfiles
+                  - eks:DescribeUpdate
+                  - eks:ListUpdates
+                  - eks:ListAccessEntries
+                  - eks:ListAssociatedAccessPolicies
                   - eks:CreateCluster
                   - eks:DeleteCluster
                   - eks:UpdateClusterConfig
@@ -1160,6 +1173,84 @@ Resources:
                       - spot.amazonaws.com
                       - spotfleet.amazonaws.com
                       - elasticloadbalancing.amazonaws.com
+              # ---------- IAM role lifecycle for eksctl-managed IRSA/nodegroup/cluster roles ----------
+              # Covers `eksctl create iamserviceaccount` flows (e.g., trident-controller,
+              # aws-load-balancer-controller) that require CreateRole + TagRole. Scoped to
+              # eksctl-* and workshop role name patterns.
+              - Sid: IAMRoleLifecycleForEksctl
+                Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:GetRole
+                  - iam:UpdateRole
+                  - iam:UpdateAssumeRolePolicy
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:ListRoleTags
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:GetRolePolicy
+                  - iam:ListRolePolicies
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:ListAttachedRolePolicies
+                Resource:
+                  - !Sub arn:${AWS::Partition}:iam::*:role/eksctl-*
+                  - !Sub arn:${AWS::Partition}:iam::*:role/trident-*
+                  - !Sub arn:${AWS::Partition}:iam::*:role/aws-load-balancer-controller*
+                  - !Sub arn:${AWS::Partition}:iam::*:role/AmazonEKS*
+                  - !Sub arn:${AWS::Partition}:iam::*:role/genaifsxworkshoponeks*
+              # ---------- IAM customer-managed policy lifecycle for workshop ----------
+              # Covers `aws iam create-policy` flows for Amazon_FSx_ONTAP_Trident_CSI_Driver,
+              # AWSLoadBalancerControllerIAMPolicy, and eksctl-generated policies.
+              - Sid: IAMPolicyLifecycleForWorkshop
+                Effect: Allow
+                Action:
+                  - iam:CreatePolicy
+                  - iam:DeletePolicy
+                  - iam:GetPolicy
+                  - iam:ListPolicies
+                  - iam:CreatePolicyVersion
+                  - iam:DeletePolicyVersion
+                  - iam:GetPolicyVersion
+                  - iam:ListPolicyVersions
+                  - iam:SetDefaultPolicyVersion
+                  - iam:TagPolicy
+                  - iam:UntagPolicy
+                Resource:
+                  - !Sub arn:${AWS::Partition}:iam::*:policy/Amazon_FSx_ONTAP_*
+                  - !Sub arn:${AWS::Partition}:iam::*:policy/AWSLoadBalancerControllerIAMPolicy*
+                  - !Sub arn:${AWS::Partition}:iam::*:policy/eksctl-*
+                  - !Sub arn:${AWS::Partition}:iam::*:policy/genaifsxworkshoponeks*
+                  - !Sub arn:${AWS::Partition}:iam::*:policy/AmazonEKS*
+              # ---------- Instance profile lifecycle for eksctl nodegroups ----------
+              - Sid: IAMInstanceProfileForEksctl
+                Effect: Allow
+                Action:
+                  - iam:CreateInstanceProfile
+                  - iam:DeleteInstanceProfile
+                  - iam:GetInstanceProfile
+                  - iam:AddRoleToInstanceProfile
+                  - iam:RemoveRoleFromInstanceProfile
+                  - iam:TagInstanceProfile
+                  - iam:UntagInstanceProfile
+                Resource:
+                  - !Sub arn:${AWS::Partition}:iam::*:instance-profile/eksctl-*
+              # ---------- OIDC provider management for eksctl IRSA setup ----------
+              - Sid: IAMOIDCProviderForEksctl
+                Effect: Allow
+                Action:
+                  - iam:CreateOpenIDConnectProvider
+                  - iam:DeleteOpenIDConnectProvider
+                  - iam:GetOpenIDConnectProvider
+                  - iam:ListOpenIDConnectProviders
+                  - iam:TagOpenIDConnectProvider
+                  - iam:UntagOpenIDConnectProvider
+                  - iam:UpdateOpenIDConnectProviderThumbprint
+                  - iam:AddClientIDToOpenIDConnectProvider
+                  - iam:RemoveClientIDFromOpenIDConnectProvider
+                Resource: '*'
               # ---------- CloudFormation lifecycle (scoped to workshop stacks) ----------
               - Sid: CloudFormationLifecycle
                 Effect: Allow
@@ -2316,7 +2407,7 @@ Resources:
                   aws s3 sync $ASSET_BUCKET/scripts /home/${VSCodeUser}/environment/scripts --delete
                   chown -R ${VSCodeUser}:${VSCodeUser} /home/${VSCodeUser}/environment
                   # aws s3 sync $ASSET_BUCKET/download /home/${VSCodeUser}/environment/download --delete
-                  # aws s3 sync $ASSET_BUCKET/scripts /home/${VSCodeUser}/environment/scripts --delete
+                  
 
           - action: aws:runShellScript
             name: Installs5cmd
@@ -2685,18 +2776,3 @@ Outputs:
   Password:
     Description: VSCode-Server Password
     Value: !GetAtt SecretPlaintext.password
-  FSxONTAPSecurityGroupId:
-    Description: Security Group ID for FSx for ONTAP NFS access
-    Value: !Ref FSxONTAPSecurityGroup
-  FSxONTAPSecurityGroupDescription:
-    Description: FSx for ONTAP security group allows NFS (TCP 2049) access
-    Value: !GetAtt FSxONTAPSecurityGroup.GroupId
-  CloudTrailArn:
-    Description: CloudTrail ARN for IAM Access Analyzer policy generation
-    Value: !GetAtt PolicyGenCloudTrail.Arn
-  AccessAnalyzerRoleArn:
-    Description: IAM role ARN for Access Analyzer to read CloudTrail S3 bucket
-    Value: !GetAtt AccessAnalyzerPolicyGenRole.Arn
-  VSCodeInstanceRoleArn:
-    Description: VSCode instance role ARN (target for policy generation)
-    Value: !GetAtt VSCodeInstanceRole.Arn

@@ -43,7 +43,7 @@ mountOptions:
 
 Key points about this StorageClass:
 - **provisioner**: `csi.trident.netapp.io` — tells Kubernetes to use the Trident CSI driver
-- **backendType**: `ontap-nas` — provisions NFS-based volumes on the ONTAP backend
+- **backendType**: `ontap-nas` — provisions NFS based volumes on the ONTAP backend
 - **provisioningType**: `thin` — uses thin provisioning so storage is allocated on demand
 - **snapshots**: `true` — enables snapshot support for volumes created by this class
 - **allowVolumeExpansion**: `true` — allows you to resize volumes after creation
@@ -89,7 +89,7 @@ spec:
 
 Key points about this PVC:
 - **name**: `ontap-model-claim` — this is the name that the vLLM deployment and model loading Job will reference
-- **accessModes**: `ReadWriteMany` — allows multiple pods to mount the volume concurrently (needed so both the model loading Job and the vLLM pod can access the data)
+- **accessModes**: `ReadWriteMany` — allows multiple pods to mount the volume concurrently, for example this allows both the model loading Job and the vLLM pod can access the data. In produciton, you may be running 100s of pods to mount on this volume.
 - **storageClassName**: `ontap-nas-sc` — references the StorageClass you just created, which tells Kubernetes to use Trident for provisioning
 - **storage**: `100Gi` — sufficient for the Mistral-7B model (~29 GiB compiled) with room for cache artifacts
 
@@ -124,7 +124,7 @@ As a final check, confirm that the Trident backend is still registered and healt
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=false}
 NAME               BACKEND NAME   BACKEND UUID                           PHASE   STATUS
-backend-ontap-nas  fsx-ontap-nas  12345678-abcd-efgh-ijkl-123456789abc   Bound   Success
+backend-ontap-nas  fsx-ontap-nas  6ca7c511-649b-4be4-a1eb-c8cdc5496ea9   Bound   Success
 :::
 
 ::::

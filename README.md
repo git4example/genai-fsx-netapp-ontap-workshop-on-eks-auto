@@ -75,7 +75,7 @@ In this workshop the **Mistral-7B-Instruct** model is stored in an Amazon S3 buc
 │   │   └── index.en.md
 │   ├── 100_module1_eks_fsxl
 │   │   ├── 110_DeployAmazonFSxLustreCSIDriverToEKS.md
-│   │   ├── 120_StaticProvisioning.md
+│   │   ├── 120_DynamicProvisioning.md
 │   │   ├── 123_ViewFSxConsole.md
 │   │   └── index.en.md
 │   ├── 200_module2_genai
@@ -180,7 +180,7 @@ Run the automated deployment script :
 
 ```bash
 # Download and run the deployment script
-curl -O https://raw.githubusercontent.com/git4example/genai-fsx-workshop-on-eks-auto/mainline/static/scripts/quick-deploy-on-demand.sh
+curl -O https://raw.githubusercontent.com/git4example/genai-fsx-netapp-ontap-workshop-on-eks-auto/mainline/static/scripts/quick-deploy-on-demand.sh
 chmod +x quick-deploy-on-demand.sh
 ./quick-deploy-on-demand.sh
 ```
@@ -265,7 +265,7 @@ When you're finished with the workshop, use the cleanup script to remove all res
 
 ```bash
 # Navigate to scripts directory (if not already there)
-cd genai-fsx-workshop-on-eks-auto/static/scripts
+cd genai-fsx-netapp-ontap-workshop-on-eks-auto/static/scripts
 
 # Run cleanup script
 ./cleanup-on-demand.sh

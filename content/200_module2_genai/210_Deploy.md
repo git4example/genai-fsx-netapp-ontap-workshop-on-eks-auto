@@ -7,9 +7,9 @@ weight : 210
 
 In this section you will configure the AWS Inferentia nodepool on the EKS cluster, install the AWS Neuron plugins, and then deploy the vLLM inference engine Pod.
 
-##### Step 1: Install Neuron Device Plugin & Neuron Scheduler
+##### Step 1: Install Neuron Device Plugin, Scheduler & Node Problem Detector
 
-In order to use the AWS Inferentia accelerated compute nodes with the Mistral LLM, we need to install the Neuron Device Plugin, Neuron Scheduler, and Node Problem Detector on the EKS Cluster using helm chart. Click on this link to learn more about the [AWS Neuron Helm Chart](https://aws.amazon.com/blogs/containers/announcing-aws-neuron-helm-chart/).
+In order to use the AWS Inferentia accelerated compute nodes with the Mistral LLM, we need to install the Neuron Device Plugin, Neuron Scheduler, and Neuron Node Problem Detector & Recovery on the EKS Cluster using a helm chart. Click on this link to learn more about the [AWS Neuron Helm Chart](https://aws.amazon.com/blogs/containers/announcing-aws-neuron-helm-chart/).
 
 1. Copy & paste the below command into your terminal to install the neuron helm chart.
 
@@ -50,11 +50,13 @@ The Neuron scheduler extension is required for scheduling pods that require more
 
 For more information on this, please refer [Neuron Scheduler Extension](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/containers/kubernetes-getting-started.html#neuron-scheduler-extension)
 
-###### Node Problem Detector
+###### Neuron Node Problem Detector and Recovery
 
-The Neuron Problem Detector Plugin facilitates error detection and recovery by continuously monitoring the health of Neuron devices across all Kubernetes nodes, and publishes CloudWatch metrics for errors.
+This component combines a Neuron-specific Node Problem Detector (NPD) with a Node Recovery controller. NPD watches kernel logs on each Neuron node for hardware errors (uncorrectable SRAM, HBM, and NeuronCore errors, as well as DMA errors) and surfaces them as Kubernetes node conditions. Node Recovery (enabled in this workshop via `npd.nodeRecovery.enabled`) reacts to those conditions by cordoning and replacing unhealthy nodes so that workloads reschedule onto healthy Neuron hardware.
 
-For more information on this, please refer [Neuron Problem Detector Plugin](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/containers/kubernetes-getting-started.html#neuron-scheduler-extension)
+CloudWatch metrics for Neuron hardware utilization and errors are published by a separate component, the **Neuron Monitor**, which you will install in Module 3.
+
+For more information on this, please refer to the [Neuron Node Problem Detector and Recovery](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/containers/tutorials/k8s-neuron-problem-detector-and-recovery.html) documentation.
 
 #####  Step 2: Create EKS Auto Mode NodePool and EC2 NodeClass for AWS Inferentia Accelerators
 
@@ -95,7 +97,9 @@ nodeclass.eks.amazonaws.com/inferentia   eksworkshop-eks-auto-202501030632263297
 ##### Step 3: Load the Mistral-7B Model onto the FSx for ONTAP Volume
 
 :::alert{header="Important — Why is this step needed?" type="info"}
-Unlike FSx for Lustre, which can transparently import data from an S3 bucket on first access, **FSx for NetApp ONTAP does not have native S3 data repository integration**. This means the model data must be explicitly downloaded and written to the ONTAP-backed persistent volume before the vLLM inference pod can use it. We accomplish this using a Kubernetes Job that downloads a **pre-compiled** Mistral-7B-Instruct-v0.3 model (with Neuron compiled artifacts) from HuggingFace directly onto the PVC. Using pre-compiled artifacts means vLLM can skip the Neuron compilation step and start serving immediately.
+FSx for NetApp ONTAP is a fully-featured enterprise file system that supports NFS, SMB, and iSCSI, with features like snapshots, clones, SnapMirror replication, data compression, and deduplication. In this workshop we use it as a high-performance shared volume for model data — the same volume can be mounted `ReadWriteMany` across pods, enabling both the model loading Job and the vLLM inference pod to share a single copy of the model.
+
+Because the model data lives on a persistent volume (rather than being baked into the container image or streamed on demand), we stage it onto the ONTAP-backed PVC once using a Kubernetes Job that downloads a **pre-compiled** Mistral-7B-Instruct-v0.3 model (with Neuron compiled artifacts) from HuggingFace directly onto the PVC. Using pre-compiled artifacts means vLLM can skip the Neuron compilation step and start serving immediately.
 
 This is a **one-time operation**. Once the model data is on the FSx for ONTAP volume, it persists across pod restarts and redeployments. If the vLLM pod is deleted and recreated, it will load the model directly from the volume without needing to download it again. This is one of the key benefits of using persistent storage like FSx for ONTAP for inference workloads — the model is loaded once and reused by any pod that mounts the same volume.
 :::
@@ -110,7 +114,7 @@ kubectl apply -f model-loading-job.yaml
 2. The model download will take several minutes depending on network speed. Wait for the Job to complete by running the following command. This will block until the Job finishes successfully (or time out after 30 minutes).
 
 :::alert{header="Expected time" type="info"}
-The pre-compiled Mistral-7B model is approximately 29 GB. The download typically completes in **4–6 minutes**. You can monitor progress with `kubectl logs job/model-download -f`.
+The pre-compiled Mistral-7B model is approximately 29 GB. The download typically completes in **4–6 minutes**.
 :::
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
@@ -121,6 +125,16 @@ You should see an output similar to:
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
 job.batch/model-download condition met
+:::
+
+:::alert{header="Tip — Watch download progress" type="info"}
+The `kubectl wait` command above blocks silently until the Job completes. If you'd prefer to watch live progress (HuggingFace download percentages, file transfer status, etc.), open a **second terminal** and tail the Job's pod logs:
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+kubectl logs -f job/model-download
+:::
+
+The log stream will end when the download finishes, at which point the `kubectl wait` command in your first terminal will also return.
 :::
 
 :::alert{header="Note" type="info"}

@@ -1,6 +1,5 @@
 {
-  "_comment": "Merged workshop IAM policy. Option 1 (Access-Analyzer-derived, augmented) + Option 3 (baseline AWS managed policies). Apply this inline policy ON TOP of the managed policies listed in managedPolicyArns below. See static/GenAIFSXWorkshopOnEKS.yaml VSCodeInstanceRole for the live definition.",
-  "managedPolicyArns": [
+    "managedPolicyArns": [
     "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
     "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",
     "arn:aws:iam::aws:policy/AmazonQDeveloperAccess",
@@ -16,6 +15,19 @@
         "Sid": "EKSLifecycle",
         "Effect": "Allow",
         "Action": [
+          "eks:DescribeCluster",
+          "eks:ListClusters",
+          "eks:DescribeAddon",
+          "eks:DescribeAddonVersions",
+          "eks:ListAddons",
+          "eks:DescribeNodegroup",
+          "eks:ListNodegroups",
+          "eks:DescribeFargateProfile",
+          "eks:ListFargateProfiles",
+          "eks:DescribeUpdate",
+          "eks:ListUpdates",
+          "eks:ListAccessEntries",
+          "eks:ListAssociatedAccessPolicies",
           "eks:CreateCluster",
           "eks:DeleteCluster",
           "eks:UpdateClusterConfig",
@@ -108,6 +120,91 @@
             ]
           }
         }
+      },
+      {        
+        "Sid": "IAMRoleLifecycleForEksctl",
+        "Effect": "Allow",
+        "Action": [
+          "iam:CreateRole",
+          "iam:DeleteRole",
+          "iam:GetRole",
+          "iam:UpdateRole",
+          "iam:UpdateAssumeRolePolicy",
+          "iam:TagRole",
+          "iam:UntagRole",
+          "iam:ListRoleTags",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy",
+          "iam:GetRolePolicy",
+          "iam:ListRolePolicies",
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy",
+          "iam:ListAttachedRolePolicies"
+        ],
+        "Resource": [
+          "arn:aws:iam::*:role/eksctl-*",
+          "arn:aws:iam::*:role/trident-*",
+          "arn:aws:iam::*:role/aws-load-balancer-controller*",
+          "arn:aws:iam::*:role/AmazonEKS*",
+          "arn:aws:iam::*:role/genaifsxworkshoponeks*"
+        ]
+      },
+      {        
+        "Sid": "IAMPolicyLifecycleForWorkshop",
+        "Effect": "Allow",
+        "Action": [
+          "iam:CreatePolicy",
+          "iam:DeletePolicy",
+          "iam:GetPolicy",
+          "iam:ListPolicies",
+          "iam:CreatePolicyVersion",
+          "iam:DeletePolicyVersion",
+          "iam:GetPolicyVersion",
+          "iam:ListPolicyVersions",
+          "iam:SetDefaultPolicyVersion",
+          "iam:TagPolicy",
+          "iam:UntagPolicy"
+        ],
+        "Resource": [
+          "arn:aws:iam::*:policy/Amazon_FSx_ONTAP_*",
+          "arn:aws:iam::*:policy/AWSLoadBalancerControllerIAMPolicy*",
+          "arn:aws:iam::*:policy/eksctl-*",
+          "arn:aws:iam::*:policy/genaifsxworkshoponeks*",
+          "arn:aws:iam::*:policy/AmazonEKS*"
+        ]
+      },
+      {
+        
+        "Sid": "IAMInstanceProfileForEksctl",
+        "Effect": "Allow",
+        "Action": [
+          "iam:CreateInstanceProfile",
+          "iam:DeleteInstanceProfile",
+          "iam:GetInstanceProfile",
+          "iam:AddRoleToInstanceProfile",
+          "iam:RemoveRoleFromInstanceProfile",
+          "iam:TagInstanceProfile",
+          "iam:UntagInstanceProfile"
+        ],
+        "Resource": [
+          "arn:aws:iam::*:instance-profile/eksctl-*"
+        ]
+      },
+      {        
+        "Sid": "IAMOIDCProviderForEksctl",
+        "Effect": "Allow",
+        "Action": [
+          "iam:CreateOpenIDConnectProvider",
+          "iam:DeleteOpenIDConnectProvider",
+          "iam:GetOpenIDConnectProvider",
+          "iam:ListOpenIDConnectProviders",
+          "iam:TagOpenIDConnectProvider",
+          "iam:UntagOpenIDConnectProvider",
+          "iam:UpdateOpenIDConnectProviderThumbprint",
+          "iam:AddClientIDToOpenIDConnectProvider",
+          "iam:RemoveClientIDFromOpenIDConnectProvider"
+        ],
+        "Resource": "*"
       },
       {
         "Sid": "CloudFormationLifecycle",
