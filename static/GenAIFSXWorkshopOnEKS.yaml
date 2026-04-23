@@ -1058,38 +1058,277 @@ Resources:
             Action:
               - sts:AssumeRole
       ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
+        # Baseline managed policies (scoped per-service). Kept as a safety
+        # net so the workshop is resilient to new AWS API requirements over
+        # time. The WorkshopLeastPrivilege inline policy below narrows and
+        # augments these with resource-scoped statements derived from
+        # IAM Access Analyzer policy generation.
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonQDeveloperAccess
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/ReadOnlyAccess
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonVPCFullAccess
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/IAMFullAccess
       Policies:
-        - PolicyName: FSxONTAPOperations
+        - PolicyName: WorkshopLeastPrivilege
           PolicyDocument:
             Version: 2012-10-17
             Statement:
-              - Effect: Allow
+              # ---------- EKS lifecycle ----------
+              - Sid: EKSLifecycle
+                Effect: Allow
                 Action:
-                  - fsx:DescribeFileSystems
-                  - fsx:DescribeVolumes
-                  - fsx:DescribeStorageVirtualMachines
-                  - fsx:CreateVolume
-                  - fsx:DeleteVolume
-                  - fsx:UpdateVolume
-                  - fsx:TagResource
-                  - fsx:UntagResource
-                  - fsx:CreateStorageVirtualMachine
+                  - eks:CreateCluster
+                  - eks:DeleteCluster
+                  - eks:UpdateClusterConfig
+                  - eks:UpdateClusterVersion
+                  - eks:CreateNodegroup
+                  - eks:DeleteNodegroup
+                  - eks:UpdateNodegroupConfig
+                  - eks:UpdateNodegroupVersion
+                  - eks:CreateFargateProfile
+                  - eks:DeleteFargateProfile
+                  - eks:CreateAddon
+                  - eks:DeleteAddon
+                  - eks:UpdateAddon
+                  - eks:CreateAccessEntry
+                  - eks:DeleteAccessEntry
+                  - eks:UpdateAccessEntry
+                  - eks:DescribeAccessEntry
+                  - eks:AssociateAccessPolicy
+                  - eks:DisassociateAccessPolicy
+                  - eks:TagResource
+                  - eks:UntagResource
+                  - eks:AssociateIdentityProviderConfig
+                  - eks:DisassociateIdentityProviderConfig
+                Resource: '*'
+              # ---------- FSx for ONTAP lifecycle ----------
+              - Sid: FSxONTAPLifecycle
+                Effect: Allow
+                Action:
                   - fsx:CreateFileSystem
                   - fsx:DeleteFileSystem
                   - fsx:UpdateFileSystem
+                  - fsx:CreateStorageVirtualMachine
+                  - fsx:DeleteStorageVirtualMachine
+                  - fsx:UpdateStorageVirtualMachine
+                  - fsx:CreateVolume
+                  - fsx:DeleteVolume
+                  - fsx:UpdateVolume
+                  - fsx:CreateSnapshot
+                  - fsx:DeleteSnapshot
+                  - fsx:DescribeFileSystems
+                  - fsx:DescribeStorageVirtualMachines
+                  - fsx:DescribeVolumes
+                  - fsx:DescribeSnapshots
+                  - fsx:DescribeBackups
+                  - fsx:ListTagsForResource
+                  - fsx:TagResource
+                  - fsx:UntagResource
                 Resource: '*'
-              - Effect: Allow
-                Action:
-                  - iam:CreateServiceLinkedRole
+              # ---------- IAM PassRole (scoped to workshop services) ----------
+              - Sid: IAMPassRoleScoped
+                Effect: Allow
+                Action: iam:PassRole
                 Resource: '*'
                 Condition:
-                  StringLike:
-                    iam:AWSServiceName: fsx.amazonaws.com
-              - Effect: Allow
+                  StringEquals:
+                    iam:PassedToService:
+                      - ec2.amazonaws.com
+                      - eks.amazonaws.com
+                      - eks-nodegroup.amazonaws.com
+                      - eks-fargate-pods.amazonaws.com
+                      - fsx.amazonaws.com
+                      - lambda.amazonaws.com
+                      - ssm.amazonaws.com
+                      - application-autoscaling.amazonaws.com
+              # ---------- Service-linked roles for workshop services ----------
+              - Sid: IAMServiceLinkedRoles
+                Effect: Allow
+                Action: iam:CreateServiceLinkedRole
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    iam:AWSServiceName:
+                      - eks.amazonaws.com
+                      - eks-nodegroup.amazonaws.com
+                      - eks-fargate.amazonaws.com
+                      - fsx.amazonaws.com
+                      - s3.data-source.lustre.fsx.amazonaws.com
+                      - autoscaling.amazonaws.com
+                      - spot.amazonaws.com
+                      - spotfleet.amazonaws.com
+                      - elasticloadbalancing.amazonaws.com
+              # ---------- CloudFormation lifecycle (scoped to workshop stacks) ----------
+              - Sid: CloudFormationLifecycle
+                Effect: Allow
                 Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:ListStacks
+                  - cloudformation:ListStackResources
+                  - cloudformation:GetTemplate
+                  - cloudformation:GetTemplateSummary
+                  - cloudformation:ValidateTemplate
+                  - cloudformation:TagResource
+                  - cloudformation:UntagResource
+                Resource:
+                  - !Sub arn:${AWS::Partition}:cloudformation:*:*:stack/eksctl-*
+                  - !Sub arn:${AWS::Partition}:cloudformation:*:*:stack/genaifsxworkshoponeks*
+                  - !Sub arn:${AWS::Partition}:cloudformation:*:*:stack/CDKToolkit/*
+              # ---------- KMS lifecycle for workshop encryption ----------
+              - Sid: KMSLifecycle
+                Effect: Allow
+                Action:
+                  - kms:CreateKey
+                  - kms:CreateAlias
+                  - kms:DeleteAlias
+                  - kms:UpdateAlias
+                  - kms:ScheduleKeyDeletion
+                  - kms:CancelKeyDeletion
+                  - kms:EnableKeyRotation
+                  - kms:DisableKeyRotation
+                  - kms:PutKeyPolicy
+                  - kms:GetKeyPolicy
+                  - kms:GetKeyRotationStatus
+                  - kms:DescribeKey
+                  - kms:ListAliases
+                  - kms:ListKeys
+                  - kms:ListResourceTags
+                  - kms:TagResource
+                  - kms:UntagResource
+                  - kms:CreateGrant
+                  - kms:RetireGrant
+                  - kms:RevokeGrant
+                  - kms:Encrypt
+                  - kms:Decrypt
+                  - kms:GenerateDataKey
+                  - kms:GenerateDataKeyWithoutPlaintext
+                  - kms:ReEncryptFrom
+                  - kms:ReEncryptTo
+                Resource: '*'
+              # ---------- Secrets Manager (scoped to workshop secret prefixes) ----------
+              - Sid: SecretsManagerLifecycle
+                Effect: Allow
+                Action:
+                  - secretsmanager:CreateSecret
+                  - secretsmanager:DeleteSecret
+                  - secretsmanager:UpdateSecret
+                  - secretsmanager:PutSecretValue
                   - secretsmanager:GetSecretValue
-                Resource: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:trident-fsx-*
+                  - secretsmanager:DescribeSecret
+                  - secretsmanager:GetResourcePolicy
+                  - secretsmanager:TagResource
+                  - secretsmanager:UntagResource
+                  - secretsmanager:RestoreSecret
+                Resource:
+                  - !Sub arn:${AWS::Partition}:secretsmanager:*:*:secret:trident-fsx-*
+                  - !Sub arn:${AWS::Partition}:secretsmanager:*:*:secret:vscode-*
+                  - !Sub arn:${AWS::Partition}:secretsmanager:*:*:secret:eks-*
+              - Sid: SecretsManagerDiscovery
+                Effect: Allow
+                Action: secretsmanager:ListSecrets
+                Resource: '*'
+              # ---------- CloudWatch Logs lifecycle ----------
+              - Sid: CloudWatchLogsLifecycle
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DeleteLogGroup
+                  - logs:CreateLogStream
+                  - logs:DeleteLogStream
+                  - logs:PutLogEvents
+                  - logs:PutRetentionPolicy
+                  - logs:DeleteRetentionPolicy
+                  - logs:AssociateKmsKey
+                  - logs:DisassociateKmsKey
+                  - logs:TagResource
+                  - logs:UntagResource
+                Resource: !Sub arn:${AWS::Partition}:logs:*:*:log-group:*
+              # ---------- S3 (scoped to workshop bucket prefixes) ----------
+              - Sid: S3WorkshopAssets
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                  - s3:GetBucketVersioning
+                  - s3:GetBucketPolicy
+                  - s3:GetEncryptionConfiguration
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:DeleteObjectVersion
+                  - s3:AbortMultipartUpload
+                  - s3:ListMultipartUploadParts
+                  - s3:ListBucketMultipartUploads
+                Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::cloudtrail-policy-gen-*
+                  - !Sub arn:${AWS::Partition}:s3:::cloudtrail-policy-gen-*/*
+                  - !Sub arn:${AWS::Partition}:s3:::*workshop*
+                  - !Sub arn:${AWS::Partition}:s3:::*workshop*/*
+                  - !Sub arn:${AWS::Partition}:s3:::eksworkshop*
+                  - !Sub arn:${AWS::Partition}:s3:::eksworkshop*/*
+                  - !Sub arn:${AWS::Partition}:s3:::genai*
+                  - !Sub arn:${AWS::Partition}:s3:::genai*/*
+                  - !Sub arn:${AWS::Partition}:s3:::ws-assets-prod-*
+                  - !Sub arn:${AWS::Partition}:s3:::ws-assets-prod-*/*
+              - Sid: S3BucketDiscovery
+                Effect: Allow
+                Action: s3:ListAllMyBuckets
+                Resource: '*'
+              # ---------- Elastic Load Balancing (AWS LB Controller + Open WebUI) ----------
+              - Sid: ELBLifecycle
+                Effect: Allow
+                Action:
+                  - elasticloadbalancing:CreateLoadBalancer
+                  - elasticloadbalancing:DeleteLoadBalancer
+                  - elasticloadbalancing:ModifyLoadBalancerAttributes
+                  - elasticloadbalancing:CreateTargetGroup
+                  - elasticloadbalancing:DeleteTargetGroup
+                  - elasticloadbalancing:ModifyTargetGroup
+                  - elasticloadbalancing:RegisterTargets
+                  - elasticloadbalancing:DeregisterTargets
+                  - elasticloadbalancing:CreateListener
+                  - elasticloadbalancing:DeleteListener
+                  - elasticloadbalancing:ModifyListener
+                  - elasticloadbalancing:AddTags
+                  - elasticloadbalancing:RemoveTags
+                  - elasticloadbalancing:Describe*
+                Resource: '*'
+              # ---------- ECR Public (Neuron helm chart, base images) ----------
+              - Sid: ECRPublicRead
+                Effect: Allow
+                Action:
+                  - ecr-public:GetAuthorizationToken
+                  - ecr-public:DescribeRepositories
+                  - ecr-public:GetRepositoryPolicy
+                  - ecr-public:ListTagsForResource
+                  - ecr-public:DescribeImages
+                  - ecr-public:DescribeImageTags
+                  - ecr-public:BatchCheckLayerAvailability
+                  - ecr-public:GetRepositoryCatalogData
+                  - ecr-public:GetRegistryCatalogData
+                  - sts:GetServiceBearerToken
+                Resource: '*'
+              # ---------- STS (IRSA, eksctl) ----------
+              - Sid: STSAssume
+                Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                  - sts:AssumeRoleWithWebIdentity
+                  - sts:TagSession
+                  - sts:GetCallerIdentity
+                Resource: '*'
 
   VSCodeInstanceProfile:
     Type: AWS::IAM::InstanceProfile

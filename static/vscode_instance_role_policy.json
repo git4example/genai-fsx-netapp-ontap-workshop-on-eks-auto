@@ -1,0 +1,306 @@
+{
+  "_comment": "Merged workshop IAM policy. Option 1 (Access-Analyzer-derived, augmented) + Option 3 (baseline AWS managed policies). Apply this inline policy ON TOP of the managed policies listed in managedPolicyArns below. See static/GenAIFSXWorkshopOnEKS.yaml VSCodeInstanceRole for the live definition.",
+  "managedPolicyArns": [
+    "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+    "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",
+    "arn:aws:iam::aws:policy/AmazonQDeveloperAccess",
+    "arn:aws:iam::aws:policy/ReadOnlyAccess",
+    "arn:aws:iam::aws:policy/AmazonVPCFullAccess",
+    "arn:aws:iam::aws:policy/AmazonEC2FullAccess",
+    "arn:aws:iam::aws:policy/IAMFullAccess"
+  ],
+  "inlinePolicy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "EKSLifecycle",
+        "Effect": "Allow",
+        "Action": [
+          "eks:CreateCluster",
+          "eks:DeleteCluster",
+          "eks:UpdateClusterConfig",
+          "eks:UpdateClusterVersion",
+          "eks:CreateNodegroup",
+          "eks:DeleteNodegroup",
+          "eks:UpdateNodegroupConfig",
+          "eks:UpdateNodegroupVersion",
+          "eks:CreateFargateProfile",
+          "eks:DeleteFargateProfile",
+          "eks:CreateAddon",
+          "eks:DeleteAddon",
+          "eks:UpdateAddon",
+          "eks:CreateAccessEntry",
+          "eks:DeleteAccessEntry",
+          "eks:UpdateAccessEntry",
+          "eks:DescribeAccessEntry",
+          "eks:AssociateAccessPolicy",
+          "eks:DisassociateAccessPolicy",
+          "eks:TagResource",
+          "eks:UntagResource",
+          "eks:AssociateIdentityProviderConfig",
+          "eks:DisassociateIdentityProviderConfig"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "FSxONTAPLifecycle",
+        "Effect": "Allow",
+        "Action": [
+          "fsx:CreateFileSystem",
+          "fsx:DeleteFileSystem",
+          "fsx:UpdateFileSystem",
+          "fsx:CreateStorageVirtualMachine",
+          "fsx:DeleteStorageVirtualMachine",
+          "fsx:UpdateStorageVirtualMachine",
+          "fsx:CreateVolume",
+          "fsx:DeleteVolume",
+          "fsx:UpdateVolume",
+          "fsx:CreateSnapshot",
+          "fsx:DeleteSnapshot",
+          "fsx:DescribeFileSystems",
+          "fsx:DescribeStorageVirtualMachines",
+          "fsx:DescribeVolumes",
+          "fsx:DescribeSnapshots",
+          "fsx:DescribeBackups",
+          "fsx:ListTagsForResource",
+          "fsx:TagResource",
+          "fsx:UntagResource"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "IAMPassRoleScoped",
+        "Effect": "Allow",
+        "Action": "iam:PassRole",
+        "Resource": "*",
+        "Condition": {
+          "StringEquals": {
+            "iam:PassedToService": [
+              "ec2.amazonaws.com",
+              "eks.amazonaws.com",
+              "eks-nodegroup.amazonaws.com",
+              "eks-fargate-pods.amazonaws.com",
+              "fsx.amazonaws.com",
+              "lambda.amazonaws.com",
+              "ssm.amazonaws.com",
+              "application-autoscaling.amazonaws.com"
+            ]
+          }
+        }
+      },
+      {
+        "Sid": "IAMServiceLinkedRoles",
+        "Effect": "Allow",
+        "Action": "iam:CreateServiceLinkedRole",
+        "Resource": "*",
+        "Condition": {
+          "StringEquals": {
+            "iam:AWSServiceName": [
+              "eks.amazonaws.com",
+              "eks-nodegroup.amazonaws.com",
+              "eks-fargate.amazonaws.com",
+              "fsx.amazonaws.com",
+              "s3.data-source.lustre.fsx.amazonaws.com",
+              "autoscaling.amazonaws.com",
+              "spot.amazonaws.com",
+              "spotfleet.amazonaws.com",
+              "elasticloadbalancing.amazonaws.com"
+            ]
+          }
+        }
+      },
+      {
+        "Sid": "CloudFormationLifecycle",
+        "Effect": "Allow",
+        "Action": [
+          "cloudformation:CreateStack",
+          "cloudformation:UpdateStack",
+          "cloudformation:DeleteStack",
+          "cloudformation:CreateChangeSet",
+          "cloudformation:ExecuteChangeSet",
+          "cloudformation:DescribeChangeSet",
+          "cloudformation:DeleteChangeSet",
+          "cloudformation:DescribeStacks",
+          "cloudformation:DescribeStackEvents",
+          "cloudformation:DescribeStackResources",
+          "cloudformation:ListStacks",
+          "cloudformation:ListStackResources",
+          "cloudformation:GetTemplate",
+          "cloudformation:GetTemplateSummary",
+          "cloudformation:ValidateTemplate",
+          "cloudformation:TagResource",
+          "cloudformation:UntagResource"
+        ],
+        "Resource": [
+          "arn:aws:cloudformation:*:*:stack/eksctl-*",
+          "arn:aws:cloudformation:*:*:stack/genaifsxworkshoponeks*",
+          "arn:aws:cloudformation:*:*:stack/CDKToolkit/*"
+        ]
+      },
+      {
+        "Sid": "KMSLifecycle",
+        "Effect": "Allow",
+        "Action": [
+          "kms:CreateKey",
+          "kms:CreateAlias",
+          "kms:DeleteAlias",
+          "kms:UpdateAlias",
+          "kms:ScheduleKeyDeletion",
+          "kms:CancelKeyDeletion",
+          "kms:EnableKeyRotation",
+          "kms:DisableKeyRotation",
+          "kms:PutKeyPolicy",
+          "kms:GetKeyPolicy",
+          "kms:GetKeyRotationStatus",
+          "kms:DescribeKey",
+          "kms:ListAliases",
+          "kms:ListKeys",
+          "kms:ListResourceTags",
+          "kms:TagResource",
+          "kms:UntagResource",
+          "kms:CreateGrant",
+          "kms:RetireGrant",
+          "kms:RevokeGrant",
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:GenerateDataKeyWithoutPlaintext",
+          "kms:ReEncryptFrom",
+          "kms:ReEncryptTo"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "SecretsManagerLifecycle",
+        "Effect": "Allow",
+        "Action": [
+          "secretsmanager:CreateSecret",
+          "secretsmanager:DeleteSecret",
+          "secretsmanager:UpdateSecret",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret",
+          "secretsmanager:GetResourcePolicy",
+          "secretsmanager:TagResource",
+          "secretsmanager:UntagResource",
+          "secretsmanager:RestoreSecret"
+        ],
+        "Resource": [
+          "arn:aws:secretsmanager:*:*:secret:trident-fsx-*",
+          "arn:aws:secretsmanager:*:*:secret:vscode-*",
+          "arn:aws:secretsmanager:*:*:secret:eks-*"
+        ]
+      },
+      {
+        "Sid": "SecretsManagerDiscovery",
+        "Effect": "Allow",
+        "Action": "secretsmanager:ListSecrets",
+        "Resource": "*"
+      },
+      {
+        "Sid": "CloudWatchLogsLifecycle",
+        "Effect": "Allow",
+        "Action": [
+          "logs:CreateLogGroup",
+          "logs:DeleteLogGroup",
+          "logs:CreateLogStream",
+          "logs:DeleteLogStream",
+          "logs:PutLogEvents",
+          "logs:PutRetentionPolicy",
+          "logs:DeleteRetentionPolicy",
+          "logs:AssociateKmsKey",
+          "logs:DisassociateKmsKey",
+          "logs:TagResource",
+          "logs:UntagResource"
+        ],
+        "Resource": "arn:aws:logs:*:*:log-group:*"
+      },
+      {
+        "Sid": "S3WorkshopAssets",
+        "Effect": "Allow",
+        "Action": [
+          "s3:ListBucket",
+          "s3:GetBucketLocation",
+          "s3:GetBucketVersioning",
+          "s3:GetBucketPolicy",
+          "s3:GetEncryptionConfiguration",
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:DeleteObjectVersion",
+          "s3:AbortMultipartUpload",
+          "s3:ListMultipartUploadParts",
+          "s3:ListBucketMultipartUploads"
+        ],
+        "Resource": [
+          "arn:aws:s3:::cloudtrail-policy-gen-*",
+          "arn:aws:s3:::cloudtrail-policy-gen-*/*",
+          "arn:aws:s3:::*workshop*",
+          "arn:aws:s3:::*workshop*/*",
+          "arn:aws:s3:::eksworkshop*",
+          "arn:aws:s3:::eksworkshop*/*",
+          "arn:aws:s3:::genai*",
+          "arn:aws:s3:::genai*/*",
+          "arn:aws:s3:::ws-assets-prod-*",
+          "arn:aws:s3:::ws-assets-prod-*/*"
+        ]
+      },
+      {
+        "Sid": "S3BucketDiscovery",
+        "Effect": "Allow",
+        "Action": "s3:ListAllMyBuckets",
+        "Resource": "*"
+      },
+      {
+        "Sid": "ELBLifecycle",
+        "Effect": "Allow",
+        "Action": [
+          "elasticloadbalancing:CreateLoadBalancer",
+          "elasticloadbalancing:DeleteLoadBalancer",
+          "elasticloadbalancing:ModifyLoadBalancerAttributes",
+          "elasticloadbalancing:CreateTargetGroup",
+          "elasticloadbalancing:DeleteTargetGroup",
+          "elasticloadbalancing:ModifyTargetGroup",
+          "elasticloadbalancing:RegisterTargets",
+          "elasticloadbalancing:DeregisterTargets",
+          "elasticloadbalancing:CreateListener",
+          "elasticloadbalancing:DeleteListener",
+          "elasticloadbalancing:ModifyListener",
+          "elasticloadbalancing:AddTags",
+          "elasticloadbalancing:RemoveTags",
+          "elasticloadbalancing:Describe*"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "ECRPublicRead",
+        "Effect": "Allow",
+        "Action": [
+          "ecr-public:GetAuthorizationToken",
+          "ecr-public:DescribeRepositories",
+          "ecr-public:GetRepositoryPolicy",
+          "ecr-public:ListTagsForResource",
+          "ecr-public:DescribeImages",
+          "ecr-public:DescribeImageTags",
+          "ecr-public:BatchCheckLayerAvailability",
+          "ecr-public:GetRepositoryCatalogData",
+          "ecr-public:GetRegistryCatalogData",
+          "sts:GetServiceBearerToken"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "STSAssume",
+        "Effect": "Allow",
+        "Action": [
+          "sts:AssumeRole",
+          "sts:AssumeRoleWithWebIdentity",
+          "sts:TagSession",
+          "sts:GetCallerIdentity"
+        ],
+        "Resource": "*"
+      }
+    ]
+  }
+}
