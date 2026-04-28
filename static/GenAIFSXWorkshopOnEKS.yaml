@@ -64,13 +64,13 @@ Parameters:
   KubectlVersion:
     Description: kubectl version to be installed on VSCode IDE instance. Ref - https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
     Type: String
-    Default: 1.35.0
+    Default: 1.35.3
     ConstraintDescription: Must be a valid kubectl version
 
   KubectlDate:
     Description: kubectl version release date to be used. Ref - https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
     Type: String
-    Default: "2025-05-01"
+    Default: "2026-04-08"
     ConstraintDescription: Must be a valid date 
 
   NodeViewerVersion:
