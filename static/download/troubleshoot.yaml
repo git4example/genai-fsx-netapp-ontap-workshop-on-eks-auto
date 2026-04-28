@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: netshoot
+spec:
+  containers:
+  - name: netshoot
+    image: nicolaka/netshoot
+    command: ["sh", "-c", "sleep infinity"]
+    volumeMounts:
+    - name: persistent-storage
+      mountPath: /work-dir
+  - name: hf-cli
+    image: public.ecr.aws/parikshit/huggingface-cli:slim
+    command: ["sh", "-c", "sleep infinity"]
+    env:
+    - name: HF_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: hf-token
+          key: token
+          optional: true
+    volumeMounts:
+    - name: persistent-storage
+      mountPath: /work-dir
+  - name: s5cmd
+    image: public.ecr.aws/parikshit/s5cmd
+    command: ["sh", "-c", "sleep infinity"]
+    volumeMounts:
+      - name: persistent-storage
+        mountPath: /work-dir
+  volumes:
+  - name: persistent-storage
+    persistentVolumeClaim:
+      claimName: ontap-model-claim
+  restartPolicy: Never
+  tolerations:
+  - key: aws.amazon.com/neuron
+    operator: Exists
+    effect: NoSchedule

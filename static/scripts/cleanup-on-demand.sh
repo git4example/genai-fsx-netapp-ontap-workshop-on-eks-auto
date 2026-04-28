@@ -287,33 +287,30 @@ main() {
     if [[ -n "$ASSET_BUCKET" ]]; then
         if check_bucket_exists "$ASSET_BUCKET"; then
             log_info "Found S3 bucket: ${ASSET_BUCKET}"
-            
-            # Check for workshop-specific content
+
+            # Check for workshop-specific content.
+            # Note: The Mistral model is no longer staged in S3 — it is pulled
+            # directly from HuggingFace by a Kubernetes Job into FSx ONTAP.
+            # Only the workshop asset folder (terraform/, eks/, scripts/) is
+            # synced to S3 for the VSCode instance bootstrap.
             log_info "Checking for workshop content in bucket..."
-            
+
             WORKSHOP_FOLDER_EXISTS=false
-            MISTRAL_MODEL_EXISTS=false
-            
+
             # Check for workshop folder
-            if aws s3 ls s3://${ASSET_BUCKET}/genai-fsx-workshop-on-eks-auto/ &>/dev/null; then
+            if aws s3 ls s3://${ASSET_BUCKET}/genai-fsx-netapp-ontap-workshop-on-eks-auto/ &>/dev/null; then
                 WORKSHOP_FOLDER_EXISTS=true
-                log_info "✓ Found workshop folder: genai-fsx-workshop-on-eks-auto/"
+                log_info "✓ Found workshop folder: genai-fsx-netapp-ontap-workshop-on-eks-auto/"
             fi
-            
-            # Check for Mistral model
-            if aws s3 ls s3://${ASSET_BUCKET}/genai-fsx-workshop-on-eks-auto/assets/Mistral-7B-Instruct-v0.2/ &>/dev/null; then
-                MISTRAL_MODEL_EXISTS=true
-                log_info "✓ Found Mistral model: genai-fsx-workshop-on-eks-auto/assets/Mistral-7B-Instruct-v0.2/"
-            fi
-            
-            if [[ "$WORKSHOP_FOLDER_EXISTS" == false && "$MISTRAL_MODEL_EXISTS" == false ]]; then
+
+            if [[ "$WORKSHOP_FOLDER_EXISTS" == false ]]; then
                 log_info "No workshop content found in this bucket"
                 read -p "Delete the entire S3 bucket ${ASSET_BUCKET}? (yes/no): " DELETE_ENTIRE_BUCKET
-                
+
                 if [[ "$DELETE_ENTIRE_BUCKET" == "yes" ]]; then
                     log_warn "WARNING: This will permanently delete the entire bucket and all its contents!"
                     read -p "Are you absolutely sure? Type 'DELETE' to confirm: " CONFIRM_DELETE
-                    
+
                     if [[ "$CONFIRM_DELETE" == "DELETE" ]]; then
                         delete_s3_bucket "$ASSET_BUCKET"
                         log_info "S3 bucket deleted completely"
@@ -326,58 +323,23 @@ main() {
             else
                 echo ""
                 log_info "Workshop content cleanup options:"
-                
-                if [[ "$WORKSHOP_FOLDER_EXISTS" == true ]]; then
-                    echo "  1. Delete workshop folder only (genai-fsx-workshop-on-eks-auto/)"
-                else
-                    echo "  1. Delete workshop folder only (not found - unavailable)"
-                fi
-                
-                if [[ "$MISTRAL_MODEL_EXISTS" == true ]]; then
-                    echo "  2. Delete Mistral model only (~7GB)"
-                else
-                    echo "  2. Delete Mistral model only (not found - unavailable)"
-                fi
-                
-                echo "  3. Delete all workshop content (folder + model)"
-                echo "  4. Delete entire bucket and all contents"
-                echo "  5. Keep everything (no deletion)"
+                echo "  1. Delete workshop folder (genai-fsx-netapp-ontap-workshop-on-eks-auto/)"
+                echo "  2. Delete entire bucket and all contents"
+                echo "  3. Keep everything (no deletion)"
                 echo ""
-                
-                read -p "Choose option (1-5): " CLEANUP_OPTION
-                
+
+                read -p "Choose option (1-3): " CLEANUP_OPTION
+
                 case "$CLEANUP_OPTION" in
                     1)
-                        if [[ "$WORKSHOP_FOLDER_EXISTS" == true ]]; then
-                            log_info "Deleting workshop folder..."
-                            aws s3 rm s3://${ASSET_BUCKET}/genai-fsx-workshop-on-eks-auto/ --recursive --exclude "assets/Mistral-7B-Instruct-v0.2/*"
-                            log_info "Workshop folder deleted (Mistral model preserved)"
-                        else
-                            log_warn "Workshop folder not found - nothing to delete"
-                        fi
+                        log_info "Deleting workshop folder..."
+                        aws s3 rm s3://${ASSET_BUCKET}/genai-fsx-netapp-ontap-workshop-on-eks-auto/ --recursive
+                        log_info "Workshop folder deleted"
                         ;;
                     2)
-                        if [[ "$MISTRAL_MODEL_EXISTS" == true ]]; then
-                            log_info "Deleting Mistral model (~7GB)..."
-                            aws s3 rm s3://${ASSET_BUCKET}/genai-fsx-workshop-on-eks-auto/assets/Mistral-7B-Instruct-v0.2/ --recursive
-                            log_info "Mistral model deleted"
-                        else
-                            log_warn "Mistral model not found - nothing to delete"
-                        fi
-                        ;;
-                    3)
-                        if [[ "$WORKSHOP_FOLDER_EXISTS" == true || "$MISTRAL_MODEL_EXISTS" == true ]]; then
-                            log_info "Deleting all workshop content..."
-                            aws s3 rm s3://${ASSET_BUCKET}/genai-fsx-workshop-on-eks-auto/ --recursive
-                            log_info "All workshop content deleted"
-                        else
-                            log_warn "No workshop content found - nothing to delete"
-                        fi
-                        ;;
-                    4)
                         log_warn "WARNING: This will permanently delete the entire bucket and all its contents!"
                         read -p "Are you absolutely sure? Type 'DELETE' to confirm: " CONFIRM_DELETE
-                        
+
                         if [[ "$CONFIRM_DELETE" == "DELETE" ]]; then
                             delete_s3_bucket "$ASSET_BUCKET"
                             log_info "S3 bucket deleted completely"
@@ -385,32 +347,11 @@ main() {
                             log_info "Bucket deletion cancelled"
                         fi
                         ;;
-                    5|*)
+                    3|*)
                         log_info "S3 bucket and contents preserved"
-                        
-                        # Only show relevant manual cleanup commands
-                        if [[ "$WORKSHOP_FOLDER_EXISTS" == true || "$MISTRAL_MODEL_EXISTS" == true ]]; then
-                            log_info "Manual cleanup commands:"
-                            
-                            if [[ "$WORKSHOP_FOLDER_EXISTS" == true ]]; then
-                                echo "  # Delete workshop folder only:"
-                                echo "  aws s3 rm s3://${ASSET_BUCKET}/genai-fsx-workshop-on-eks-auto/ --recursive --exclude 'assets/Mistral-7B-Instruct-v0.2/*'"
-                                echo ""
-                            fi
-                            
-                            if [[ "$MISTRAL_MODEL_EXISTS" == true ]]; then
-                                echo "  # Delete Mistral model only:"
-                                echo "  aws s3 rm s3://${ASSET_BUCKET}/genai-fsx-workshop-on-eks-auto/assets/Mistral-7B-Instruct-v0.2/ --recursive"
-                                echo ""
-                            fi
-                            
-                            if [[ "$WORKSHOP_FOLDER_EXISTS" == true || "$MISTRAL_MODEL_EXISTS" == true ]]; then
-                                echo "  # Delete all workshop content:"
-                                echo "  aws s3 rm s3://${ASSET_BUCKET}/genai-fsx-workshop-on-eks-auto/ --recursive"
-                            fi
-                        else
-                            log_info "No workshop content found to clean up"
-                        fi
+                        log_info "Manual cleanup command:"
+                        echo "  # Delete workshop folder:"
+                        echo "  aws s3 rm s3://${ASSET_BUCKET}/genai-fsx-netapp-ontap-workshop-on-eks-auto/ --recursive"
                         ;;
                 esac
             fi
@@ -420,11 +361,11 @@ main() {
     else
         log_info "Skipping S3 bucket cleanup"
     fi
-    
+
     # Step 3: Local file cleanup
     log_step "Step 3: Local file cleanup"
-    
-    LOCAL_DIRS=("genai-fsx-workshop-on-eks-auto" "work-dir")
+
+    LOCAL_DIRS=("genai-fsx-netapp-ontap-workshop-on-eks-auto" "work-dir")
     
     for dir in "${LOCAL_DIRS[@]}"; do
         if [[ -d "$dir" ]]; then

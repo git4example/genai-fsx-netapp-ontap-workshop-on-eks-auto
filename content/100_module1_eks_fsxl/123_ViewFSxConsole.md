@@ -63,13 +63,13 @@ The SVM acts as a logical storage server. It has its own DNS endpoints, credenti
 9. From the SVM details page, click on the **Volumes** tab. Alternatively, you can navigate to the **Volumes** section from the left-hand navigation menu in the FSx console.
 
 10. You will see the volumes on your file system. There are two types of volumes to note:
-    - **Root volume** (`fsx_root` or similar) — This is the SVM's root volume, created automatically. It is used internally by ONTAP.
+    - **Root volume** (`eksworkshop_svm_root` or similar) — This is the SVM's root volume, created automatically. It is used internally by ONTAP.
     - **Data volume(s)** — These are the volumes where your data is stored. If Trident has already provisioned a volume for your PVC, you will see it listed here with a name like `trident_pvc_...`.
 
 11. Click on a data volume to view its details. Key properties include:
     - **Junction path** — The NFS mount path for this volume (e.g., `/trident_pvc_...`). This is the path that gets mounted inside your Kubernetes pods.
     - **Volume size** — The size of the volume (100 GiB for the model storage PVC)
-    - **Volume style** — FlexVol (the standard ONTAP volume type)
+    - **Volume style** — FLEXVOL (the standard ONTAP volume type)
     - **Tiering policy** — Controls how data is tiered between SSD and capacity pool storage. A policy of `Auto` means infrequently accessed data is automatically moved to capacity pool storage.
 
 ::::expand{header="About ONTAP data tiering policies (click to expand)"}

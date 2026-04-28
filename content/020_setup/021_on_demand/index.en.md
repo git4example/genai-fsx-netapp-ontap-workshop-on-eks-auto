@@ -4,20 +4,34 @@ chapter: false
 weight: 21
 ---
 
+**On-demand workshops** are workshops that you deploy in your own environment. These are different to **AWS Sponsored workshops**, where AWS will provide you with a temporary workshop lab account, which already has the workshop provisioned in it.
+
+
 :::alert{header="Important" type="warning"}
-If you are at an AWS event and are using **[AWS Sponsored Workshop](/020-setup/022-aws-event)** instead of on-demand workshop, please **SKIP** this section and go straight to the **[AWS Sponsored Workshop](/020-setup/022-aws-event)**
+If you are at an AWS event, please **SKIP** this section and go straight to the **[AWS Sponsored Workshop](/020-setup/022-aws-event)**
 :::
 
-
-**On-demand workshops** are workshops that you deploy in your own environment. These are different to **AWS Sponsored workshops**, where AWS will provide you with a temporary workshop lab account, which already has the workshop provisioned in it.
 
 ### Part 1 : Identify an Amazon EC2 instance that you can use for the initial workshop provisioning
 
 To deploy the workshop script (in part 2 of this module), you will need access to a Linux based Amazon Linux 2023 Amazon EC2 instance, with an Amazon EBS GP3 volume with at least 100GB free capacity (to download the LLM model data and other items required for the workshop)
 
-This Linux based EC2 instance also needs to have the required AWS account access and permissions in-order to run the commands outlined below, along with being able to create AWS resources required for this workshop (as shown below).  
+This Linux based EC2 instance also needs to have the required AWS account access and permissions in-order to run the commands outlined below, along with being able to create AWS resources required for this workshop (as shown below).
 
-Below is an EXAMPLE of a broad IAM policy that you could use, which includes all the required permissions for both CloudFormation and Terraform deployments:
+The workshop deploys the following AWS services via CloudFormation and Terraform:
+
+* Amazon EKS (cluster, nodegroups, access entries, addons)
+* Amazon EC2 + VPC (networking, security groups, launch templates, jumpbox instance)
+* Amazon FSx for NetApp ONTAP (file system, SVM, volumes)
+* AWS IAM (roles, policies, OIDC provider for IRSA, service-linked roles)
+* AWS KMS (customer-managed keys for EKS secrets and FSx encryption)
+* AWS Secrets Manager (SVM admin password, VSCode server password)
+* Amazon S3 (workshop asset bucket — the Mistral model is NOT staged in S3)
+* Amazon CloudWatch Logs (EKS control-plane logs)
+* Elastic Load Balancing (for the Open WebUI front-end)
+* AWS Systems Manager (agent on the jumpbox)
+
+Below is an EXAMPLE of a broad IAM policy that you could use, which includes all the required permissions for both CloudFormation and Terraform deployments. This is suitable for the EC2 jumpbox role that runs the deployment script:
 
 ```json
 {
@@ -27,16 +41,21 @@ Below is an EXAMPLE of a broad IAM policy that you could use, which includes all
             "Effect": "Allow",
             "Action": [
                 "sts:GetCallerIdentity",
+                "sts:AssumeRole",
                 "cloudformation:*",
+                "cloudfront:*",
                 "ec2:*",
                 "eks:*",
                 "iam:*",
                 "fsx:*",
-                "cloudfront:*",
+                "kms:*",
                 "lambda:*",
-                "ssm:*",
                 "logs:*",
-                "secretsmanager:*"
+                "s3:*",
+                "secretsmanager:*",
+                "ssm:*",
+                "elasticloadbalancing:*",
+                "ecr-public:GetAuthorizationToken"
             ],
             "Resource": "*"
         }
@@ -44,21 +63,30 @@ Below is an EXAMPLE of a broad IAM policy that you could use, which includes all
 }
 ```
 
+:::alert{header="Note" type="info"}
+The VSCode jumpbox role that the CloudFormation stack creates inside the workshop uses a tighter, scoped least-privilege policy. See `static/vscode_instance_role_policy.json` in the repo for the exact policy applied to the in-workshop jumpbox.
+:::
 
-### Part 2 : Automated workshop deploymentbscript
+
+### Part 2 : Automated workshop deployment script
 
 The below workshop automated deployment script handles setup tasks including:
 - Tool installation (AWS CLI, Docker, Git, jq)
 - Repository cloning
-- Creating of AWS resources: Amazon EKS cluster, Amazon EC2 instance, Amazon FSx for NetApp ONTAP file system
+- Syncing workshop files (`terraform/`, `eks/`, `scripts/`) to an S3 asset bucket
+- Creating AWS resources: Amazon EKS cluster, Amazon EC2 instance, Amazon FSx for NetApp ONTAP file system
 - Deployment of the VSCode IDE terminal (which you will use to interact with the workshop)
 - CloudFormation stack deployment with monitoring
 - Deployment validation and access information
 
+:::alert{header="Model staging" type="info"}
+The Mistral-7B model is **not** staged to S3 by this script. It is pulled directly from HuggingFace (`Hello2pariksit/Mistral-7B-Instruct-v0.3-neuron`) into the FSx for NetApp ONTAP volume by a Kubernetes Job during the first workshop module. This is a one-time download (~30 GB, ~3 minutes) that persists across pod restarts.
+:::
+
 1. Run the below commands to start the automated workshop environment deployment script:
 
 ```bash
-curl -O https://raw.githubusercontent.com/git4example/genai-fsx-workshop-on-eks-auto/mainline/static/scripts/quick-deploy-on-demand.sh
+curl -O https://raw.githubusercontent.com/git4example/genai-fsx-netapp-ontap-workshop-on-eks-auto/mainline/static/scripts/quick-deploy-on-demand.sh
 chmod +x quick-deploy-on-demand.sh
 ./quick-deploy-on-demand.sh
 ```
@@ -84,7 +112,7 @@ When you're finished with the workshop, use the cleanup script to remove all res
 
 ```bash
 # Navigate to scripts directory (if not already there)
-cd genai-fsx-workshop-on-eks-auto/static/scripts
+cd genai-fsx-netapp-ontap-workshop-on-eks-auto/static/scripts
 
 # Run cleanup script
 ./cleanup-on-demand.sh

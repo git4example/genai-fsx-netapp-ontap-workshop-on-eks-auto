@@ -5,13 +5,13 @@ weight: 10
 
 Copyright Amazon Web Services, Inc. and its affiliates. All rights reserved. This sample code is made available under the MIT-0 license. See the [LICENSE](./LICENSE.en.md) file.
 
-Errors or corrections? Contact ppariksh@amazon.com, akbariw@amazon.com, ameenamz@amazon.com
+Errors or corrections? Contact ppariksh@amazon.com, akbariw@amazon.com
 
 -------------------------------------------------------------
 ## Workshop Objective
 In this workshop, you will learn how you can:
 1. Deploy a Generative AI chatbot application by deploying:
-- A vLLM and an Open WebUI Pod on an Amazon EKS cluster
+- A vLLM and an Open WebUI Pod on an Amazon EKS cluster to serve Mistral-7B model 
 - Storing and accessing the Mistral-7B model on an Amazon FSx for NetApp ONTAP file system (Persistent Volume).
 - Leverage AWS Inferentia Accelerator as your accelerated compute, to power your Generative AI workload
 - Deploy a Grafana dashboard to view Inference workload metrics
@@ -65,7 +65,7 @@ To provide text generation inference capability with an OpenAI-compatible endpoi
 [**Amazon EKS**](https://aws.amazon.com/eks/), is a managed service that makes it easy for you to deploy, run, manage and scale container based apps using Kubernetes on AWS, without installing and operating your own Kubernetes control plane or worker nodes. Amazon EKS clusters can scale to support thousands of containers, which makes it ideal for Generative AI and ML workloads, where you can tune and deploy LLMs on Amazon EKS. Amazon EKS serves as an effective orchestrator to help achieve rapid scale out and scale in that is required for Generative AI and ML workloads, optimal cost efficiency.
 
 #### How to consume the Inference Service
-You can connect to the Inference Service using the **"Open WebUI"** application, which is designed to consume the OpenAI-compatible endpoint provided by the vLLM-hosted Mistral-7B-Instruct model that you will deploy in the workshop. The Open WebUI application allows users to interact with the LLM model through a chat-based interface. To use the Open WebUI application, simply deploy the application container, and connect to the WebUI URL that is provided and start chatting with the LLM model. The WebUI application will handle the communication with the VLLM-hosted Mistral-7B-Instruct model, providing a seamless user experience
+You can connect to the Inference Service using the **"Open WebUI"** application, which is designed to consume the OpenAI-compatible endpoint provided by the vLLM-hosted Mistral-7B-Instruct model that you will deploy in the workshop. The Open WebUI application allows users to interact with the LLM model through a chat-based interface. To use the Open WebUI application, simply deploy the application container, and connect to the Open WebUI URL that is provided and start chatting with the LLM model. The WebUI application will handle the communication with the vLLM hosted Mistral-7B-Instruct model, providing a seamless user experience.
 
 #### What is Amazon FSx for NetApp ONTAP
 [**Amazon FSx for NetApp ONTAP**](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/what-is-fsx-ontap.html) is a fully managed shared storage service built on the NetApp ONTAP file system. FSx for ONTAP provides feature-rich, fast, and flexible shared file storage that is broadly accessible from Linux, Windows, and macOS compute instances running on AWS or on-premises.
@@ -92,7 +92,7 @@ In this workshop the **Mistral-7B-Instruct** LLM model data is loaded onto an [*
 
 
 #### What are AWS Inferentia Accelerators
-[**AWS Inferentia accelerators**](https://aws.amazon.com/machine-learning/inferentia/) are custom built machine learning chips designed by Amazon Web Services (AWS) to accelerate the inference phase of machine learning. Inference involves using a trained model to make predictions or decisions based on new data. This phase is critical for real-time applications and services that require low latency and high throughput. AWS Inferentia2 is designed to deliver high throughput and low latency for a variety of inference workloads.AWS Inferentia accelerators deliver high performance at the lowest cost in Amazon EC2, where it supports popular machine learning frameworks such as TensorFlow, PyTorch, and MXNet. AWS Inferentia2-based Amazon EC2 Inf2 instances are optimized to deploy increasingly complex models, such as large language models (LLM) and latent diffusion models.
+[**AWS Inferentia accelerators**](https://aws.amazon.com/machine-learning/inferentia/) are custom built machine learning chips designed by Amazon Web Services (AWS) to accelerate the inference phase of machine learning. Inference involves using a trained model to make predictions or decisions based on new data. This phase is critical for real-time applications and services that require low latency and high throughput. AWS Inferentia2 is designed to deliver high throughput and low latency for a variety of inference workloads. AWS Inferentia accelerators deliver high performance at the lowest cost in Amazon EC2, where it supports popular machine learning frameworks such as TensorFlow, PyTorch, and MXNet. AWS Inferentia2 based Amazon EC2 Inf2 instances are optimized to deploy increasingly complex models, such as large language models (LLM) and latent diffusion models.
 
 
 #### AWS Neuron SDK - Native Support for ML Frameworks

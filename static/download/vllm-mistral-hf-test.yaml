@@ -96,12 +96,9 @@ spec:
             successThreshold: 1
           resources:
             requests:
-              cpu: 2
-              memory: 16Gi
               aws.amazon.com/neuroncore: 2
             limits:
               aws.amazon.com/neuroncore: 2
-              memory: 24Gi
           volumeMounts:
             - name: model-store
               mountPath: /models

@@ -311,9 +311,9 @@ else
 fi
 
 # Clone repository if not already present
-if [[ ! -d "genai-fsx-workshop-on-eks-auto" ]]; then
+if [[ ! -d "genai-fsx-netapp-ontap-workshop-on-eks-auto" ]]; then
     log_info "Cloning workshop repository..."
-    git clone https://github.com/git4example/genai-fsx-workshop-on-eks-auto.git
+    git clone https://github.com/git4example/genai-fsx-netapp-ontap-workshop-on-eks-auto.git
 else
     log_info "Workshop repository already exists"
 fi
@@ -390,73 +390,26 @@ fi
 
 # Check if workshop files already exist in S3
 log_info "Checking for existing workshop files in S3..."
-if aws s3 ls s3://${ASSET_BUCKET}/genai-fsx-workshop-on-eks-auto/ &>/dev/null; then
+if aws s3 ls s3://${ASSET_BUCKET}/genai-fsx-netapp-ontap-workshop-on-eks-auto/ &>/dev/null; then
     log_info "Workshop files already exist in S3 bucket"
     read -p "Do you want to update the workshop files? (y/N): " UPDATE_FILES
-    
+
     if [[ "$UPDATE_FILES" =~ ^[Yy]$ ]]; then
         log_info "Updating workshop files in S3..."
-        aws s3 sync ./genai-fsx-workshop-on-eks-auto s3://${ASSET_BUCKET}/genai-fsx-workshop-on-eks-auto
+        aws s3 sync ./genai-fsx-netapp-ontap-workshop-on-eks-auto s3://${ASSET_BUCKET}/genai-fsx-netapp-ontap-workshop-on-eks-auto
     else
         log_info "Skipping workshop files update"
     fi
 else
     log_info "Uploading workshop files to S3..."
-    aws s3 sync ./genai-fsx-workshop-on-eks-auto s3://${ASSET_BUCKET}/genai-fsx-workshop-on-eks-auto
+    aws s3 sync ./genai-fsx-netapp-ontap-workshop-on-eks-auto s3://${ASSET_BUCKET}/genai-fsx-netapp-ontap-workshop-on-eks-auto
 fi
 
-# Download Mistral Model
-log_info "Downloading Mistral Model (this may take several minutes)..."
-if [[ ! -d "./work-dir/Mistral-7B-Instruct-v0.2" ]]; then
-    mkdir -p ./work-dir
-    sudo docker run -v ./work-dir/:/work-dir/ public.ecr.aws/parikshit/huggingface-cli:slim download "enghwa/neuron-mistral7bv0.2" --local-dir /work-dir/Mistral-7B-Instruct-v0.2
-else
-    log_info "Mistral model already downloaded"
-fi
-
-# Get AWS credentials from instance metadata
-log_info "Retrieving AWS credentials from instance metadata..."
-export ROLE_NAME=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/)
-export CREDENTIALS=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/$ROLE_NAME)
-export AWS_ACCESS_KEY_ID=$(echo $CREDENTIALS | jq -r '.AccessKeyId')
-export AWS_SECRET_ACCESS_KEY=$(echo $CREDENTIALS | jq -r '.SecretAccessKey')
-export AWS_SESSION_TOKEN=$(echo $CREDENTIALS | jq -r '.Token')
-
-# Validate credentials were retrieved
-if [[ -z "$AWS_ACCESS_KEY_ID" || "$AWS_ACCESS_KEY_ID" == "null" ]]; then
-    log_error "Failed to retrieve AWS credentials from instance metadata"
-    exit 1
-fi
-
-log_info "AWS credentials retrieved successfully"
-
-# Upload model to S3
-ASSET_BUCKET_PATH=genai-fsx-workshop-on-eks-auto
-
-# Check if Mistral model already exists in S3
-log_info "Checking for existing Mistral model in S3..."
-if aws s3 ls s3://${ASSET_BUCKET}/${ASSET_BUCKET_PATH}/assets/Mistral-7B-Instruct-v0.2/ &>/dev/null; then
-    log_info "Mistral model already exists in S3 bucket"
-    read -p "Do you want to re-upload the Mistral model? (y/N): " UPLOAD_MODEL
-    
-    if [[ "$UPLOAD_MODEL" =~ ^[Yy]$ ]]; then
-        log_info "Re-uploading Mistral model to S3 (this may take several minutes)..."
-        sudo docker run -e AWS_DEFAULT_REGION=$AWS_REGION \
-          -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-          -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-          -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
-          -v ./work-dir/:/work-dir/  public.ecr.aws/parikshit/s5cmd cp /work-dir/Mistral-7B-Instruct-v0.2/ s3://${ASSET_BUCKET}/${ASSET_BUCKET_PATH}/assets/Mistral-7B-Instruct-v0.2/
-    else
-        log_info "Skipping Mistral model upload"
-    fi
-else
-    log_info "Uploading Mistral model to S3 (this may take several minutes)..."
-    sudo docker run -e AWS_DEFAULT_REGION=$AWS_REGION \
-      -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-      -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-      -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
-      -v ./work-dir/:/work-dir/  public.ecr.aws/parikshit/s5cmd cp /work-dir/Mistral-7B-Instruct-v0.2/ s3://${ASSET_BUCKET}/${ASSET_BUCKET_PATH}/assets/Mistral-7B-Instruct-v0.2/
-fi
+# NOTE: The Mistral-7B model is NOT uploaded to S3 by this script. The
+# workshop uses a pre-compiled v0.3 model hosted on HuggingFace
+# (Hello2pariksit/Mistral-7B-Instruct-v0.3-neuron) that is pulled directly
+# into FSx ONTAP by a Kubernetes Job (see static/eks/FSxONTAP/model-loading-job.yaml).
+# This one-time download per account persists across pod restarts.
 
 # Part 2 : Provision workshop resources
 log_info "Starting CloudFormation stack deployment..."
@@ -464,7 +417,7 @@ log_info "Starting CloudFormation stack deployment..."
 STACK_NAME=GenAIFSXWorkshopOnEKS
 VSINSTANCE_NAME=VSCodeServerForEKS
 ASSET_BUCKET_ZIPPATH=""
-ASSET_BUCKET_PATH=genai-fsx-workshop-on-eks-auto
+ASSET_BUCKET_PATH=genai-fsx-netapp-ontap-workshop-on-eks-auto
 
 # Validate CloudFormation template
 log_info "Validating CloudFormation template..."
@@ -533,7 +486,7 @@ echo "  - VPC and networking components (5-10 minutes)"
 echo "  - IAM roles and policies (2-5 minutes)"
 echo "  - EKS cluster (15-20 minutes)"
 echo "  - EKS node groups (10-15 minutes)"
-echo "  - FSx for Lustre file system (10-15 minutes)"
+echo "  - FSx for NetApp ONTAP file system (10-15 minutes)"
 echo "  - Security groups and other resources (5-10 minutes)"
 log_info "Typical completion time: 30-45 minutes (max timeout: 60 minutes)"
 log_info "Progress updates will be shown every 5 minutes..."
@@ -569,10 +522,13 @@ fi
 # Part 3: Access your workshop
 log_info "Workshop setup completed successfully!"
 log_info "Resources created:"
-echo "  - S3 Bucket: $ASSET_BUCKET"
+echo "  - S3 Bucket: $ASSET_BUCKET (workshop assets synced for VSCode instance bootstrap)"
 echo "  - CloudFormation Stack: $STACK_NAME"
 echo "  - Workshop files uploaded to S3"
-echo "  - Mistral model uploaded to S3"
+echo ""
+log_info "Note: The Mistral-7B model is NOT staged locally or in S3. It will be"
+log_info "      pulled directly from HuggingFace into FSx ONTAP by a Kubernetes"
+log_info "      Job during the first workshop module (one-time, ~3 minutes)."
 
 log_info "Next steps:"
 echo "  1. Access your VS Code server using the URL from stack outputs"
