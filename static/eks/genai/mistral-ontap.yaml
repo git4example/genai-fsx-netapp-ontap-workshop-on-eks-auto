@@ -1,3 +1,34 @@
+# =============================================================================
+# Mistral-7B-Instruct-v0.3 — Deployment on inf2.xlarge with Pre-compiled Artifacts
+# =============================================================================
+#
+# This manifest deploys Mistral-7B-Instruct-v0.3 on AWS Inferentia2 inf2.xlarge
+# (16GB RAM, 2 NeuronCores) using pre-compiled Neuron artifacts stored on
+# FSx for NetApp ONTAP. No on-the-fly compilation occurs at startup.
+#
+# WHY SDK 2.26.1?
+#   Two independent blockers prevent newer DLC images from working on inf2.xlarge:
+#
+#   1. attention_cte NxDI runtime bug (SDK 2.29.0):
+#      The NxDI runtime generates HLO patterns that trigger a DMA transpose
+#      compiler error at seq_len=4096. Not a compiler bug — SDK 2.27.1 uses
+#      the same compiler (neuronxcc 2.24.5133.0) without triggering it.
+#
+#   2. V1 engine memory overhead (vLLM 0.11.0+):
+#      All V1 engine versions require ~14-14.5 GiB for Mistral-7B, exceeding
+#      inf2.xlarge's usable ~15.2 GiB. Only vLLM 0.9.1 (V0 engine) fits at
+#      ~9.75 GiB with 36% headroom.
+#
+# PRE-REQUISITES:
+#   - Pre-compiled model directory on FSx for ONTAP at /work-dir/Mistral-7B-Instruct-v0.3
+#     containing both model weights (safetensors) and compiled artifacts
+#     (model.pt + neuron_config.json from SDK 2.26.1)
+#   - FSx for ONTAP PVC named "ontap-model-claim" dynamically provisioned via Trident
+#   - Replace FSX_ONTAP_AZ below with your FSx ONTAP availability zone
+#
+# STARTUP: ~5-6 minutes (weight loading is ~72% of startup time)
+# MEMORY:  ~9.75 GiB used / ~15.2 GiB available (36% headroom)
+# =============================================================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,14 +57,14 @@ spec:
                     values:
                       - FSX_ONTAP_AZ # Replace with your FSx ONTAP AZ
       nodeSelector:
-        eks.amazonaws.com/instance-family: inf2
+        node.kubernetes.io/instance-type: inf2.xlarge
       tolerations:
         - key: "aws.amazon.com/neuron"
           operator: "Exists"
           effect: "NoSchedule"
       containers:
         - name: inference-server
-          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.16.0-neuronx-py312-sdk2.29.0-ubuntu24.04
+          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py311-sdk2.26.1-ubuntu22.04
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -45,20 +76,13 @@ spec:
           command: ["vllm", "serve"]
           args:
             - /work-dir/Mistral-7B-Instruct-v0.3
-            - --served-model-name=mistralai/Mistral-7B-Instruct-v0.3
+            - --served-model-name=mistral-7b-neuron
             - --trust-remote-code
-            # Mistral specific
-            - --enable-auto-tool-choice
-            - --tool-call-parser=mistral
-            - --tokenizer-mode=mistral
-            - --load-format=mistral
-            - --config-format=mistral
-            # Neuron specific
+            # Neuron-specific
             - --tensor-parallel-size=2
-            - --gpu-memory-utilization=0.95
-            - --max-num-seqs=3
-            - --max-model-len=8192
-            - --no-enable-prefix-caching
+            - --max-model-len=4096
+            - --max-num-seqs=4
+            - --device=neuron
           env:
             - name: NEURON_COMPILED_ARTIFACTS
               value: /work-dir/Mistral-7B-Instruct-v0.3
@@ -70,22 +94,24 @@ spec:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 180
+            initialDelaySeconds: 300
             periodSeconds: 30
             timeoutSeconds: 10
-            failureThreshold: 24
+            failureThreshold: 30
             successThreshold: 1
           readinessProbe:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 180
+            initialDelaySeconds: 300
             periodSeconds: 10
             timeoutSeconds: 5
-            failureThreshold: 3
+            failureThreshold: 30
             successThreshold: 1
           resources:
             requests:
+              cpu: "2"
+              memory: 8Gi
               aws.amazon.com/neuroncore: 2
             limits:
               aws.amazon.com/neuroncore: 2

@@ -3,6 +3,7 @@ kind: StorageClass
 metadata:
   name: ontap-nas-sc
 provisioner: csi.trident.netapp.io
+reclaimPolicy: Retain
 parameters:
   backendType: "ontap-nas"
   provisioningType: "thin"

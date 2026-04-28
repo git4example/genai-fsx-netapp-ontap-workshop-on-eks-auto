@@ -32,6 +32,7 @@ kind: StorageClass
 metadata:
   name: ontap-nas-sc
 provisioner: csi.trident.netapp.io
+reclaimPolicy: Retain
 parameters:
   backendType: "ontap-nas"
   provisioningType: "thin"
@@ -43,6 +44,7 @@ mountOptions:
 
 Key points about this StorageClass:
 - **provisioner**: `csi.trident.netapp.io` — tells Kubernetes to use the Trident CSI driver
+- **reclaimPolicy**: `Retain` — when a PVC is deleted, the underlying ONTAP volume and PV are preserved rather than automatically deleted. This protects the model data from accidental PVC deletion.
 - **backendType**: `ontap-nas` — provisions NFS based volumes on the ONTAP backend
 - **provisioningType**: `thin` — uses thin provisioning so storage is allocated on demand
 - **snapshots**: `true` — enables snapshot support for volumes created by this class

@@ -114,8 +114,8 @@ helm repo update
 
 **Install the Trident operator**
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-helm install trident-operator netapp-trident/trident-operator \
-    --version 100.2502.1 \
+helm upgrade --install trident-operator netapp-trident/trident-operator \
+    --version 100.2602.0 \
     --set cloudProvider="AWS" \
     --set cloudIdentity="'eks.amazonaws.com/role-arn: ${ROLE_ARN}'" \
     --namespace trident \
@@ -189,7 +189,7 @@ kubectl apply -f trident-backend-config.yaml
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=false}
 NAME               BACKEND NAME   BACKEND UUID                           PHASE   STATUS
-backend-ontap-nas  fsx-ontap-nas  12345678-abcd-efgh-ijkl-123456789abc   Bound   Success
+backend-ontap-nas  fsx-ontap-nas  6ca7c511-649b-4be4-a1eb-c8cdc5496ea9   Bound   Success
 :::
 
 ::::

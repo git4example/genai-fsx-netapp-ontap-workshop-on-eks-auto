@@ -33,9 +33,9 @@ This file tracks all version-pinned software components in this workshop for mai
 
 | Component | Image Tag | File | Notes |
 |---|---|---|---|
-| **vLLM Neuron** | `0.16.0-neuronx-py312-sdk2.29.0-ubuntu24.04` | `static/eks/genai/mistral-ontap.yaml` | ✅ Current (SDK 2.29) |
+| **vLLM Neuron** | `0.9.1-neuronx-py311-sdk2.26.1-ubuntu22.04` | `static/eks/genai/mistral-ontap.yaml` | SDK 2.26.1 required for inf2.xlarge (see mistral-ontap.yaml header) |
 | **Neuron Scheduler** | `2.29.148.0` | `static/terraform/helm-values/neuron-values.yaml` | ✅ Updated from 2.28.4.0 |
-| **kube-scheduler (EKS Distro)** | `v1.35.2-eks-1-35-8` | `static/terraform/helm-values/neuron-values.yaml` | ✅ Updated from v1.33.4-eks-1-33-13 |
+| **kube-scheduler (EKS Distro)** | `v1.35.2-eks-1-35-8` | `static/terraform/helm-values/neuron-values.yaml` | ✅ Updated to match EKS 1.35 |
 | **Neuron Monitor** | `1.9.0` | `static/eks/genai/observability/neuron-monitor.yaml` | ✅ Updated from 1.3.0 |
 | **Open WebUI** | `latest-slim` | `static/eks/genai/open-webui.yaml` | Unpinned (`latest` tag) |
 | **HuggingFace CLI** | `slim` | `static/eks/FSxONTAP/model-loading-job.yaml` | Unpinned (`slim` tag) |
@@ -44,7 +44,7 @@ This file tracks all version-pinned software components in this workshop for mai
 
 | Component | Version | Notes |
 |---|---|---|
-| **EKS Cluster Version** | `--EKS_VERSION--` (parameterized) | Set at deploy time |
+| **EKS Cluster Version** | `1.35` (parameterized via `--EKS_VERSION--`) | Default in CFN: `1.35`, kubectl: `1.35.0` |
 | **Karpenter API** | `karpenter.sh/v1` + `eks.amazonaws.com/v1` | EKS Auto Mode native |
 
 ---
@@ -60,6 +60,10 @@ This file tracks all version-pinned software components in this workshop for mai
 | Neuron Scheduler | 2.28.4.0 | 2.29.148.0 | `static/terraform/helm-values/neuron-values.yaml` |
 | kube-scheduler (EKS Distro) | v1.33.4-eks-1-33-13 | v1.35.2-eks-1-35-8 | `static/terraform/helm-values/neuron-values.yaml` |
 | Neuron Monitor | 1.3.0 | 1.9.0 | `static/eks/genai/observability/neuron-monitor.yaml` |
+| EKS Cluster Version | 1.33 | 1.35 | `static/GenAIFSXWorkshopOnEKS.yaml` (EKSClusterVersion param) |
+| kubectl Version | 1.33.0 | 1.35.0 | `static/GenAIFSXWorkshopOnEKS.yaml` (KubectlVersion param) |
+| vLLM Neuron Image | 0.16.0-sdk2.29.0 | 0.9.1-sdk2.26.1 | `static/eks/genai/mistral-ontap.yaml` (SDK 2.26.1 for inf2.xlarge) |
+| Trident (workshop instructions) | 100.2502.1 | 100.2602.0 | `content/100_module1_eks_fsxl/110_DeployAmazonFSxLustreCSIDriverToEKS.md` |
 
 ---
 
@@ -76,6 +80,7 @@ This file tracks all version-pinned software components in this workshop for mai
 
 | File | What's versioned |
 |---|---|
+| `static/GenAIFSXWorkshopOnEKS.yaml` | EKS cluster version, kubectl version (CFN parameters) |
 | `static/terraform/main.tf` | Terraform providers, EKS/VPC/Blueprints module versions |
 | `static/terraform/helm-values/neuron-values.yaml` | Neuron scheduler image, kube-scheduler image |
 | `static/eks/genai/mistral-ontap.yaml` | vLLM Neuron container image |

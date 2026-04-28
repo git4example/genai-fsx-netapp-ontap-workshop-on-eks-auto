@@ -75,7 +75,7 @@ locals {
   # region = "us-west-1"
 
   cluster_version = "--EKS_VERSION--"
-  # cluster_version = "1.33"
+  # cluster_version = "1.35"
 
   vpc_cidr = "10.0.0.0/16"
 

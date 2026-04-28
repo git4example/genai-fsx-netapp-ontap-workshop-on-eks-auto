@@ -70,7 +70,7 @@ echo $ROLE_ARN
 helm repo add netapp-trident https://netapp.github.io/trident-helm-chart
 helm repo update
 
-helm install trident-operator netapp-trident/trident-operator \
+helm upgrade --install trident-operator netapp-trident/trident-operator \
     --version 100.2602.0 \
     --set cloudProvider="AWS" \
     --set cloudIdentity="'eks.amazonaws.com/role-arn: ${ROLE_ARN}'" \
