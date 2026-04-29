@@ -230,6 +230,7 @@
         ],
         "Resource": [
           "arn:aws:cloudformation:*:*:stack/eksctl-*",
+          "arn:aws:cloudformation:*:*:stack/eksworkshop-*",
           "arn:aws:cloudformation:*:*:stack/genaifsxworkshoponeks*",
           "arn:aws:cloudformation:*:*:stack/CDKToolkit/*"
         ]
@@ -285,7 +286,8 @@
         "Resource": [
           "arn:aws:secretsmanager:*:*:secret:trident-fsx-*",
           "arn:aws:secretsmanager:*:*:secret:vscode-*",
-          "arn:aws:secretsmanager:*:*:secret:eks-*"
+          "arn:aws:secretsmanager:*:*:secret:eks-*",
+          "arn:aws:secretsmanager:*:*:secret:eksworkshop-oss-grafana*"
         ]
       },
       {

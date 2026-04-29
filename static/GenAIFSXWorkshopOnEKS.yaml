@@ -1274,6 +1274,7 @@ Resources:
                   - cloudformation:UntagResource
                 Resource:
                   - !Sub arn:${AWS::Partition}:cloudformation:*:*:stack/eksctl-*
+                  - !Sub arn:${AWS::Partition}:cloudformation:*:*:stack/eksworkshop-*
                   - !Sub arn:${AWS::Partition}:cloudformation:*:*:stack/genaifsxworkshoponeks*
                   - !Sub arn:${AWS::Partition}:cloudformation:*:*:stack/CDKToolkit/*
               # ---------- KMS lifecycle for workshop encryption ----------
@@ -1325,6 +1326,7 @@ Resources:
                   - !Sub arn:${AWS::Partition}:secretsmanager:*:*:secret:trident-fsx-*
                   - !Sub arn:${AWS::Partition}:secretsmanager:*:*:secret:vscode-*
                   - !Sub arn:${AWS::Partition}:secretsmanager:*:*:secret:eks-*
+                  - !Sub arn:${AWS::Partition}:secretsmanager:*:*:secret:${EKSClusterName}-oss-grafana*
               - Sid: SecretsManagerDiscovery
                 Effect: Allow
                 Action: secretsmanager:ListSecrets
