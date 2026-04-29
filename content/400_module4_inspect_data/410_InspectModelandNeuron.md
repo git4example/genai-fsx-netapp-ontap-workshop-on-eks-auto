@@ -1,6 +1,6 @@
 ---
 title : "Inspect vLLM, Mistral-7B model, and Neuron performance tools"
-weight : 411
+weight : 410
 
 ---
 
@@ -74,7 +74,7 @@ Here is a description of the model data you are seeing in the Mistral model fold
 | `special_tokens_map.json`, `tokenizer_config.json` | Tokenizer configuration | Maps special tokens (BOS, EOS, PAD) and tokenizer settings. |
 
 :::alert{header="Note" type="info"}
-This workshop uses **pre-compiled Neuron artifacts** (`model.pt` + `neuron_config.json`) that were compiled with SDK 2.26.1 and uploaded to HuggingFace. When vLLM starts, it detects these artifacts via the `NEURON_COMPILED_ARTIFACTS` environment variable and loads them directly onto the NeuronCores — skipping the compilation step entirely. Without pre-compiled artifacts, the Neuron compiler (`neuronx-cc`) would need to compile the model on first startup, which takes 15+ minutes and requires significantly more memory than inf2.xlarge provides.
+This workshop uses **pre-compiled Neuron artifacts** (`model.pt` + `neuron_config.json`) that were compiled with SDK 2.26.1 and uploaded to HuggingFace. When vLLM starts, it detects these artifacts via the `NEURON_COMPILED_ARTIFACTS` environment variable and loads them directly onto the NeuronCores — skipping the compilation step entirely. Without pre-compiled artifacts, the Neuron compiler (`neuronx-cc`) would need to compile the model on first startup, which takes 15+ minutes and requires significantly more memory than inf2.xlarge provides. So for inferencing jobs, you pre-compile models in bigger instances and run infernece on smaller instance.
 :::
 
 
@@ -85,13 +85,24 @@ Run the below command to view the number of AWS Inferentia2 devices on your inst
 
 ::code[neuron-ls]{showCopyAction=true showLineNumbers=false language=bash}
 
+:::code[neuron-ls]{showCopyAction=false showLineNumbers=false language=bash}
+instance-type: inf2.xlarge
+instance-id: i-123456abcd00
++--------+--------+----------+--------+--------------+------+----------+------+---------+
+| NEURON | NEURON |  NEURON  | NEURON |     PCI      | PID  |   CPU    | NUMA | RUNTIME |
+| DEVICE | CORES  | CORE IDS | MEMORY |     BDF      |      | AFFINITY | NODE | VERSION |
++--------+--------+----------+--------+--------------+------+----------+------+---------+
+| 0      | 2      | 0-1      | 32 GB  | 0000:00:1f.0 | 4290 | 0-3      | -1   | 2.28.23 |
++--------+--------+----------+--------+--------------+------+----------+------+---------+
+:::
+
 Let's view the performance of your AWS Inferentia2 node by running the **neuron-top** command. The neuron-top command provides information about NeuronCore and vCPU utilization, memory usage, loaded models, and Neuron applications.
 
 ::code[neuron-top]{showCopyAction=true showLineNumbers=false language=bash}
 
 ![neuron-top](/static/images/neuron-top.png)
 
-Now re-size the neuron-top browserwindow and also the existing WebUI browser session to your Chatbot, so they are side-by-side on your monitor.
+Now re-size the neuron-top browser window and also the existing WebUI browser session to your Chatbot, so they are side-by-side on your monitor.
 
 Ask the Chatbot a question, and then pay close attention to the **NeuronCores V2 utilization section** as your Chatbot processes your input/output tokens. Notice the optimized performance of AWS Inferentia2, which is designed to use all available Neuron core utilization capacity to process a request.
 

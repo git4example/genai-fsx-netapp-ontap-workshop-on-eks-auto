@@ -30,7 +30,8 @@ persistence:
 
 # ---- vLLM backend ----
 # Connect to the vllm-mistral7b-service deployed from mistral-ontap.yaml
-openaiBaseApiUrl: "http://vllm-mistral7b-service/v1"
+openaiBaseApiUrls: 
+  - "http://vllm-mistral7b-service/v1"
 
 # ---- Runtime environment ----
 extraEnvVars:

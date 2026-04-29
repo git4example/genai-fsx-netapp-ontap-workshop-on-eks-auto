@@ -30,8 +30,7 @@ helm repo update
 cd /home/participant/environment/eks/genai
 helm upgrade --install open-webui open-webui/open-webui \
   -n default \
-  -f open-webui-helm/values.yaml \
-  --wait --timeout 5m
+  -f open-webui-helm/values.yaml
 :::
 
 ::::expand{header="Optional: Restrict ALB access to your IP (for on-demand / local laptop deployments only)"}
@@ -52,8 +51,7 @@ cd /home/participant/environment/eks/genai
 helm upgrade --install open-webui open-webui/open-webui \
   -n default \
   -f open-webui-helm/values.yaml \
-  --set-string ingress.annotations."alb\.ingress\.kubernetes\.io/inbound-cidrs"="${MY_IP}/32" \
-  --wait --timeout 5m
+  --set-string ingress.annotations."alb\.ingress\.kubernetes\.io/inbound-cidrs"="${MY_IP}/32"
 :::
 
 If your IP changes later, re-run the same command to refresh the restriction.

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: netshoot
+  name: netshoot-fsxn
 spec:
   containers:
   - name: netshoot
