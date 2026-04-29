@@ -109,7 +109,8 @@ In this workshop the **Mistral-7B-Instruct** model is stored in an Amazon S3 buc
     │       ├── inferentia_nodepool.yaml
     │       ├── mistral-ontap.yaml
     │       ├── observability/
-    │       └── open-webui.yaml
+    │       └── open-webui-helm/
+    │           └── values.yaml
     ├── images
     │   ├── [ workshop images .. ]
     │   

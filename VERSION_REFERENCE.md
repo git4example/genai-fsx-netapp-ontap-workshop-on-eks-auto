@@ -37,7 +37,7 @@ This file tracks all version-pinned software components in this workshop for mai
 | **Neuron Scheduler** | `2.29.148.0` | `static/terraform/helm-values/neuron-values.yaml` | ✅ Updated from 2.28.4.0 |
 | **kube-scheduler (EKS Distro)** | `v1.35.2-eks-1-35-8` | `static/terraform/helm-values/neuron-values.yaml` | ✅ Updated to match EKS 1.35 |
 | **Neuron Monitor** | `1.9.0` | `static/eks/genai/observability/neuron-monitor.yaml` | ✅ Updated from 1.3.0 |
-| **Open WebUI** | `latest-slim` | `static/eks/genai/open-webui.yaml` | Unpinned (`latest` tag) |
+| **Open WebUI** | `latest-v0.9.1` | `static/eks/genai/open-webui-helm/values.yaml` | Deployed via Helm chart |
 | **HuggingFace CLI** | `slim` | `static/eks/FSxONTAP/model-loading-job.yaml` | Unpinned (`slim` tag) |
 
 ### EKS / Kubernetes
@@ -85,7 +85,7 @@ This file tracks all version-pinned software components in this workshop for mai
 | `static/terraform/helm-values/neuron-values.yaml` | Neuron scheduler image, kube-scheduler image |
 | `static/eks/genai/mistral-ontap.yaml` | vLLM Neuron container image |
 | `static/eks/genai/observability/neuron-monitor.yaml` | Neuron monitor container image |
-| `static/eks/genai/open-webui.yaml` | Open WebUI container image |
+| `static/eks/genai/open-webui-helm/values.yaml` | Open WebUI container image, helm chart config |
 | `static/eks/FSxONTAP/model-loading-job.yaml` | HuggingFace CLI image |
 | `static/scripts/quick-deploy-sponsored.sh` | Neuron Helm chart version, Trident operator version |
 

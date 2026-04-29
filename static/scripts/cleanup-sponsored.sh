@@ -66,8 +66,8 @@ echo "============================================================"
 cd /home/participant/environment/eks/genai 2>/dev/null || true
 
 # Delete application workloads (reverse order)
-echo "Deleting Open WebUI..."
-kubectl delete -f open-webui.yaml --ignore-not-found 2>/dev/null || true
+echo "Uninstalling Open WebUI..."
+helm uninstall open-webui -n default 2>/dev/null || true
 
 echo "Deleting vLLM deployment..."
 kubectl delete -f mistral-ontap.yaml --ignore-not-found 2>/dev/null || true

@@ -15,24 +15,51 @@ A chatbot UI can interact with an Inference engine by accessing the Inference en
 ### Step 1: Deploy the Open WebUI pod.
 -------------------------
 
-1. Run the below command to deploy the Open WebUI application Pod, so we can interact with the vLLM Mistral model, that we deployed in previous step. This will also deploy an application load balancer, which will serve the chatbot Open WebUI Chat user interface.
+We will deploy Open WebUI using its official Helm chart. The chart values are defined in `open-webui-helm/values.yaml` and pre-configured to connect to the vLLM Mistral service deployed in the previous step.
 
-::code[kubectl apply -f open-webui.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+1. Add the Open WebUI Helm repository:
 
-2. Let's obtain the URL ADDRESS of the Open WebUI Chat interface by running the below command (if you dont get a URL address output, run the command again)
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+helm repo add open-webui https://helm.openwebui.com/
+helm repo update
+:::
+
+2. Detect your public IP address so the ALB is locked down to just your client:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+MY_IP=$(curl -s https://checkip.amazonaws.com)
+echo "Restricting ALB to: ${MY_IP}/32"
+:::
+
+3. Install Open WebUI with the Helm chart. This also provisions an Application Load Balancer restricted to your detected IP:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+cd /home/participant/environment/eks/genai
+helm upgrade --install open-webui open-webui/open-webui \
+  -n default \
+  -f open-webui-helm/values.yaml \
+  --set-string ingress.annotations."alb\.ingress\.kubernetes\.io/inbound-cidrs"="${MY_IP}/32" \
+  --wait --timeout 5m
+:::
+
+:::alert{header="Note" type="info"}
+The `inbound-cidrs` annotation restricts access to the ALB's security group so only your current public IP can reach the Open WebUI. If your IP changes, re-run the same `helm upgrade --install` command to refresh it.
+:::
+
+4. Let's obtain the URL ADDRESS of the Open WebUI Chat interface by running the below command (if you don't get a URL address output, run the command again after a few seconds)
 
 ::code[kubectl get ing]{language=bash showLineNumbers=false showCopyAction=true}
 
 ![WebUI_url](/static/images/WebUI_url.png)
 
-3. The Open WebUI and load balancer will take up-to **2 minutes to come online**. Once you have waited 2 minutes, copy above the URL ADDRESS into a web browser as "*http://<-URL-ADDRESS->*". This will open a Open WebUI chat client interface.
+5. The Open WebUI and load balancer will take up-to **2 minutes to come online**. Once you have waited 2 minutes, copy above the URL ADDRESS into a web browser as "*http://<-URL-ADDRESS->*". This will open a Open WebUI chat client interface.
 
 :::alert{header="Note" type="info"}
 Make sure your URL is "**http:**//<-URL-ADDRESS->" and doesn't start with "**https:**". Some browser like chrome try **"https"** by default if you dont provide protocol.
 :::
 
 
-4. In the Open WebUI interface you will see a drop down in the top menu bar, used to select your model. Select the Mistral-7B model from the drop down, and start chatting with your newly deployed Generative AI chat application.
+6. In the Open WebUI interface you will see a drop down in the top menu bar, used to select your model. Select the Mistral-7B model from the drop down, and start chatting with your newly deployed Generative AI chat application.
 
 If you don't see the Mistral-7B model, please refresh the WebUI page until you can see the model in the top drop-down selection menu. (Remember from the previous lab module, that the vLLM Pod and the model load into memory will take approx. 7 minutes)
 
@@ -44,7 +71,7 @@ You can also see when vLLM Pod and the Mistral model has been loaded into the vL
 
 
 
-5. You have now successfully deployed a Generative AI Chatbot as a containerized application running on Amazon EKS, with the cached Mistral-7B model hosted on Amazon FSx for NetApp ONTAP, and the compute powered by AWS Inferentia Accelerators.
+7. You have now successfully deployed a Generative AI Chatbot as a containerized application running on Amazon EKS, with the cached Mistral-7B model hosted on Amazon FSx for NetApp ONTAP, and the compute powered by AWS Inferentia Accelerators.
 
 -------------------------
 
