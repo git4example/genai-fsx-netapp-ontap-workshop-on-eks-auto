@@ -200,17 +200,13 @@ echo "FSX_ONTAP_AZ: $FSX_ONTAP_AZ"
 sed -i'' -e "s/FSX_ONTAP_AZ/$FSX_ONTAP_AZ/g" mistral-ontap.yaml
 kubectl apply -f mistral-ontap.yaml
 
-# Deploy Open WebUI via Helm
+# Deploy Open WebUI via Helm (no IP restriction — runs from VSCode IDE)
 helm repo add open-webui https://helm.openwebui.com/
 helm repo update
-
-MY_IP=$(curl -s https://checkip.amazonaws.com)
-echo "Restricting ALB to: ${MY_IP}/32"
 
 helm upgrade --install open-webui open-webui/open-webui \
   -n default \
   -f /home/participant/environment/eks/genai/open-webui-helm/values.yaml \
-  --set-string ingress.annotations."alb\.ingress\.kubernetes\.io/inbound-cidrs"="${MY_IP}/32" \
   --wait --timeout 5m
 
 echo "Waiting for vLLM pod to start (this takes ~7 minutes)..."
