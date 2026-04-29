@@ -8,9 +8,9 @@ weight : 420
 In this module you will explore **ONTAP volume snapshots**, one of the most powerful data management features of Amazon FSx for NetApp ONTAP. Snapshots are **point-in-time, read-only copies** of your volume data. They are **space-efficient** because they only consume storage for data that has changed since the snapshot was taken — the initial snapshot is nearly instantaneous and uses almost no additional space.
 
 Snapshots are useful for a variety of scenarios:
-- **Data protection**: Quickly recover from accidental deletions or corruption by restoring to a previous snapshot.
-- **Experimentation**: Take a snapshot before fine-tuning a model or modifying training data, so you can easily roll back if needed.
-- **Auditing and compliance**: Maintain point-in-time records of your model artifacts and data.
+- **Data protection**: Automatically maintain point-in-time copies of your model data. If files are accidentally deleted or corrupted, you can recover them from a recent snapshot.
+- **Auditing and compliance**: Retain historical records of your model artifacts and data at regular intervals.
+- **Storage efficiency**: Snapshots only consume space for data that has changed, making them practical even for large AI model volumes.
 
 :::alert{header="How ONTAP Snapshots Work" type="info"}
 Unlike traditional backup methods that copy all data, ONTAP snapshots use a **redirect-on-write** mechanism. When data is modified after a snapshot is taken, only the changed blocks consume additional space. This means snapshots are created almost instantly and are extremely storage-efficient — even for large volumes containing AI model data.
