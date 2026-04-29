@@ -95,9 +95,9 @@ In this workshop the **Mistral-7B-Instruct** model is stored in an Amazon S3 buc
     ├── GenAIFSXWorkshopOnEKS.yaml
     ├── download
     │   ├── cleanup.sh
-    │   ├── install.sh
-    │   ├── model-loading-job.yaml.bak
+    │   ├── fsx-ontap-standalone.tf
     │   ├── netshoot.yaml
+    │   ├── troubleshoot.yaml
     │   └── vllm-mistral-hf-test.yaml
     ├── eks
     │   ├── FSxONTAP
@@ -118,6 +118,7 @@ In this workshop the **Mistral-7B-Instruct** model is stored in an Amazon S3 buc
     ├── scripts
     │   ├── cleanup-on-demand.sh
     │   ├── quick-deploy-on-demand.sh
+    │   ├── quick-deploy-sponsored.sh
     │   ├── terraform-cleanup.sh
     │   └── terraform-deploy.sh
     └── terraform

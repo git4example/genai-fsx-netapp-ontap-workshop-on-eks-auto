@@ -22,7 +22,7 @@ This file tracks all version-pinned software components in this workshop for mai
 | **EKS Blueprints Addons** (`aws-ia/eks-blueprints-addons/aws`) | `1.23.0` | ✅ Updated from 1.21.0 |
 | **EKS Data Addons** (`aws-ia/eks-data-addons/aws`) | `1.38.0` | ✅ Updated from 1.37.2 |
 
-### Helm Charts (`static/download/install.sh`)
+### Helm Charts (`static/scripts/quick-deploy-sponsored.sh`)
 
 | Component | Version | Notes |
 |---|---|---|
@@ -55,8 +55,8 @@ This file tracks all version-pinned software components in this workshop for mai
 |---|---|---|---|
 | EKS Blueprints Addons | 1.21.0 | 1.23.0 | `static/terraform/main.tf` |
 | EKS Data Addons | 1.37.2 | 1.38.0 | `static/terraform/main.tf` |
-| Neuron Helm Chart | 1.2.0 | 1.5.0 | `static/download/install.sh` |
-| Trident Operator | 100.2502.1 | 100.2602.0 | `static/download/install.sh` |
+| Neuron Helm Chart | 1.2.0 | 1.5.0 | `static/scripts/quick-deploy-sponsored.sh` |
+| Trident Operator | 100.2502.1 | 100.2602.0 | `static/scripts/quick-deploy-sponsored.sh` |
 | Neuron Scheduler | 2.28.4.0 | 2.29.148.0 | `static/terraform/helm-values/neuron-values.yaml` |
 | kube-scheduler (EKS Distro) | v1.33.4-eks-1-33-13 | v1.35.2-eks-1-35-8 | `static/terraform/helm-values/neuron-values.yaml` |
 | Neuron Monitor | 1.3.0 | 1.9.0 | `static/eks/genai/observability/neuron-monitor.yaml` |
@@ -87,7 +87,7 @@ This file tracks all version-pinned software components in this workshop for mai
 | `static/eks/genai/observability/neuron-monitor.yaml` | Neuron monitor container image |
 | `static/eks/genai/open-webui.yaml` | Open WebUI container image |
 | `static/eks/FSxONTAP/model-loading-job.yaml` | HuggingFace CLI image |
-| `static/download/install.sh` | Neuron Helm chart version, Trident operator version |
+| `static/scripts/quick-deploy-sponsored.sh` | Neuron Helm chart version, Trident operator version |
 
 ---
 

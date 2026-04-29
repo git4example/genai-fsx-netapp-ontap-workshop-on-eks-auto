@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# Workshop install.sh — All participant commands in execution order
+# Workshop quick-deploy-sponsored.sh — All participant commands in execution order
 #
 # This script mirrors the workshop instructions from Modules 1–3.
 # It can be used as a quick rundown to configure everything and test
