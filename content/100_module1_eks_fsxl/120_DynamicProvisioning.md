@@ -63,7 +63,7 @@ Key points about this StorageClass:
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=false}
 NAME           PROVISIONER                RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
-ontap-nas-sc   csi.trident.netapp.io      Delete          Immediate           true                   10s
+ontap-nas-sc   csi.trident.netapp.io      Retain          Immediate           true                   10s
 :::
 
 ::::

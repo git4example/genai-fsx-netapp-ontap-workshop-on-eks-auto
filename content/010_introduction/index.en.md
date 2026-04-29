@@ -84,7 +84,7 @@ Key concepts of FSx for NetApp ONTAP include:
 
 
 #### Storing and accessing your model and training data
-In this workshop the **Mistral-7B-Instruct** LLM model data is loaded onto an [**Amazon FSx for NetApp ONTAP**](https://aws.amazon.com/fsx/netapp-ontap/) volume using a Kubernetes Job that downloads the model from HuggingFace. Unlike FSx for Lustre, which can transparently import data from a linked S3 bucket, FSx for ONTAP requires an explicit model loading step. A Kubernetes Job runs before the vLLM inference pod starts, downloading the model files and writing them to the FSx for ONTAP-backed PersistentVolume. The vLLM Inference engine Pod deployment uses a PersistentVolumeClaim (PVC) that is dynamically provisioned by the NetApp Astra Trident CSI driver, backed by an FSx for ONTAP volume. When the vLLM Pod starts up, it loads the LLM model data (into its memory) directly from the FSx for ONTAP file system via NFS.
+In this workshop the **Mistral-7B-Instruct** LLM model data is loaded onto an [**Amazon FSx for NetApp ONTAP**](https://aws.amazon.com/fsx/netapp-ontap/) volume using a Kubernetes Job that downloads the pre-compiled model from HuggingFace. This is a one-time operation — once the model data is on the FSx for ONTAP volume, it persists across pod restarts and redeployments. The vLLM Inference engine Pod deployment uses a PersistentVolumeClaim (PVC) that is dynamically provisioned by the NetApp Astra Trident CSI driver, backed by an FSx for ONTAP volume. When the vLLM Pod starts up, it loads the LLM model data (into its memory) directly from the FSx for ONTAP file system via NFS.
 
 
 #### Accelerating your Compute
