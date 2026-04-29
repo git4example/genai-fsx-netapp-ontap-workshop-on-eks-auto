@@ -63,19 +63,18 @@ ls -ll
 
 Here is a description of the model data you are seeing in the Mistral model folder.
 
-| File | Purpose | Details |
+| File(s) | Purpose | Details |
 |------|-----------|-----------|
-| PyTorch | Contains model weights and parameters |  Used for Model architecture and learned parameters storage. Can be converted to different formats (NEFF, etc.) |
-| Tokenizer | Contains vocabulary and rules for text processing | Used for converting raw text to/from numerical tokens
-| Config |  Contains model architecture and settings | Used to define model structure & parameters  |
+| `model-00001-of-00003.safetensors` … `model-00003-of-00003.safetensors` | Original model weights in SafeTensors format | The Mistral-7B weights split across 3 shards (~14.5 GB total). SafeTensors is a safe, fast serialization format for tensors. |
+| `consolidated.safetensors` | Consolidated model weights | A single-file copy of all weights, used by the Neuron runtime for efficient sharding across NeuronCores. |
+| `model.pt` | Pre-compiled Neuron executable (NEFF) | Contains the compiled computation graph for Neuron hardware (SDK 2.26.1). This is what allows vLLM to skip on-the-fly compilation at startup. |
+| `neuron_config.json` | Neuron compilation config | Records the compilation parameters (tp_degree, batch_size, seq_len, etc.) so the runtime can verify the NEFF matches the current deployment config. |
+| `tokenizer.model`, `tokenizer.model.v3`, `tokenizer.json` | Tokenizer vocabulary and rules | Converts raw text to/from numerical tokens. The `.v3` variant is the Mistral v0.3 tokenizer with an expanded vocabulary. |
+| `config.json`, `generation_config.json`, `params.json` | Model architecture and generation settings | Defines the model structure (hidden size, layers, heads, etc.) and default generation parameters. |
+| `special_tokens_map.json`, `tokenizer_config.json` | Tokenizer configuration | Maps special tokens (BOS, EOS, PAD) and tokenizer settings. |
 
 :::alert{header="Note" type="info"}
-When using vLLM with AWS Neuron devices, a dedicated model executor is employed. The process works as follows:
-
-- The model's structure and weights are first loaded
-- If not previously compiled, the model is compiled for Neuron hardware using tools like neuronx-cc
-- The compiled model is then deployed to Neuron cores for running inference
-- During compilation, the PyTorch model is converted into NEFF (Neuron Executable File Format). NEFF is an optimized format specifically designed for Neuron hardware acceleration. This optimized NEFF format ensures efficient model execution on Neuron devices.
+This workshop uses **pre-compiled Neuron artifacts** (`model.pt` + `neuron_config.json`) that were compiled with SDK 2.26.1 and uploaded to HuggingFace. When vLLM starts, it detects these artifacts via the `NEURON_COMPILED_ARTIFACTS` environment variable and loads them directly onto the NeuronCores — skipping the compilation step entirely. Without pre-compiled artifacts, the Neuron compiler (`neuronx-cc`) would need to compile the model on first startup, which takes 15+ minutes and requires significantly more memory than inf2.xlarge provides.
 :::
 
 
