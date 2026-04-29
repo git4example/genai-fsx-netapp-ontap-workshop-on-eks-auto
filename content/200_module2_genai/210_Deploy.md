@@ -211,7 +211,7 @@ spec:
       labels:
         app: vllm-mistral-inf2-server
     spec:
-      schedulerName: my-scheduler                               # <<<<< we are using Neuron Scheduler
+      automountServiceAccountToken: false
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -222,23 +222,27 @@ spec:
                 values:
                 - FSX_ONTAP_AZ                                  # <<<<< Replace with your FSx ONTAP AZ
       nodeSelector:
-        eks.amazonaws.com/instance-family: inf2
+        node.kubernetes.io/instance-type: inf2.xlarge           # <<<<< Pin to inf2.xlarge
       tolerations:
       - key: "aws.amazon.com/neuron"
         operator: "Exists"
         effect: "NoSchedule"
       containers:
       - name: inference-server
-        image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.16.0-neuronx-py312-sdk2.29.0-ubuntu24.04
+        image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py311-sdk2.26.1-ubuntu22.04
         command: ["vllm", "serve"]
         args:
         - /work-dir/Mistral-7B-Instruct-v0.3                  # <<<<< Local model path on ONTAP volume
-        - --served-model-name=mistralai/Mistral-7B-Instruct-v0.3
+        - --served-model-name=mistral-7b-neuron
+        - --trust-remote-code
         - --tensor-parallel-size=2
-        - --max-num-seqs=3
-        - --max-model-len=8192
-        resources:                                             # <<<<< Here you can specify Neuron Resources just like CPU and Memory
+        - --max-model-len=4096
+        - --max-num-seqs=4
+        - --device=neuron
+        resources:                                             # <<<<< Neuron Resources
           requests:
+            cpu: "2"
+            memory: 8Gi
             aws.amazon.com/neuroncore: 2                       # <<<<< Neuron Resources Request
           limits:
             aws.amazon.com/neuroncore: 2                       # <<<<< Neuron Resources Limits
