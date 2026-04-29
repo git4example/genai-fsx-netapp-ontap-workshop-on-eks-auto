@@ -26,7 +26,19 @@
 #   - FSx for ONTAP PVC named "ontap-model-claim" dynamically provisioned via Trident
 #   - Replace FSX_ONTAP_AZ below with your FSx ONTAP availability zone
 #
-# STARTUP: ~5-6 minutes (weight loading is ~72% of startup time)
+# STARTUP TIMING (from production logs):
+#   - Image pull (first time): ~5m 12s (10.5 GB DLC image)
+#   - vLLM init + weight loading: ~1m 40s
+#   - Warmup: ~3s
+#   - Total cold start: ~7m | Warm restart (image cached): ~2m
+#
+# PROBE DESIGN:
+#   initialDelaySeconds=60 — start probing after 1 min; early failures are expected
+#   and absorbed by failureThreshold. Pod flips Ready the instant /health responds.
+#   Liveness:  60s + (36 × 15s) = 600s (10m) — covers cold start + margin.
+#   Readiness: 60s + (54 × 10s) = 600s (10m) — same window, faster polling.
+#
+# STARTUP: ~2 minutes (warm) / ~7 minutes (cold, first image pull)
 # MEMORY:  ~9.75 GiB used / ~15.2 GiB available (36% headroom)
 # =============================================================================
 apiVersion: apps/v1
@@ -94,19 +106,19 @@ spec:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 300
-            periodSeconds: 30
+            initialDelaySeconds: 60
+            periodSeconds: 15
             timeoutSeconds: 10
-            failureThreshold: 30
+            failureThreshold: 36
             successThreshold: 1
           readinessProbe:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 300
+            initialDelaySeconds: 60
             periodSeconds: 10
             timeoutSeconds: 5
-            failureThreshold: 30
+            failureThreshold: 54
             successThreshold: 1
           resources:
             requests:
