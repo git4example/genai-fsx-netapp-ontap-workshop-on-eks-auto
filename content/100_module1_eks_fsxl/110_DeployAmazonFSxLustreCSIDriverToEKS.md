@@ -181,6 +181,10 @@ sed -i'' -e "s/SVM_NAME/$SVM_NAME/g" trident-backend-config.yaml
 kubectl apply -f trident-backend-config.yaml
 :::
 
+:::alert{header="Snapshot configuration" type="info"}
+The backend configuration includes `defaults` for snapshot management: `snapshotPolicy: "default"` enables automatic hourly/daily/weekly ONTAP snapshots, `snapshotReserve: "10"` reserves 10% of volume capacity for snapshot data, and `snapshotDir: "true"` makes the `.snapshot` directory accessible from within pods. You will explore these snapshots in Module 4.
+:::
+
 12. Verify that the Trident backend has been registered successfully.
 
 ::code[kubectl get tridentbackendconfig -n trident]{language=bash showLineNumbers=false showCopyAction=true}

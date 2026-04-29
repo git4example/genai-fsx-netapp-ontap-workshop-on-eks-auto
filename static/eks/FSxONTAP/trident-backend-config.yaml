@@ -11,3 +11,7 @@ spec:
   svm: SVM_NAME
   credentials:
     name: fsx-ontap-secret
+  defaults:
+    snapshotPolicy: "default"
+    snapshotReserve: "10"
+    snapshotDir: "true"

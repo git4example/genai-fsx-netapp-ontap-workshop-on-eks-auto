@@ -5,32 +5,42 @@ weight : 420
 
 ## Overview
 
-In this module you will explore **ONTAP volume snapshots**, one of the most powerful data management features of Amazon FSx for NetApp ONTAP. Snapshots are **point-in-time, read-only copies** of your volume data. They are **space-efficient** because they only consume storage for data that has changed since the snapshot was taken — the initial snapshot is nearly instantaneous and uses almost no additional space.
+In this module you will explore **ONTAP volume snapshots**, one of the most powerful data management features of Amazon FSx for NetApp ONTAP. Snapshots are **point-in-time, read-only copies** of your volume data. They are **space-efficient** because they only consume storage for data that has changed since the snapshot was taken.
 
-Snapshots are useful for a variety of scenarios:
-- **Data protection**: Automatically maintain point-in-time copies of your model data. If files are accidentally deleted or corrupted, you can recover them from a recent snapshot.
-- **Auditing and compliance**: Retain historical records of your model artifacts and data at regular intervals.
-- **Storage efficiency**: Snapshots only consume space for data that has changed, making them practical even for large AI model volumes.
+FSx for ONTAP provides two complementary snapshot mechanisms:
+
+1. **Automatic ONTAP snapshots** — scheduled by the ONTAP snapshot policy (`default`), configured in the Trident backend. These run on a fixed schedule (hourly, daily, weekly) and are accessible via the `.snapshot` directory on the volume.
+2. **Kubernetes VolumeSnapshots** — on-demand, Kubernetes-native snapshots created through the CSI snapshot API. These are managed as Kubernetes objects and can be used to create new PVCs (clones).
+
+In this exercise, you will:
+1. Verify that automatic ONTAP snapshots are enabled (configured in Module 1)
+2. Create an on-demand Kubernetes VolumeSnapshot of your model data
+3. View snapshots and understand recovery options
+4. (Optional) View snapshots using the AWS CLI
 
 :::alert{header="How ONTAP Snapshots Work" type="info"}
 Unlike traditional backup methods that copy all data, ONTAP snapshots use a **redirect-on-write** mechanism. When data is modified after a snapshot is taken, only the changed blocks consume additional space. This means snapshots are created almost instantly and are extremely storage-efficient — even for large volumes containing AI model data.
 :::
 
-## Snapshot Policies
+---
 
-FSx for ONTAP manages snapshots through **snapshot policies** — schedules that define when snapshots are created and how many are retained. There are three built-in policies:
+## Part 1: Automatic ONTAP Snapshots
 
-| Policy | Hourly | Daily | Weekly | Use case |
-|---|---|---|---|---|
-| **default** | 6 (5 min past the hour) | 2 (Mon–Sat at 00:10) | 2 (Sun at 00:15) | Most workloads |
-| **default-1weekly** | 6 | 2 | 1 | Same as default, fewer weekly |
-| **none** | — | — | — | No automatic snapshots |
+When you configured the Trident backend in Module 1, the `TridentBackendConfig` included these snapshot defaults:
 
-When Trident dynamically provisions a volume, it sets the snapshot policy to `none` by default. In this exercise, you will enable the `default` snapshot policy on the Trident-provisioned volume that holds your Mistral-7B model data, and then view the snapshots from within a pod.
+:::code[]{language=yaml showLineNumbers=true showCopyAction=false}
+defaults:
+  snapshotPolicy: "default"
+  snapshotReserve: "10"
+  snapshotDir: "true"
+:::
 
-##### Step 1: Discover the Trident-provisioned volume
+This means every volume provisioned by Trident automatically gets:
+- **snapshotPolicy: "default"** — automatic hourly (6), daily (2), and weekly (2) snapshots
+- **snapshotReserve: "10"** — 10% of volume capacity reserved for snapshot data (10 GiB on a 100 GiB volume — more than sufficient for static model data)
+- **snapshotDir: "true"** — the `.snapshot` directory is accessible from within pods
 
-The model data lives on a volume that was dynamically provisioned by Trident when you created the `ontap-model-claim` PVC. We trace from the PVC to the PV to find the underlying ONTAP volume.
+##### Step 1: Verify the snapshot policy on your volume
 
 1. Get the ONTAP volume name from the PersistentVolume:
 
@@ -39,127 +49,202 @@ ONTAP_VOL_NAME=$(kubectl get pv $(kubectl get pvc ontap-model-claim -o jsonpath=
 echo "ONTAP Volume Name: $ONTAP_VOL_NAME"
 :::
 
-2. Look up the FSx Volume ID for this volume:
+2. Look up the FSx Volume ID and check the snapshot policy:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 FSX_ID=$(aws fsx describe-file-systems --query "FileSystems[?FileSystemType=='ONTAP'].FileSystemId" --output text)
 VOLUME_ID=$(aws fsx describe-volumes --filters Name=file-system-id,Values=$FSX_ID --query "Volumes[?Name=='${ONTAP_VOL_NAME}'].VolumeId" --output text)
-echo "Volume ID: $VOLUME_ID"
+aws fsx describe-volumes --volume-ids $VOLUME_ID --query "Volumes[0].OntapConfiguration.{SnapshotPolicy:SnapshotPolicy,SnapshotReserve:SnapshotReserveSize}" --output table
 :::
 
-3. Check the current snapshot policy on this volume:
+You should see `SnapshotPolicy: default`, confirming that automatic snapshots are active.
+
+##### Step 2: View automatic snapshots from within a pod
+
+Each ONTAP snapshot is accessible through a hidden `.snapshot` directory at the root of the volume.
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=false}
+# From within the vLLM pod or any pod with the volume mounted:
+ls /work-dir/.snapshot/
+
+# View model files from a specific snapshot
+ls /work-dir/.snapshot/hourly.0/Mistral-7B-Instruct-v0.3/
+:::
+
+:::alert{header="Note" type="info"}
+The `default` policy creates the first hourly snapshot at 5 minutes past the hour. If the `.snapshot` directory is empty, check back after the next hour mark.
+:::
+
+---
+
+## Part 2: Kubernetes VolumeSnapshots (On-Demand)
+
+While automatic ONTAP snapshots run on a schedule, **Kubernetes VolumeSnapshots** let you create point-in-time snapshots on demand — for example, before fine-tuning a model or modifying training data. These snapshots are fully Kubernetes-native and managed through `kubectl`.
+
+##### Step 3: Create a VolumeSnapshotClass
+
+The `VolumeSnapshotClass` tells Kubernetes which CSI driver to use for snapshots. This is analogous to a `StorageClass` for volumes.
+
+1. Navigate to the working directory and review the manifest:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-aws fsx describe-volumes --volume-ids $VOLUME_ID --query "Volumes[0].OntapConfiguration.SnapshotPolicy" --output text
+cd /home/participant/environment/eks/FSxONTAP
+cat volume-snapshot-class.yaml
 :::
+
+:::code[]{language=yaml showLineNumbers=true showCopyAction=false}
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: trident-snapshotclass
+  annotations:
+    snapshot.storage.kubernetes.io/is-default-class: "true"
+driver: csi.trident.netapp.io
+deletionPolicy: Retain
+:::
+
+Key points:
+- **driver**: `csi.trident.netapp.io` — uses the Trident CSI driver to create ONTAP snapshots
+- **deletionPolicy: Retain** — the underlying ONTAP snapshot is preserved even if the Kubernetes `VolumeSnapshot` object is deleted
+- **is-default-class: "true"** — makes this the default snapshot class, so you don't need to specify it in every `VolumeSnapshot`
+
+2. Apply the VolumeSnapshotClass:
+
+::code[kubectl apply -f volume-snapshot-class.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+
+3. Verify it was created:
+
+::code[kubectl get volumesnapshotclass]{language=bash showLineNumbers=false showCopyAction=true}
+
+##### Step 4: Create an on-demand VolumeSnapshot
+
+Now create a snapshot of the `ontap-model-claim` PVC. Trident will create an ONTAP snapshot on the underlying volume via the CSI interface.
+
+1. Create the VolumeSnapshot:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl apply -f - <<EOF
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: model-snapshot
+spec:
+  volumeSnapshotClassName: trident-snapshotclass
+  source:
+    persistentVolumeClaimName: ontap-model-claim
+EOF
+:::
+
+2. Wait for the snapshot to be ready:
+
+::code[kubectl get volumesnapshot model-snapshot]{language=bash showLineNumbers=false showCopyAction=true}
 
 ::::expand{header="You should see output similar to below, click to expand"}
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=false}
-none
+NAME             READYTOUSE   SOURCEPVC           SOURCESNAPSHOTCONTENT   RESTORESIZE   SNAPSHOTCLASS           SNAPSHOTCONTENT                                    CREATIONTIME   AGE
+model-snapshot   true         ontap-model-claim                           100Gi         trident-snapshotclass   snapcontent-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   10s            15s
 :::
 
 ::::
 
-The policy is `none` because Trident sets this by default when provisioning volumes. This means no automatic snapshots are being taken.
+When `READYTOUSE` shows `true`, the snapshot has been created successfully on the ONTAP volume.
 
-##### Step 2: Enable the default snapshot policy
+3. View the snapshot details:
 
-Update the volume to use the `default` snapshot policy. This enables automatic hourly, daily, and weekly snapshots.
+::code[kubectl describe volumesnapshot model-snapshot]{language=bash showLineNumbers=false showCopyAction=true}
 
-1. Run the following command to update the snapshot policy:
+##### Step 5: Create a PVC from the snapshot (clone)
+
+One of the most powerful features of VolumeSnapshots is the ability to create a new PVC from a snapshot. This creates a **space-efficient clone** of the data — ideal for experimentation, A/B testing, or creating isolated environments.
+
+:::code[]{language=yaml showLineNumbers=true showCopyAction=false}
+# Example: Create a new PVC from the snapshot
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-clone
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ontap-nas-sc
+  resources:
+    requests:
+      storage: 100Gi
+  dataSource:
+    name: model-snapshot
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+:::
+
+:::alert{header="Key Takeaway" type="success"}
+With Kubernetes VolumeSnapshots, you can take on-demand snapshots before any experiment and instantly create clones from those snapshots. The clones share unchanged data blocks with the original volume (ONTAP FlexClone), so they consume minimal additional storage. This is ideal for AI/ML workflows where you want to test different model configurations without duplicating the entire dataset.
+:::
+
+---
+
+## Part 3: View Snapshots in the FSx Console
+
+1. Navigate to the [Amazon FSx console](https://console.aws.amazon.com/fsx).
+
+2. Click on your FSx for ONTAP file system.
+
+3. Select the **Volumes** tab and click on the Trident-provisioned volume (its name starts with `trident_pvc_...`).
+
+4. In the volume details, you can verify:
+   - **Snapshot policy**: `default` (automatic snapshots enabled)
+   - The volume is actively being protected by both automatic ONTAP snapshots and any Kubernetes VolumeSnapshots you created
+
+---
+
+## Part 4: (Optional) Managing Snapshots via AWS CLI
+
+You can also view and manage the snapshot policy on Trident-provisioned volumes using the AWS CLI. While the Kubernetes-native approach (Parts 1–2) is preferred for on-demand snapshots, the AWS CLI is useful for administrative tasks like changing the snapshot policy.
+
+##### View the current snapshot policy
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
+ONTAP_VOL_NAME=$(kubectl get pv $(kubectl get pvc ontap-model-claim -o jsonpath='{.spec.volumeName}') -o jsonpath='{.spec.csi.volumeAttributes.internalName}')
+FSX_ID=$(aws fsx describe-file-systems --query "FileSystems[?FileSystemType=='ONTAP'].FileSystemId" --output text)
+VOLUME_ID=$(aws fsx describe-volumes --filters Name=file-system-id,Values=$FSX_ID --query "Volumes[?Name=='${ONTAP_VOL_NAME}'].VolumeId" --output text)
+
+aws fsx describe-volumes --volume-ids $VOLUME_ID \
+  --query "Volumes[0].OntapConfiguration.{Name:Name,SnapshotPolicy:SnapshotPolicy,SizeMB:SizeInMegabytes,StorageEfficiency:StorageEfficiencyEnabled}" \
+  --output table
+:::
+
+##### Change the snapshot policy
+
+If you need to change the snapshot policy (for example, to disable automatic snapshots or switch to a different schedule), you can update the volume:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=false}
+# Switch to default-1weekly (fewer weekly snapshots)
+aws fsx update-volume --volume-id $VOLUME_ID \
+  --ontap-configuration '{"SnapshotPolicy":"default-1weekly"}'
+
+# Disable automatic snapshots
+aws fsx update-volume --volume-id $VOLUME_ID \
+  --ontap-configuration '{"SnapshotPolicy":"none"}'
+
+# Re-enable default policy
 aws fsx update-volume --volume-id $VOLUME_ID \
   --ontap-configuration '{"SnapshotPolicy":"default"}'
 :::
 
-2. Verify the policy was updated:
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-aws fsx describe-volumes --volume-ids $VOLUME_ID --query "Volumes[0].OntapConfiguration.SnapshotPolicy" --output text
-:::
-
-::::expand{header="You should see output similar to below, click to expand"}
-
-:::code[]{language=bash showLineNumbers=false showCopyAction=false}
-default
-:::
-
-::::
-
 :::alert{header="Note" type="info"}
-The `default` policy creates the first hourly snapshot at 5 minutes past the next hour. You don't need to wait for this — in the next step, you'll see how to access snapshots from within a pod. If you've just enabled the policy, the `.snapshot` directory may initially be empty until the first scheduled snapshot is taken.
+Modifying a Trident-managed volume's snapshot policy via the FSx API is safe and does not interfere with Trident's operation. However, the preferred approach is to configure the snapshot policy in the Trident backend configuration so that all new volumes are provisioned with the correct policy from the start.
 :::
 
-##### Step 3: View the snapshot in the FSx console
-
-1. Navigate to the [Amazon FSx console](https://console.aws.amazon.com/fsx).
-
-2. Click on your FSx for ONTAP file system in the list.
-
-3. Select the **Volumes** tab to see the volumes in your file system.
-
-4. Click on the Trident-provisioned volume (its name starts with `trident_pvc_...`). This is the volume that holds your model data.
-
-5. In the volume details, verify that the **Snapshot policy** now shows `default`.
-
-:::alert{header="Automatic Snapshots" type="info"}
-With the `default` policy enabled, ONTAP will automatically create snapshots on the following schedule: up to 6 hourly, 2 daily (Mon–Sat), and 2 weekly (Sunday). Snapshot times are based on the file system's time zone (UTC by default). The oldest snapshots are automatically deleted to make room for newer ones.
-:::
-
-##### Step 4: Access snapshots from within a pod
-
-Each ONTAP snapshot is accessible through a hidden `.snapshot` directory at the root of the volume. This means you can browse and recover files from any snapshot directly from within a pod — no restore operation needed.
-
-1. From your vLLM pod (or any pod with the volume mounted), you can list available snapshots:
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=false}
-# List available snapshots from within a pod
-ls /work-dir/.snapshot/
-
-# View model files from a specific snapshot
-ls /work-dir/.snapshot/<snapshot-name>/Mistral-7B-Instruct-v0.3/
-:::
-
-:::alert{header="Note" type="info"}
-If you just enabled the `default` policy, the `.snapshot` directory may be empty until the first scheduled snapshot is taken (at 5 minutes past the next hour). You can check back after the hour to see the first snapshot appear.
-:::
-
-##### Step 5: Understand snapshot-based data protection and recovery
-
-ONTAP volume snapshots provide several data protection capabilities:
-
-**Restoring individual files from a snapshot**
-
-If you accidentally delete or modify a file, you can recover it directly from the `.snapshot` directory without performing a full volume restore. Simply copy the file from the snapshot back to the active volume:
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=false}
-# Example: recover a deleted config file from the most recent hourly snapshot
-cp /work-dir/.snapshot/hourly.0/Mistral-7B-Instruct-v0.3/config.json \
-   /work-dir/Mistral-7B-Instruct-v0.3/config.json
-:::
-
-**FlexClone volumes**
-
-FSx for ONTAP supports **FlexClone** volumes, which are writable clones created from snapshots. FlexClone volumes are space-efficient — they share unchanged data blocks with the parent volume and only consume additional space for new or modified data. This is ideal for running parallel experiments with different model configurations without duplicating the entire dataset.
-
-**Custom snapshot policies**
-
-You can create custom snapshot policies using the ONTAP CLI or REST API to match your specific data protection requirements. For example, you might create a policy that takes snapshots every 15 minutes during business hours for a production inference workload.
-
-For more information, see [Snapshot policies](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snapshots-ontap.html) in the FSx for ONTAP User Guide.
-
-:::alert{header="Key Takeaway" type="success"}
-ONTAP volume snapshots give you fast, space-efficient data protection for your AI model data. By enabling the `default` snapshot policy, you get automatic hourly, daily, and weekly snapshots with no additional configuration. Combined with features like FlexClone, you can create lightweight copies of your data for experimentation, testing, and disaster recovery — all without the overhead of full data copies.
-:::
+---
 
 ## Summary
 
 In this section, you have:
-- Discovered the Trident-provisioned ONTAP volume that stores your Mistral-7B model data
-- Enabled the `default` snapshot policy to activate automatic hourly, daily, and weekly snapshots
-- Learned how to access snapshots from within a pod via the `.snapshot` directory
-- Understood how ONTAP snapshots can be used for file-level recovery and creating space-efficient clones
+- Verified that automatic ONTAP snapshots are enabled via the Trident backend configuration (`snapshotPolicy: "default"`, `snapshotReserve: "10"`)
+- Created a `VolumeSnapshotClass` for Kubernetes-native on-demand snapshots
+- Created an on-demand `VolumeSnapshot` of the model data PVC using `kubectl`
+- Learned how to create space-efficient clones from snapshots using `dataSource`
+- Viewed snapshots in the FSx console
+- (Optional) Managed snapshot policies via the AWS CLI
 
-ONTAP snapshots provide instant, space-efficient data protection directly at the storage layer. This is particularly valuable for AI/ML workloads where model data can be large and needs to be protected without impacting inference performance.
+FSx for ONTAP provides both automatic scheduled snapshots and Kubernetes-native on-demand snapshots through Trident's CSI integration. Together, these give you comprehensive data protection for AI/ML workloads — automatic snapshots for ongoing protection, and on-demand snapshots for point-in-time captures before experiments.

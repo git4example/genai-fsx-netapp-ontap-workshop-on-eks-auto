@@ -1,0 +1,10 @@
+# VolumeSnapshotClass for Trident CSI driver
+# This enables Kubernetes-native on-demand volume snapshots for ONTAP volumes.
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: trident-snapshotclass
+  annotations:
+    snapshot.storage.kubernetes.io/is-default-class: "true"
+driver: csi.trident.netapp.io
+deletionPolicy: Retain
