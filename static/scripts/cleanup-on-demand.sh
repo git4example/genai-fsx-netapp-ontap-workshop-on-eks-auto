@@ -242,6 +242,10 @@ main() {
         echo ""
         read -p "Proceed with CloudFormation stack deletion? (yes/no): " DELETE_STACK
         if [[ "$DELETE_STACK" == "yes" ]]; then
+            log_info "Disabling termination protection..."
+            aws cloudformation update-termination-protection \
+                --no-enable-termination-protection \
+                --stack-name "${STACK_NAME}" --region $AWS_REGION 2>/dev/null || true
             log_info "Initiating CloudFormation stack deletion..."
             aws cloudformation delete-stack --stack-name "${STACK_NAME}" --region $AWS_REGION
             

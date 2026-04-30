@@ -46,7 +46,7 @@ spec:
     size: "100Gi"    # Range: 1-59000Gi or 1-64000G or 1-58Ti or 1-64T
     iops: 10000      # Range: 3000-16000
     throughput: 1000 # Range: 125-1000
-  role: "NODE_ROLE" 
+  role: "$NODE_ROLE" 
   subnetSelectorTerms:          
     - tags:
         karpenter.sh/discovery: "eksworkshop"

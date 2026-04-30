@@ -24,7 +24,7 @@
 #     containing both model weights (safetensors) and compiled artifacts
 #     (model.pt + neuron_config.json from SDK 2.26.1)
 #   - FSx for ONTAP PVC named "ontap-model-claim" dynamically provisioned via Trident
-#   - Replace FSX_ONTAP_AZ below with your FSx ONTAP availability zone
+#   - Replace us-east-1a below with your FSx ONTAP availability zone
 #
 # STARTUP TIMING (from production logs):
 #   - Image pull (first time): ~5m 12s (10.5 GB DLC image)
@@ -67,7 +67,7 @@ spec:
                   - key: topology.kubernetes.io/zone
                     operator: In
                     values:
-                      - FSX_ONTAP_AZ # Replace with your FSx ONTAP AZ
+                      - $FSX_ONTAP_AZ # Replace with your FSx ONTAP AZ
       nodeSelector:
         node.kubernetes.io/instance-type: inf2.xlarge
       tolerations:

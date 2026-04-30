@@ -7,20 +7,61 @@
 # the workshop command execution end-to-end.
 #
 # Prerequisites:
-#   - VSCode IDE instance with AWS credentials configured
-#   - Environment variables: AWS_REGION, AWS_ACCOUNTID
+#   - AWS credentials configured (CLI, instance role, or environment variables)
+#   - AWS_REGION set in environment, or script will prompt for it
+#   - AWS_ACCOUNTID auto-detected from caller identity if not set
 #   - EKS cluster "eksworkshop" already provisioned via Terraform
 #   - FSx for ONTAP file system, SVM, and volume already provisioned
 # =============================================================================
 
 set -euo pipefail
 
+# --- Resolve workshop directory ---
+# Works in both layouts:
+#   Project repo: static/scripts/ -> static/ contains eks/, terraform/
+#   VSCode server: /home/participant/environment/scripts/ -> environment/ contains eks/, terraform/
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Try project repo layout first (script at static/scripts/, root is ../..)
+if [[ -d "${SCRIPT_DIR}/../../static/eks" ]]; then
+    WORKSHOP_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+    TERRAFORM_DIR="${WORKSHOP_DIR}/static/terraform"
+    EKS_ONTAP_DIR="${WORKSHOP_DIR}/static/eks/FSxONTAP"
+    EKS_GENAI_DIR="${WORKSHOP_DIR}/static/eks/genai"
+    OBSERVABILITY_DIR="${EKS_GENAI_DIR}/observability"
+# VSCode server layout (script at environment/scripts/, siblings are eks/, terraform/)
+elif [[ -d "${SCRIPT_DIR}/../eks" ]]; then
+    WORKSHOP_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+    TERRAFORM_DIR="${WORKSHOP_DIR}/terraform"
+    EKS_ONTAP_DIR="${WORKSHOP_DIR}/eks/FSxONTAP"
+    EKS_GENAI_DIR="${WORKSHOP_DIR}/eks/genai"
+    OBSERVABILITY_DIR="${EKS_GENAI_DIR}/observability"
+else
+    echo "ERROR: Could not detect workshop directory layout."
+    echo "Expected eks/ and terraform/ directories near: $SCRIPT_DIR"
+    exit 1
+fi
+
 echo "============================================================"
 echo "  Workshop Quick Setup Script"
 echo "============================================================"
+echo "Workshop directory: $WORKSHOP_DIR"
 
 # --- Initial setup ---
-aws sts get-caller-identity
+CALLER_IDENTITY=$(aws sts get-caller-identity --output json)
+echo "$CALLER_IDENTITY" | jq .
+
+# Auto-detect AWS_ACCOUNTID from caller identity if not set
+if [[ -z "${AWS_ACCOUNTID:-}" ]]; then
+    export AWS_ACCOUNTID=$(echo "$CALLER_IDENTITY" | jq -r '.Account')
+    echo "Auto-detected AWS_ACCOUNTID: $AWS_ACCOUNTID"
+fi
+
+# Prompt for AWS_REGION if not set
+if [[ -z "${AWS_REGION:-}" ]]; then
+    read -p "AWS_REGION is not set. Enter your AWS region (e.g., us-west-2): " AWS_REGION
+    export AWS_REGION
+fi
 
 export CLUSTER_NAME=eksworkshop
 echo "AWS_REGION: $AWS_REGION"
@@ -75,12 +116,12 @@ cat << EOF > trident-csi-driver.json
 }
 EOF
 
-# --- Step 2: Create the IAM policy ---
+# --- Step 2: Create the IAM policy (skip if already exists) ---
 aws iam create-policy \
         --policy-name Amazon_FSx_ONTAP_Trident_CSI_Driver \
-        --policy-document file://trident-csi-driver.json
+        --policy-document file://trident-csi-driver.json 2>&1 || echo "IAM policy already exists, continuing..."
 
-# --- Step 3: Create service account for Trident ---
+# --- Step 3: Create service account for Trident (skip if already exists) ---
 eksctl create iamserviceaccount \
     --region $AWS_REGION \
     --cluster=$CLUSTER_NAME \
@@ -89,14 +130,14 @@ eksctl create iamserviceaccount \
     --attach-policy-arn arn:aws:iam::$AWS_ACCOUNTID:policy/Amazon_FSx_ONTAP_Trident_CSI_Driver \
     --role-name=trident-controller \
     --role-only \
-    --approve
+    --approve 2>&1 || echo "IAM service account already exists, continuing..."
 
 # --- Step 4: Save the Role ARN ---
 export ROLE_ARN=$(aws cloudformation describe-stacks --stack-name "eksctl-${CLUSTER_NAME}-addon-iamserviceaccount-trident-trident-controller" --query "Stacks[0].Outputs[0].OutputValue" --region $AWS_REGION --output text)
 echo "ROLE_ARN: $ROLE_ARN"
 
 # --- Step 5: Deploy Trident CSI driver via Helm ---
-helm repo add netapp-trident https://netapp.github.io/trident-helm-chart
+helm repo add netapp-trident https://netapp.github.io/trident-helm-chart --force-update
 helm repo update
 
 helm upgrade --install trident-operator netapp-trident/trident-operator \
@@ -110,19 +151,23 @@ echo "Waiting for Trident pods to be ready..."
 sleep 30
 kubectl get pods -n trident
 
+# --- Step 5b: Install Kubernetes VolumeSnapshot CRDs (required for Module 4) ---
+echo "Installing VolumeSnapshot CRDs (external-snapshotter v8.2.0)..."
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+
 # --- Step 6: Configure Trident backend for FSx ONTAP ---
-cd /home/participant/environment/eks/FSxONTAP
+cd "$EKS_ONTAP_DIR"
 
 # Step 6.7: Retrieve SVM password from Secrets Manager
 SECRET_NAME=$(aws secretsmanager list-secrets --query "SecretList[?starts_with(Name,'trident-fsx-ontap-svm-')].Name" --output text --region $AWS_REGION)
 SVM_PASSWORD=$(aws secretsmanager get-secret-value --secret-id $SECRET_NAME --query "SecretString" --output text --region $AWS_REGION)
 echo "SVM Password retrieved from secret: $SECRET_NAME"
 
-# Step 6.8: Update secret manifest
-sed -i'' -e "s/SVM_PASSWORD/$SVM_PASSWORD/g" fsx-ontap-secret.yaml
-
-# Step 6.9: Apply the secret
-kubectl apply -f fsx-ontap-secret.yaml
+# Step 6.8: Apply the secret (envsubst replaces $SVM_PASSWORD in the template)
+export SVM_PASSWORD
+envsubst '$SVM_PASSWORD' < fsx-ontap-secret.yaml | kubectl apply -f -
 
 # Step 6.10: Retrieve SVM management LIF and name
 FSX_ID=$(aws fsx describe-file-systems --query "FileSystems[?FileSystemType=='ONTAP'].FileSystemId" --output text --region $AWS_REGION)
@@ -131,10 +176,9 @@ SVM_NAME=$(aws fsx describe-storage-virtual-machines --filters "Name=file-system
 echo "SVM Management LIF: $SVM_MGMT_LIF"
 echo "SVM Name: $SVM_NAME"
 
-# Step 6.11: Update and apply TridentBackendConfig
-sed -i'' -e "s/SVM_MGMT_LIF/$SVM_MGMT_LIF/g" trident-backend-config.yaml
-sed -i'' -e "s/SVM_NAME/$SVM_NAME/g" trident-backend-config.yaml
-kubectl apply -f trident-backend-config.yaml
+# Step 6.11: Apply TridentBackendConfig (envsubst replaces $SVM_MGMT_LIF and $SVM_NAME)
+export SVM_MGMT_LIF SVM_NAME
+envsubst '$SVM_MGMT_LIF $SVM_NAME' < trident-backend-config.yaml | kubectl apply -f -
 
 # Step 6.12: Verify backend
 echo "Waiting for Trident backend to register..."
@@ -146,7 +190,7 @@ echo "============================================================"
 echo "  Module 1: Create StorageClass and PVC (Dynamic Provisioning)"
 echo "============================================================"
 
-cd /home/participant/environment/eks/FSxONTAP
+cd "$EKS_ONTAP_DIR"
 
 # Apply StorageClass
 kubectl apply -f ontap-storage-class.yaml
@@ -167,46 +211,63 @@ echo "  Module 2: Deploy vLLM on AWS Inferentia"
 echo "============================================================"
 
 # --- Step 1: Install Neuron Helm Chart ---
-cd /home/participant/environment/terraform
+cd "$TERRAFORM_DIR"
 
 helm upgrade --install neuron-helm-chart \
     oci://public.ecr.aws/neuron/neuron-helm-chart \
     --namespace kube-system \
     --version 1.5.0 \
-    -f ./helm-values/neuron-values.yaml
+    -f "$TERRAFORM_DIR/helm-values/neuron-values.yaml"
 
 # --- Step 2: Create Inferentia NodePool ---
-NODE_ROLE=$(cd /home/participant/environment/terraform && terraform output --raw eks_node_iam_role_name)
-cd /home/participant/environment/eks/genai
-sed -i'' -e "s/NODE_ROLE/$NODE_ROLE/g" inferentia_nodepool.yaml
-
-kubectl apply -f inferentia_nodepool.yaml
+NODE_ROLE=""
+RAW_OUTPUT=$(cd "$TERRAFORM_DIR" 2>/dev/null && terraform output --raw eks_node_iam_role_name 2>/dev/null) || true
+# Validate: a valid IAM role name is alphanumeric with hyphens/underscores, max 64 chars
+CLEAN_ROLE=$(echo "$RAW_OUTPUT" | grep -oE '^[a-zA-Z0-9_+=,.@-]{1,64}$' | head -1 || true)
+if [[ -n "$CLEAN_ROLE" ]]; then
+    NODE_ROLE="$CLEAN_ROLE"
+fi
+if [[ -z "$NODE_ROLE" ]]; then
+    echo "Could not retrieve NODE_ROLE from terraform output (state may be on another machine)."
+    read -p "Enter the EKS node IAM role name: " NODE_ROLE
+fi
+echo "NODE_ROLE: $NODE_ROLE"
+cd "$EKS_GENAI_DIR"
+export NODE_ROLE
+envsubst '$NODE_ROLE' < inferentia_nodepool.yaml | kubectl apply -f -
 kubectl get nodepool,nodeclass inferentia
 
 # --- Step 3: Load Mistral-7B model onto FSx ONTAP volume ---
-cd /home/participant/environment/eks/FSxONTAP
-kubectl apply -f model-loading-job.yaml
+cd "$EKS_ONTAP_DIR"
 
-echo "Waiting for model-download Job to complete (timeout: 1800s)..."
-echo "Tip: In another terminal, run: kubectl logs -f job/model-download"
-kubectl wait --for=condition=complete job/model-download --timeout=1800s
+# Check if model-download job already completed
+if kubectl get job model-download -o jsonpath='{.status.succeeded}' 2>/dev/null | grep -q "1"; then
+    echo "Model download Job already completed, skipping..."
+else
+    kubectl delete job model-download --ignore-not-found 2>/dev/null || true
+    kubectl apply -f model-loading-job.yaml
+
+    echo "Waiting for model-download Job to complete (timeout: 1800s)..."./c
+    echo "Tip: In another terminal, run: kubectl logs -f job/model-download"
+    kubectl wait --for=condition=complete job/model-download --timeout=1800s
+fi
 
 # --- Step 4: Deploy vLLM ---
-cd /home/participant/environment/eks/genai
+cd "$EKS_GENAI_DIR"
 
 FSX_ONTAP_AZ=$(aws fsx describe-file-systems --region $AWS_REGION --query "FileSystems[?FileSystemType=='ONTAP'].SubnetIds[0]" --output text | head -1 | xargs -I {} aws ec2 describe-subnets --subnet-ids {} --query 'Subnets[0].AvailabilityZone' --output text)
+export FSX_ONTAP_AZ
 echo "FSX_ONTAP_AZ: $FSX_ONTAP_AZ"
 
-sed -i'' -e "s/FSX_ONTAP_AZ/$FSX_ONTAP_AZ/g" mistral-ontap.yaml
-kubectl apply -f mistral-ontap.yaml
+envsubst '$FSX_ONTAP_AZ' < mistral-ontap.yaml | kubectl apply -f -
 
 # Deploy Open WebUI via Helm (no IP restriction — runs from VSCode IDE)
-helm repo add open-webui https://helm.openwebui.com/
+helm repo add open-webui https://helm.openwebui.com/ --force-update
 helm repo update
 
 helm upgrade --install open-webui open-webui/open-webui \
   -n default \
-  -f /home/participant/environment/eks/genai/open-webui-helm/values.yaml \
+  -f "$EKS_GENAI_DIR/open-webui-helm/values.yaml" \
   --wait --timeout 5m
 
 echo "Waiting for vLLM pod to start (this takes ~7 minutes)..."
@@ -228,10 +289,10 @@ GRAFANA_PASSWORD=$(aws secretsmanager get-secret-value \
     --query 'SecretString' \
     --output text)
 
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update
 helm repo update
 
-cd /home/participant/environment/eks/genai/observability/
+cd "$OBSERVABILITY_DIR"
 
 helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
     --namespace kube-system \

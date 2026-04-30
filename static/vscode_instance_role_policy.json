@@ -226,7 +226,8 @@
           "cloudformation:GetTemplateSummary",
           "cloudformation:ValidateTemplate",
           "cloudformation:TagResource",
-          "cloudformation:UntagResource"
+          "cloudformation:UntagResource",
+          "cloudformation:UpdateTerminationProtection"
         ],
         "Resource": [
           "arn:aws:cloudformation:*:*:stack/eksctl-*",

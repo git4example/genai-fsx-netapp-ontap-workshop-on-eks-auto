@@ -150,20 +150,14 @@ SVM_PASSWORD=$(aws secretsmanager get-secret-value --secret-id $SECRET_NAME --qu
 echo "SVM Password retrieved from secret: $SECRET_NAME"
 :::
 
-8. Replace the `SVM_PASSWORD` placeholder in the Secret manifest with the actual password.
+8. Apply the Secret containing the SVM `vsadmin` credentials, substituting the `$SVM_PASSWORD` placeholder with the actual password retrieved above.
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/FSxONTAP
-sed -i'' -e "s/SVM_PASSWORD/$SVM_PASSWORD/g" fsx-ontap-secret.yaml
+envsubst '$SVM_PASSWORD' < fsx-ontap-secret.yaml | kubectl apply -f -
 :::
 
-9. Apply the Secret containing the SVM `vsadmin` credentials.
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-kubectl apply -f fsx-ontap-secret.yaml
-:::
-
-10. Next, retrieve the SVM management LIF and SVM name from your FSx for ONTAP file system, and update the TridentBackendConfig manifest.
+9. Next, retrieve the SVM management LIF and SVM name from your FSx for ONTAP file system.
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 FSX_ID=$(aws fsx describe-file-systems --query "FileSystems[?FileSystemType=='ONTAP'].FileSystemId" --output text --region $AWS_REGION)
@@ -173,19 +167,17 @@ echo "SVM Management LIF: $SVM_MGMT_LIF"
 echo "SVM Name: $SVM_NAME"
 :::
 
-11. Replace the placeholders in the TridentBackendConfig manifest and apply it.
+10. Apply the TridentBackendConfig, substituting the `$SVM_MGMT_LIF` and `$SVM_NAME` placeholders with the values retrieved above.
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-sed -i'' -e "s/SVM_MGMT_LIF/$SVM_MGMT_LIF/g" trident-backend-config.yaml
-sed -i'' -e "s/SVM_NAME/$SVM_NAME/g" trident-backend-config.yaml
-kubectl apply -f trident-backend-config.yaml
+envsubst '$SVM_MGMT_LIF $SVM_NAME' < trident-backend-config.yaml | kubectl apply -f -
 :::
 
 :::alert{header="Snapshot configuration" type="info"}
 The backend configuration includes `defaults` for snapshot management: `snapshotPolicy: "default"` enables automatic hourly/daily/weekly ONTAP snapshots, `snapshotReserve: "10"` reserves 10% of volume capacity for snapshot data, and `snapshotDir: "true"` makes the `.snapshot` directory accessible from within pods. You will explore these snapshots in Module 4.
 :::
 
-12. Verify that the Trident backend has been registered successfully.
+11. Verify that the Trident backend has been registered successfully.
 
 ::code[kubectl get tridentbackendconfig -n trident]{language=bash showLineNumbers=false showCopyAction=true}
 

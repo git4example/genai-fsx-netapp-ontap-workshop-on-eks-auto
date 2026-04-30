@@ -9,4 +9,4 @@ In this module, you will configure and deploy a Generative-AI chatbot applicatio
 
 The storage architecture uses the NetApp Astra Trident CSI driver to dynamically provision ONTAP-backed volumes. A Kubernetes Job loads the model data onto the persistent volume before the vLLM inference pod starts.
 
-![lab-image-2](/static/images/lab-image-2.png)
+![lab-image](/static/images/lab-image.png)

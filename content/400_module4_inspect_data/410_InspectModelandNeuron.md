@@ -74,8 +74,59 @@ Here is a description of the model data you are seeing in the Mistral model fold
 | `special_tokens_map.json`, `tokenizer_config.json` | Tokenizer configuration | Maps special tokens (BOS, EOS, PAD) and tokenizer settings. |
 
 :::alert{header="Note" type="info"}
-This workshop uses **pre-compiled Neuron artifacts** (`model.pt` + `neuron_config.json`) that were compiled with SDK 2.26.1 and uploaded to HuggingFace. When vLLM starts, it detects these artifacts via the `NEURON_COMPILED_ARTIFACTS` environment variable and loads them directly onto the NeuronCores — skipping the compilation step entirely. Without pre-compiled artifacts, the Neuron compiler (`neuronx-cc`) would need to compile the model on first startup, which takes 15+ minutes and requires significantly more memory than inf2.xlarge provides. So for inferencing jobs, you pre-compile models in bigger instances and run infernece on smaller instance.
+This workshop uses **pre-compiled Neuron artifacts** (`model.pt` + `neuron_config.json`) that were compiled with SDK 2.26.1 and uploaded to HuggingFace. When vLLM starts, it detects these artifacts via the `NEURON_COMPILED_ARTIFACTS` environment variable and loads them directly onto the NeuronCores — skipping the compilation step entirely. Without pre-compiled artifacts, the Neuron compiler (`neuronx-cc`) would need to compile the model on first startup, which takes 15+ minutes and requires significantly more memory than inf2.xlarge provides.
 :::
+
+::::expand{header="What is Neuron compilation and how are pre-compiled artifacts generated? (click to expand)"}
+
+**Why compilation is needed**
+
+Standard PyTorch models are designed for GPUs or CPUs. AWS Inferentia NeuronCores use a different instruction set, so the model's computation graph must be **compiled** into **NEFF (Neuron Executable File Format)** — an optimized binary that the Neuron hardware can execute directly. This compilation is performed by the **Neuron Compiler** (`neuronx-cc`), which is part of the AWS Neuron SDK.
+
+**What happens during compilation**
+
+The compiler takes the model's PyTorch operations, optimizes them for the Neuron architecture (operator fusion, memory layout, tensor parallelism across NeuronCores), and produces a `model.pt` file (the NEFF binary) along with a `neuron_config.json` that records the compilation parameters. These parameters include:
+- **tp_degree** — tensor parallel degree (number of NeuronCores, e.g., 2)
+- **batch_size** — maximum concurrent requests (e.g., 4)
+- **seq_len** — maximum sequence length (e.g., 4096 tokens)
+- **Neuron SDK version** — the compiled artifacts are tied to a specific SDK version
+
+**How to generate pre-compiled artifacts**
+
+Compilation is typically done on a larger instance (e.g., inf2.8xlarge or inf2.24xlarge) that has enough memory for the compiler. You run the same DLC container image used for inference — when the Neuron runtime detects no pre-compiled artifacts, it automatically invokes `neuronx-cc` to compile the model on first startup. Once compiled, the artifacts are saved alongside the model weights and can be uploaded to a model registry for reuse.
+
+```bash
+# On a larger instance (e.g., inf2.8xlarge) with sufficient memory:
+# 1. Run the vLLM DLC container with the model — it will auto-compile on first run
+docker run -v ./model:/work-dir \
+  -e NEURON_COMPILED_ARTIFACTS=/work-dir/Mistral-7B-Instruct-v0.3 \
+  public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py311-sdk2.26.1-ubuntu22.04 \
+  vllm serve /work-dir/Mistral-7B-Instruct-v0.3 \
+  --device neuron --tensor-parallel-size 2 \
+  --max-model-len 4096 --max-num-seqs 4
+
+# 2. The Neuron runtime inside the container detects no NEFF artifacts at
+#    the NEURON_COMPILED_ARTIFACTS path, invokes neuronx-cc to compile,
+#    and saves model.pt + neuron_config.json to that same directory.
+#    This takes 15-30+ minutes.
+
+# 3. After compilation completes, the compiled artifacts are stored
+#    alongside the model weights in the mounted volume. Upload the
+#    entire directory to HuggingFace or S3 for reuse.
+```
+
+**Why pre-compilation matters for production**
+
+| Approach | Startup time | Memory needed | Best for |
+|---|---|---|---|
+| Compile on first run | 15–30+ minutes | High (compiler overhead) | Development, one-off testing |
+| Pre-compiled artifacts | 1–2 minutes | Low (just weight loading) | Production, workshops, CI/CD |
+
+Pre-compiled artifacts must match the exact SDK version, tp_degree, batch_size, and seq_len of the deployment. If any parameter changes, the model must be recompiled.
+
+For more information, see the [Neuron Compiler documentation](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/compiler/index.html).
+
+::::
 
 
 

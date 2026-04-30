@@ -81,7 +81,35 @@ The `default` policy creates the first hourly snapshot at 5 minutes past the hou
 
 While automatic ONTAP snapshots run on a schedule, **Kubernetes VolumeSnapshots** let you create point-in-time snapshots on demand — for example, before fine-tuning a model or modifying training data. These snapshots are fully Kubernetes-native and managed through `kubectl`.
 
-##### Step 3: Create a VolumeSnapshotClass
+##### Step 3: Install VolumeSnapshot CRDs
+
+Kubernetes VolumeSnapshots require the **external-snapshotter** Custom Resource Definitions (CRDs) to be installed on the cluster. These CRDs define the `VolumeSnapshotClass`, `VolumeSnapshot`, and `VolumeSnapshotContent` resources. EKS Auto Mode does not install these by default.
+
+:::alert{header="Note" type="info"}
+Trident installs its own snapshot CRDs (`tridentsnapshots.trident.netapp.io`), but the **Kubernetes-native** VolumeSnapshot CRDs (`snapshot.storage.k8s.io`) are a separate component maintained by the [kubernetes-csi/external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter) project.
+:::
+
+1. Install the VolumeSnapshot CRDs:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+:::
+
+2. Verify the CRDs are installed:
+
+::code[kubectl get crd | grep snapshot.storage.k8s.io]{language=bash showLineNumbers=false showCopyAction=true}
+
+You should see three CRDs:
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=false}
+volumesnapshotclasses.snapshot.storage.k8s.io    2026-04-30T00:00:00Z
+volumesnapshotcontents.snapshot.storage.k8s.io   2026-04-30T00:00:00Z
+volumesnapshots.snapshot.storage.k8s.io          2026-04-30T00:00:00Z
+:::
+
+##### Step 4: Create a VolumeSnapshotClass
 
 The `VolumeSnapshotClass` tells Kubernetes which CSI driver to use for snapshots. This is analogous to a `StorageClass` for volumes.
 
@@ -116,7 +144,7 @@ Key points:
 
 ::code[kubectl get volumesnapshotclass]{language=bash showLineNumbers=false showCopyAction=true}
 
-##### Step 4: Create an on-demand VolumeSnapshot
+##### Step 5: Create an on-demand VolumeSnapshot
 
 Now create a snapshot of the `ontap-model-claim` PVC. Trident will create an ONTAP snapshot on the underlying volume via the CSI interface.
 
@@ -154,7 +182,46 @@ When `READYTOUSE` shows `true`, the snapshot has been created successfully on th
 
 ::code[kubectl describe volumesnapshot model-snapshot]{language=bash showLineNumbers=false showCopyAction=true}
 
-##### Step 5: Create a PVC from the snapshot (clone)
+##### Step 6: Verify snapshots from within a pod
+
+To confirm that both automatic ONTAP snapshots and the Kubernetes VolumeSnapshot are visible on the volume, deploy a lightweight utility pod and inspect the `.snapshot` directory.
+
+1. Deploy the netshoot pod (mounts the same `ontap-model-claim` PVC):
+
+::code[kubectl apply -f netshoot-fsxn.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+
+2. Wait for the pod to be running:
+
+::code[kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=120s]{language=bash showLineNumbers=false showCopyAction=true}
+
+3. List the `.snapshot` directory to see all snapshots on the volume:
+
+::code[kubectl exec -it netshoot-fsxn -- ls -la /work-dir/.snapshot]{language=bash showLineNumbers=false showCopyAction=true}
+
+You should see both the automatic ONTAP snapshots (named `hourly.0`, `daily.0`, etc.) and the Kubernetes VolumeSnapshot (named `snapshot-xxxxxxxx-...`):
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=false}
+Defaulted container "netshoot" out of: netshoot, hf-cli, s5cmd
+total 16
+drwxrwxrwx    4 4294967294 4294967294      4096 Apr 30 07:28 .
+drwxrwxrwx    3 4294967294 4294967294      4096 Apr 30 07:16 ..
+drwxrwxrwx    3 4294967294 4294967294      4096 Apr 30 07:16 hourly.0
+drwxrwxrwx    3 4294967294 4294967294      4096 Apr 30 07:16 snapshot-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+:::
+
+:::alert{header="Note" type="info"}
+The `hourly.0` snapshot is created by the ONTAP `default` snapshot policy at 5 minutes past the hour. If you don't see it yet, the first scheduled snapshot hasn't fired. The `snapshot-xxxxxxxx-...` entry is the Kubernetes VolumeSnapshot you created in Step 5. Each snapshot directory contains a full read-only copy of the volume data at that point in time.
+:::
+
+4. Verify the model data is intact inside a snapshot:
+
+::code[kubectl exec -it netshoot-fsxn -- sh -c 'ls /work-dir/.snapshot/snapshot-*/Mistral-7B-Instruct-v0.3/']{language=bash showLineNumbers=false showCopyAction=true}
+
+5. Clean up the utility pod when done:
+
+::code[kubectl delete pod netshoot-fsxn]{language=bash showLineNumbers=false showCopyAction=true}
+
+##### Step 7: Create a PVC from the snapshot (clone)
 
 One of the most powerful features of VolumeSnapshots is the ability to create a new PVC from a snapshot. This creates a **space-efficient clone** of the data — ideal for experimentation, A/B testing, or creating isolated environments.
 
@@ -183,7 +250,7 @@ With Kubernetes VolumeSnapshots, you can take on-demand snapshots before any exp
 
 ---
 
-## Part 3: View Snapshots in the FSx Console
+## Part 3: Check Snapshot policy config in the FSx Console
 
 1. Navigate to the [Amazon FSx console](https://console.aws.amazon.com/fsx).
 

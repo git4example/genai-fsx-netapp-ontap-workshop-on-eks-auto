@@ -91,7 +91,7 @@ You can also see when vLLM Pod and the Mistral model has been loaded into the vL
 
 ---
 
-✅   Task 1  | Scripting task
+Task 1  | Scripting task
 ---
 
 - Ask the Chatbot to generate a quick script for us. Copy and paste the below example prompt into the Chatbot (or write your own).
@@ -100,7 +100,7 @@ You can also see when vLLM Pod and the Mistral model has been loaded into the vL
 
 
 
-✅   Task 2  | Language translation task
+Task 2  | Language translation task
 ---
 
 -  Ask the Chatbot to perform a language translation, without telling it what language the document is in.
@@ -122,7 +122,7 @@ You can also see when vLLM Pod and the Mistral model has been loaded into the vL
 
 
 
-✅   Task 3  | Context for input prompts using a context document
+Task 3  | Context for input prompts using a context document
 ---
 
 

@@ -27,7 +27,7 @@ In this workshop, you will learn how you can:
 
 ****Duration****: Approximately take 2 hours.
 
-![lab-image-3](/static/images/lab-image-3.png)
+![lab-image](/static/images/lab-image.png)
 
 -----
 

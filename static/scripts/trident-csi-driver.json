@@ -1,0 +1,38 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "fsx:DescribeFileSystems",
+                "fsx:DescribeVolumes",
+                "fsx:DescribeStorageVirtualMachines",
+                "fsx:CreateVolume",
+                "fsx:DeleteVolume",
+                "fsx:UpdateVolume",
+                "fsx:TagResource",
+                "fsx:UntagResource"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Action": "iam:CreateServiceLinkedRole",
+            "Effect": "Allow",
+            "Resource": "*",
+            "Condition": {
+                "StringLike": {
+                    "iam:AWSServiceName": [
+                        "fsx.amazonaws.com"
+                    ]
+                }
+            }
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "secretsmanager:GetSecretValue"
+            ],
+            "Resource": "arn:aws:secretsmanager:*:*:secret:trident-fsx-*"
+        }
+    ]
+}

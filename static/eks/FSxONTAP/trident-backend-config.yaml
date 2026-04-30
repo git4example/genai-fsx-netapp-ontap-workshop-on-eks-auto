@@ -7,8 +7,8 @@ spec:
   version: 1
   storageDriverName: ontap-nas
   backendName: fsx-ontap-nas
-  managementLIF: SVM_MGMT_LIF
-  svm: SVM_NAME
+  managementLIF: $SVM_MGMT_LIF
+  svm: $SVM_NAME
   credentials:
     name: fsx-ontap-secret
   defaults:

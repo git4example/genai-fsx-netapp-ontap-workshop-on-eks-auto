@@ -1272,6 +1272,7 @@ Resources:
                   - cloudformation:ValidateTemplate
                   - cloudformation:TagResource
                   - cloudformation:UntagResource
+                  - cloudformation:UpdateTerminationProtection
                 Resource:
                   - !Sub arn:${AWS::Partition}:cloudformation:*:*:stack/eksctl-*
                   - !Sub arn:${AWS::Partition}:cloudformation:*:*:stack/eksworkshop-*
@@ -2407,8 +2408,8 @@ Resources:
                   aws s3 sync $ASSET_BUCKET/terraform /home/${VSCodeUser}/environment/terraform --delete
                   aws s3 sync $ASSET_BUCKET/eks /home/${VSCodeUser}/environment/eks --delete
                   aws s3 sync $ASSET_BUCKET/scripts /home/${VSCodeUser}/environment/scripts --delete
-                  chown -R ${VSCodeUser}:${VSCodeUser} /home/${VSCodeUser}/environment
                   # aws s3 sync $ASSET_BUCKET/download /home/${VSCodeUser}/environment/download --delete
+                  chown -R ${VSCodeUser}:${VSCodeUser} /home/${VSCodeUser}/environment
                   
 
           - action: aws:runShellScript

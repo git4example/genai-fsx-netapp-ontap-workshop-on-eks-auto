@@ -68,16 +68,16 @@ The EKS Auto Mode configuration comes in the form of a NodePool Custom Resource 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 NODE_ROLE=$(cd /home/participant/environment/terraform && terraform output --raw eks_node_iam_role_name)
 cd /home/participant/environment/eks/genai
-sed -i'' -e "s/NODE_ROLE/$NODE_ROLE/g" inferentia_nodepool.yaml
+export NODE_ROLE
 :::
 
 2. Lets take a look at the EKS Auto NodePool definition for the inferentia NodePool before we apply it. This configuration will create a new nodepool for AWS Inferentia (using "INF2" type for instance-family), where the AWS INF2 compute nodes will power Generative AI application (vLLM pod).
 
 ::code[cat inferentia_nodepool.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
-4. Let's deploy the inferentia NodePool
+4. Let's deploy the inferentia NodePool, substituting the `$NODE_ROLE` placeholder with the IAM role name retrieved above.
 
-::code[kubectl apply -f inferentia_nodepool.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+::code[envsubst '$NODE_ROLE' < inferentia_nodepool.yaml | kubectl apply -f -]{language=bash showLineNumbers=false showCopyAction=true}
 
 5. Verify NodePool and NodeClass:
 ::code[kubectl get nodepool,nodeclass inferentia]{language=bash showLineNumbers=false showCopyAction=true}
@@ -166,16 +166,13 @@ cd /home/participant/environment/eks/genai
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 FSX_ONTAP_AZ=$(aws fsx describe-file-systems --region $AWS_REGION --query "FileSystems[?FileSystemType=='ONTAP'].SubnetIds[0]" --output text | head -1 | xargs -I {} aws ec2 describe-subnets --subnet-ids {} --query 'Subnets[0].AvailabilityZone' --output text)
+export FSX_ONTAP_AZ
 :::
 
-:::code[]{language=bash showLineNumbers=false showCopyAction=true}
-sed -i'' -e "s/FSX_ONTAP_AZ/$FSX_ONTAP_AZ/g" mistral-ontap.yaml
-:::
-
-2. Run the below command to deploy the vLLM Pod.
+2. Run the below command to deploy the vLLM Pod, substituting the `$FSX_ONTAP_AZ` placeholder with the availability zone retrieved above.
 
 
-::code[kubectl apply -f mistral-ontap.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+::code[envsubst '$FSX_ONTAP_AZ' < mistral-ontap.yaml | kubectl apply -f -]{language=bash showLineNumbers=false showCopyAction=true}
 
 
 3. Now run the below command, and you will see the Inferentia node count increase to 1, as we have deployed a pod that requires the accelerated compute node. Note that the increase to a value of 1 can take 30 seconds to update.
