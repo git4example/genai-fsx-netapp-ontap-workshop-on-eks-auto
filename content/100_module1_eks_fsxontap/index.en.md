@@ -10,7 +10,7 @@ In this workshop the **Mistral-7B-Instruct** model is stored on an Amazon FSx fo
 In this module you will deploy and integrate the **NetApp Astra Trident CSI driver** with your Amazon EKS cluster, configure a **TridentBackendConfig** to connect to the pre-provisioned FSx for ONTAP file system, create a **StorageClass** for dynamic provisioning, and create a **PersistentVolumeClaim** to provision an ONTAP volume for model storage. You will learn about Kubernetes storage concepts such as CSI drivers, StorageClasses, PersistentVolumeClaims, and dynamic provisioning with Trident. The infrastructure for this module comprises an Amazon EKS cluster with EC2 worker nodes and an Amazon FSx for NetApp ONTAP file system.
 
 
-![lab-architecture](/static/images/fsxl_lab.png)
+![fsxn-architecture](/static/images/fsxn-architecture.png)
 <!-- TODO: Replace with FSx for ONTAP architecture diagram -->
 
 ---

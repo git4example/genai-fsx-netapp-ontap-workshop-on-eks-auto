@@ -63,7 +63,7 @@ This file tracks all version-pinned software components in this workshop for mai
 | EKS Cluster Version | 1.33 | 1.35 | `static/GenAIFSXWorkshopOnEKS.yaml` (EKSClusterVersion param) |
 | kubectl Version | 1.33.0 | 1.35.0 | `static/GenAIFSXWorkshopOnEKS.yaml` (KubectlVersion param) |
 | vLLM Neuron Image | 0.16.0-sdk2.29.0 | 0.9.1-sdk2.26.1 | `static/eks/genai/mistral-ontap.yaml` (SDK 2.26.1 for inf2.xlarge) |
-| Trident (workshop instructions) | 100.2502.1 | 100.2602.0 | `content/100_module1_eks_fsxl/110_DeployAmazonFSxLustreCSIDriverToEKS.md` |
+| Trident (workshop instructions) | 100.2502.1 | 100.2602.0 | `content/100_module1_eks_fsxontap/110_DeployTridentCSIDriverToEKS.md` |
 
 ---
 

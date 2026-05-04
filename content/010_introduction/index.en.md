@@ -27,7 +27,7 @@ In this workshop, you will learn how you can:
 
 ****Duration****: Approximately take 2 hours.
 
-![lab-image](/static/images/lab-image.png)
+![fsxn-architecture](/static/images/fsxn-architecture.png)
 
 -----
 

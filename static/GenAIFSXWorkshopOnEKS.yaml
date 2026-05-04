@@ -1168,7 +1168,6 @@ Resources:
                       - eks-nodegroup.amazonaws.com
                       - eks-fargate.amazonaws.com
                       - fsx.amazonaws.com
-                      - s3.data-source.lustre.fsx.amazonaws.com
                       - autoscaling.amazonaws.com
                       - spot.amazonaws.com
                       - spotfleet.amazonaws.com

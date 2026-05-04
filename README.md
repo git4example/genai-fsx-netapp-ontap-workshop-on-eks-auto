@@ -1,9 +1,9 @@
 ## Workshop Objective
 In this workshop, you will learn how you can:
-1. Deploy a Generative AI chatbot application on Kubernetes by deploying a vLLM and a WebUI Pod on an Amazon EKS cluster, store and access the Mistral-7B model using Amazon FSx for Lustre and  Amazon S3, and leverage Accelerate Compute for your Generative AI workload using AWS Inferentia Accelerator.
+1. Deploy a Generative AI chatbot application on Kubernetes by deploying a vLLM and a WebUI Pod on an Amazon EKS cluster, store and access the Mistral-7B model using Amazon FSx for NetApp ONTAP, and leverage Accelerate Compute for your Generative AI workload using AWS Inferentia Accelerator.
 2. Use Karpenter to scale the number of EKS nodes, when there are additional Pod requests that require additional nodes, to enable scale and operational efficiency.
 3. Use AWS Inferentia Accelerated Compute in your Amazon EKS clusters, as a new nodepool to power your Generative AI applications.
-4. Configure Amazon FSx for Lustre and Amazon S3, as your performant and scalable data layer, which will host your model and data
+4. Configure Amazon FSx for NetApp ONTAP as your performant and scalable data layer, which will host your model and data
 5. Achieve operational efficiency at the data layer: accessing the same model data across container Pods without storing multiple copies, and seamlessly sharing your data across regions, for scenario's such as distributed access and sharing, to DR.
 
 
@@ -13,7 +13,7 @@ In this workshop, you will learn how you can:
 
 ****Duration****: Approximately take 2 hours.
 
-![lab-image](/static/images/lab-image.png)
+![fsxn-architecture](/static/images/fsxn-architecture.png)
 
 -----
 
@@ -50,7 +50,7 @@ You can connect to the Inference Service using the **"Open WebUI"** application,
 
 
 ## Storing and accessing your model and training data
-In this workshop the **Mistral-7B-Instruct** model is stored in an Amazon S3 bucket [**Amazon S3**](https://aws.amazon.com/s3/), which is linked to an  [**Amazon FSx for Lustre File system S3**](https://aws.amazon.com/fsx/lustre/). The vLLM container will consume the Mistral model data via the mounted Amazon FSx for Lustre instance for the Generative AI Chat application. Amazon FSx for Lustre is a fully managed service that provides a high-performance scalable file system, for workloads where speed matters, providing sub-millisecond latency, and scaling to TB/s of throughput and millions of IOPS. Amazon FSx also integrates with Amazon S3 (highly durable, available and scalable object store), making it easy for you to store, access and process vast amounts of cloud data with the Lustre high-performance file system.
+In this workshop the **Mistral-7B-Instruct** model is downloaded from Hugging Face and stored on a persistent volume backed by [**Amazon FSx for NetApp ONTAP**](https://aws.amazon.com/fsx/netapp-ontap/). The vLLM container mounts this volume to access the Mistral model data for the Generative AI Chat application. Amazon FSx for NetApp ONTAP is a fully managed shared storage service built on the NetApp ONTAP file system, providing NFS access, snapshots, cloning, and automatic data tiering between SSD and capacity pool storage. The NetApp Astra Trident CSI driver integrates FSx for ONTAP with Kubernetes, enabling dynamic volume provisioning so your Pods can mount high-performance shared storage.
 
 ## Accelerating your Compute
  [**AWS Inferentia accelerators**](https://aws.amazon.com/machine-learning/inferentia/) are designed by AWS to deliver high performance at the lowest cost in Amazon EC2 for your deep learning (DL) and generative AI inference applications, where Inferentia2-based Amazon EC2 Inf2 instances are optimized to deploy increasingly complex models, such as large language models (LLM). [**AWS Neuron SDK**](https://aws.amazon.com/machine-learning/neuron/) is an SDK with a compiler, runtime, and profiling tools that unlocks high-performance and cost-effective deep learning (DL) acceleration. AWS Neuron SDK helps developers deploy models on the AWS Inferentia accelerators, where it integrates natively with popular frameworks, such as PyTorch and TensorFlow, so that you can continue to use your existing code and workflows and run on Inferentia accelerators.
@@ -73,8 +73,8 @@ In this workshop the **Mistral-7B-Instruct** model is stored in an Amazon S3 buc
 │   │   └── index.en.md
 │   ├── 030_module_explore_karpenter
 │   │   └── index.en.md
-│   ├── 100_module1_eks_fsxl
-│   │   ├── 110_DeployAmazonFSxLustreCSIDriverToEKS.md
+│   ├── 100_module1_eks_fsxontap
+│   │   ├── 110_DeployTridentCSIDriverToEKS.md
 │   │   ├── 120_DynamicProvisioning.md
 │   │   ├── 123_ViewFSxConsole.md
 │   │   └── index.en.md
