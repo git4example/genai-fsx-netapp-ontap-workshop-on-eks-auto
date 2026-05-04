@@ -61,7 +61,6 @@ In this workshop the **Mistral-7B-Instruct** model is downloaded from Hugging Fa
 ```bash
 .
 ├── README.md
-├── assets
 ├── content
 │   ├── 010_introduction
 │   │   └── index.en.md
@@ -71,7 +70,9 @@ In this workshop the **Mistral-7B-Instruct** model is downloaded from Hugging Fa
 │   │   ├── 022_aws_event
 │   │   │   └── index.en.md
 │   │   └── index.en.md
-│   ├── 030_module_explore_karpenter
+│   ├── 023_vs_code
+│   │   └── index.en.md
+│   ├── 030_module_explore_eks_auto
 │   │   └── index.en.md
 │   ├── 100_module1_eks_fsxontap
 │   │   ├── 110_DeployTridentCSIDriverToEKS.md
@@ -82,29 +83,30 @@ In this workshop the **Mistral-7B-Instruct** model is downloaded from Hugging Fa
 │   │   ├── 210_Deploy.md
 │   │   ├── 220_webui.md
 │   │   └── index.en.md
-│   ├── 300_module3_replication
-│   │   ├── 320_CreateCrossRegionReplicationForS3Buckets.md
-│   │   ├── 330_RegionalFailoverAndSwitch.md
+│   ├── 300_module3_vllm_dash
+│   │   ├── 310_settingObservabilityStack.md
+│   │   ├── 320_vLLMandNeuronMonitoring.md
+│   │   ├── 330_ConfiguratingNeuronMonitoring.md
 │   │   └── index.en.md
-│   ├── 400_module1_fsx_perf
-│   │   ├── 422_DynamicProvisioning.md
-│   │   ├── 430_Fio_performanceTesting.md
+│   ├── 400_module4_inspect_data
+│   │   ├── 410_InspectModelandNeuron.md
+│   │   ├── 420_FSxNSnapshots.md
 │   │   └── index.en.md
 │   └── index.en.md
 └── static
     ├── GenAIFSXWorkshopOnEKS.yaml
     ├── download
     │   ├── fsx-ontap-standalone.tf
-    │   ├── netshoot.yaml
-    │   ├── troubleshoot.yaml
     │   └── vllm-mistral-hf-test.yaml
     ├── eks
     │   ├── FSxONTAP
     │   │   ├── fsx-ontap-secret.yaml
     │   │   ├── model-loading-job.yaml
+    │   │   ├── netshoot-fsxn.yaml
     │   │   ├── ontap-pvc.yaml
     │   │   ├── ontap-storage-class.yaml
-    │   │   └── trident-backend-config.yaml
+    │   │   ├── trident-backend-config.yaml
+    │   │   └── volume-snapshot-class.yaml
     │   └── genai
     │       ├── inferentia_nodepool.yaml
     │       ├── mistral-ontap.yaml
@@ -112,21 +114,19 @@ In this workshop the **Mistral-7B-Instruct** model is downloaded from Hugging Fa
     │       └── open-webui-helm/
     │           └── values.yaml
     ├── images
-    │   ├── [ workshop images .. ]
-    │   
-    │   └── vllm_pod_1.png
+    │   └── [ workshop images ]
     ├── scripts
     │   ├── cleanup-on-demand.sh
     │   ├── cleanup-sponsored.sh
     │   ├── quick-deploy-on-demand.sh
     │   ├── quick-deploy-sponsored.sh
     │   ├── terraform-cleanup.sh
-    │   └── terraform-deploy.sh
+    │   ├── terraform-deploy.sh
+    │   └── trident-csi-driver.json
     └── terraform
         ├── helm-values
         │   ├── neuron-values.yaml
         │   └── nvidia-values.yaml
-        ├── sysprep.tf
         └── main.tf
 ```
 
