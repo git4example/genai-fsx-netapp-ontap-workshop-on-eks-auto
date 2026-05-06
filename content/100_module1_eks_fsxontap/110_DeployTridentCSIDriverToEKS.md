@@ -147,6 +147,7 @@ Now that the Trident CSI driver is running, you need to configure it to connect 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 SECRET_NAME=$(aws secretsmanager list-secrets --query "SecretList[?starts_with(Name,'trident-fsx-ontap-svm-')].Name" --output text --region $AWS_REGION)
 SVM_PASSWORD=$(aws secretsmanager get-secret-value --secret-id $SECRET_NAME --query "SecretString" --output text --region $AWS_REGION)
+export SVM_PASSWORD
 echo "SVM Password retrieved from secret: $SECRET_NAME"
 :::
 
@@ -163,6 +164,7 @@ envsubst '$SVM_PASSWORD' < fsx-ontap-secret.yaml | kubectl apply -f -
 FSX_ID=$(aws fsx describe-file-systems --query "FileSystems[?FileSystemType=='ONTAP'].FileSystemId" --output text --region $AWS_REGION)
 SVM_MGMT_LIF=$(aws fsx describe-storage-virtual-machines --filters "Name=file-system-id,Values=$FSX_ID" --query "StorageVirtualMachines[0].Endpoints.Management.DNSName" --output text --region $AWS_REGION)
 SVM_NAME=$(aws fsx describe-storage-virtual-machines --filters "Name=file-system-id,Values=$FSX_ID" --query "StorageVirtualMachines[0].Name" --output text --region $AWS_REGION)
+export SVM_MGMT_LIF SVM_NAME
 echo "SVM Management LIF: $SVM_MGMT_LIF"
 echo "SVM Name: $SVM_NAME"
 :::
