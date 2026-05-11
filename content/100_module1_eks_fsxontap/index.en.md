@@ -15,9 +15,11 @@ In this module you will deploy and integrate the **NetApp Astra Trident CSI driv
 
 ---
 
-# Additional reading
+# Additional Reading
 
-<br></br>
+This section covers Kubernetes storage concepts and how they integrate with FSx for NetApp ONTAP through the Trident CSI driver. Expand below to learn more.
+
+::::expand{header="Click here to read about Kubernetes storage concepts and FSx for ONTAP integration"}
 
 #### Kubernetes storage concepts, and integration with FSx for NetApp ONTAP
 
@@ -44,3 +46,5 @@ With Trident and FSx for ONTAP, this workshop uses **dynamic provisioning** — 
 4. Pods reference the PVC to mount the dynamically provisioned volume at the desired path (e.g., `/work-dir`).
 
 This eliminates the need for administrators to manually create PersistentVolume definitions or look up storage-specific details like volume handles or DNS names. Trident handles the full lifecycle of the volume, including creation, mounting, and deletion.
+
+::::

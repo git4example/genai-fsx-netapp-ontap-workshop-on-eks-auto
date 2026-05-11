@@ -75,6 +75,16 @@ export NODE_ROLE
 
 ::code[cat inferentia_nodepool.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
+:::alert{header="What to observe in the NodePool definition" type="info"}
+When reviewing the output, pay attention to these key fields:
+- **instance-family: ["inf2"]** — constrains EKS Auto Mode to only provision AWS Inferentia2 instances for this NodePool
+- **instance-size: ["xlarge"]** — pins to `inf2.xlarge` (1 Inferentia2 chip with 2 NeuronCores)
+- **nodeSelector / tolerations** — pods must explicitly request this NodePool via matching labels and tolerations
+- **disruption policy** — controls how EKS Auto Mode handles node consolidation and expiry
+
+These constraints ensure that only pods requesting Neuron resources get scheduled onto the expensive accelerated compute nodes.
+:::
+
 4. Let's deploy the inferentia NodePool, substituting the `$NODE_ROLE` placeholder with the IAM role name retrieved above.
 
 ::code[envsubst '$NODE_ROLE' < inferentia_nodepool.yaml | kubectl apply -f -]{language=bash showLineNumbers=false showCopyAction=true}
@@ -165,8 +175,12 @@ cd /home/participant/environment/eks/genai
 :::
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
-FSX_ONTAP_AZ=$(aws fsx describe-file-systems --region $AWS_REGION --query "FileSystems[?FileSystemType=='ONTAP'].SubnetIds[0]" --output text | head -1 | xargs -I {} aws ec2 describe-subnets --subnet-ids {} --query 'Subnets[0].AvailabilityZone' --output text)
+FSX_ONTAP_AZ=$(aws fsx describe-file-systems --region $AWS_REGION --query "FileSystems[?FileSystemType=='ONTAP'].OntapConfiguration.PreferredSubnetId" --output text | head -1 | xargs -I {} aws ec2 describe-subnets --subnet-ids {} --query 'Subnets[0].AvailabilityZone' --output text)
 export FSX_ONTAP_AZ
+:::
+
+:::alert{header="Why pin to the FSx ONTAP preferred AZ?" type="info"}
+Although your FSx for ONTAP file system is deployed in **Multi-AZ** mode (accessible from both AZs), we pin the vLLM pod to the **preferred AZ** (where the active file server runs) to minimize cross-AZ NFS latency and avoid cross-AZ data transfer costs. The model data is accessible from either AZ, but placing compute in the same AZ as the active storage provides optimal performance. If a failover occurs, the pod continues to work — it just routes NFS traffic cross-AZ until the file system fails back.
 :::
 
 2. Run the below command to deploy the vLLM Pod, substituting the `$FSX_ONTAP_AZ` placeholder with the availability zone retrieved above.
@@ -263,6 +277,10 @@ spec:
 
 ![vllm_pod](/static/images/vllm_pod_1.png)
 
+:::alert{header="Note" type="info"}
+The screenshot above shows the expected pod status progression. Your output may look slightly different depending on timing — the key is to see the vLLM pod transition from `Pending` → `ContainerCreating` → `Running`.
+:::
+
 
 6. While you are waiting for the vLLM pod to deploy, lets go check out the EKS NodePools by navigating to the [Amazon EKS cluster Console](https://console.aws.amazon.com/eks)
 
@@ -271,6 +289,10 @@ spec:
 8. Click on the   **Compute** tab, you will see there is now a new AWS Inferentia **inf2.xlarge** compute node
 
 ![inf2_node](/static/images/inf2_node.png)
+
+:::alert{header="What to look for" type="info"}
+In the EKS console Compute tab, you should see the `inf2.xlarge` node listed under the **inferentia** NodePool. The node status should show **Ready**. This confirms that EKS Auto Mode provisioned the Inferentia accelerated compute node in response to the vLLM pod's resource request for `aws.amazon.com/neuroncore: 2`.
+:::
 
 9. Click on the **Node name**, where it will show you the capacity allocation and Pod details relating to the inf2.xlarge compute node
 

@@ -503,8 +503,8 @@ resource "aws_secretsmanager_secret_version" "fsx_ontap_svm_password" {
 resource "aws_fsx_ontap_file_system" "fsx_ontap" {
   provider             = aws.region1
   storage_capacity     = 1024
-  subnet_ids           = [module.vpc.private_subnets[0]]
-  deployment_type      = "SINGLE_AZ_1"
+  subnet_ids           = [module.vpc.private_subnets[0], module.vpc.private_subnets[1]]
+  deployment_type      = "MULTI_AZ_1"
   throughput_capacity  = 256
   security_group_ids   = [aws_security_group.fsx_ontap_sg.id]
   preferred_subnet_id  = module.vpc.private_subnets[0]

@@ -23,7 +23,11 @@ In this section you will:
 
 ##### Step 2: Create the StorageClass
 
-The StorageClass defines how Trident provisions new ONTAP volumes. Let's take a look at the StorageClass manifest (`ontap-storage-class.yaml`):
+The StorageClass defines how Trident provisions new ONTAP volumes. Let's review the StorageClass manifest:
+
+1. Run the below command to view the StorageClass manifest (`ontap-storage-class.yaml`):
+
+::code[cat ontap-storage-class.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
 :::code[]{language=yaml showLineNumbers=true showCopyAction=false}
 # ontap-storage-class.yaml
@@ -51,11 +55,11 @@ Key points about this StorageClass:
 - **allowVolumeExpansion**: `true` — allows you to resize volumes after creation
 - **nfsvers=4.1** — uses NFS version 4.1 for improved performance and security
 
-1. Apply the StorageClass manifest:
+2. Apply the StorageClass manifest:
 
 ::code[kubectl apply -f ontap-storage-class.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
-2. Verify the StorageClass has been created:
+3. Verify the StorageClass has been created:
 
 ::code[kubectl get storageclass ontap-nas-sc]{language=bash showLineNumbers=false showCopyAction=true}
 
@@ -72,7 +76,9 @@ ontap-nas-sc   csi.trident.netapp.io      Retain          Immediate           tr
 
 Now create a PersistentVolumeClaim (PVC) that references the StorageClass. When you apply this PVC, Trident will automatically provision an ONTAP volume and create the corresponding PV — no manual PV creation is needed.
 
-Let's look at the PVC manifest (`ontap-pvc.yaml`):
+1. Let's review the PVC manifest (`ontap-pvc.yaml`):
+
+::code[cat ontap-pvc.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
 :::code[]{language=yaml showLineNumbers=true showCopyAction=false}
 # ontap-pvc.yaml
@@ -95,11 +101,11 @@ Key points about this PVC:
 - **storageClassName**: `ontap-nas-sc` — references the StorageClass you just created, which tells Kubernetes to use Trident for provisioning
 - **storage**: `100Gi` — sufficient for the Mistral-7B model (~29 GiB compiled) with room for cache artifacts
 
-1. Apply the PVC manifest:
+2. Apply the PVC manifest:
 
 ::code[kubectl apply -f ontap-pvc.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
-2. Verify that the PVC is **Bound**. When the status shows `Bound`, Trident has successfully provisioned an ONTAP volume and created the PV automatically.
+3. Verify that the PVC is **Bound**. When the status shows `Bound`, Trident has successfully provisioned an ONTAP volume and created the PV automatically.
 
 ::code[kubectl get pvc ontap-model-claim]{language=bash showLineNumbers=false showCopyAction=true}
 

@@ -196,6 +196,17 @@ You can also verify the backend details with:
 
 ::code[kubectl describe tridentbackendconfig backend-ontap-nas -n trident]{language=bash showLineNumbers=false showCopyAction=true}
 
+:::alert{header="What to look for" type="info"}
+In the output of the `describe` command, verify the following key fields:
+- **Phase: Bound** — confirms the backend is connected to the FSx for ONTAP file system
+- **Status: Success** — confirms the backend is healthy and ready to provision volumes
+- **Backend Name: fsx-ontap-nas** — the logical name for this backend
+- **Management LIF** — should match your SVM's management DNS name
+- **SVM** — should match your SVM name
+
+If the Phase shows anything other than `Bound` or the Status is not `Success`, check the Trident controller logs with `kubectl logs -n trident -l app=trident-controller`.
+:::
+
 ## Summary
 
 In this section you have created an IAM policy with FSx for ONTAP and Secrets Manager permissions, created a service account for the Trident CSI driver, deployed the Trident CSI driver using Helm, and configured a Trident backend that connects to your FSx for ONTAP file system and SVM. In the next section you will create the StorageClass and PersistentVolumeClaim for dynamic volume provisioning, so your Pods can use FSx for ONTAP as persistent storage.

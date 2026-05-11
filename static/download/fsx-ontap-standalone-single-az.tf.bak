@@ -55,7 +55,7 @@ variable "vpc_id" {
 }
 
 variable "private_subnet_ids" {
-  description = "List of private subnet IDs in the EKS VPC (at least 2 required for Multi-AZ). FSx ONTAP will span both subnets for high availability."
+  description = "List of private subnet IDs in the EKS VPC. FSx ONTAP will be created in the first subnet unless preferred_subnet_id is set."
   type        = list(string)
 }
 
@@ -202,8 +202,8 @@ resource "aws_secretsmanager_secret_version" "svm_password" {
 
 resource "aws_fsx_ontap_file_system" "this" {
   storage_capacity    = var.storage_capacity_gb
-  subnet_ids          = [var.private_subnet_ids[0], var.private_subnet_ids[1]]
-  deployment_type     = "MULTI_AZ_1"
+  subnet_ids          = [local.fsx_subnet_id]
+  deployment_type     = "SINGLE_AZ_1"
   throughput_capacity = var.throughput_capacity
   security_group_ids  = [aws_security_group.fsx_ontap.id]
   preferred_subnet_id = local.fsx_subnet_id

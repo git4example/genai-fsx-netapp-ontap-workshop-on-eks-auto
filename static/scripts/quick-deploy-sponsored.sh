@@ -255,9 +255,10 @@ fi
 # --- Step 4: Deploy vLLM ---
 cd "$EKS_GENAI_DIR"
 
-FSX_ONTAP_AZ=$(aws fsx describe-file-systems --region $AWS_REGION --query "FileSystems[?FileSystemType=='ONTAP'].SubnetIds[0]" --output text | head -1 | xargs -I {} aws ec2 describe-subnets --subnet-ids {} --query 'Subnets[0].AvailabilityZone' --output text)
+# For Multi-AZ, use the preferred subnet (where the active file server runs) for optimal latency
+FSX_ONTAP_AZ=$(aws fsx describe-file-systems --region $AWS_REGION --query "FileSystems[?FileSystemType=='ONTAP'].OntapConfiguration.PreferredSubnetId" --output text | head -1 | xargs -I {} aws ec2 describe-subnets --subnet-ids {} --query 'Subnets[0].AvailabilityZone' --output text)
 export FSX_ONTAP_AZ
-echo "FSX_ONTAP_AZ: $FSX_ONTAP_AZ"
+echo "FSX_ONTAP_AZ (preferred/active): $FSX_ONTAP_AZ"
 
 envsubst '$FSX_ONTAP_AZ' < mistral-ontap.yaml | kubectl apply -f -
 

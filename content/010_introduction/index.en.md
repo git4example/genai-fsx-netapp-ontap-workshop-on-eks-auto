@@ -9,14 +9,18 @@ Errors or corrections? Contact ppariksh@amazon.com, akbariw@amazon.com
 
 -------------------------------------------------------------
 ## Workshop Objective
-In this workshop, you will learn how you can:
-1. Deploy a Generative AI chatbot application by deploying:
-- A vLLM and an Open WebUI Pod on an Amazon EKS cluster to serve Mistral-7B model 
-- Storing and accessing the Mistral-7B model on an Amazon FSx for NetApp ONTAP file system (Persistent Volume).
-- Leverage AWS Inferentia Accelerator as your accelerated compute, to power your Generative AI workload
-- Deploy a Grafana dashboard to view Inference workload metrics
-2. Let EKS Auto Mode scale the number of EKS managed nodes based on Pod requests, enabling operational efficiency at-scale.
-3. Configure Amazon FSx for NetApp ONTAP with the NetApp Astra Trident CSI driver, as your performant and scalable data layer to host your model and training data
+
+This workshop demonstrates how to deploy a Generative AI inference platform on AWS by serving the open-source Mistral-7B-Instruct Large Language Model through the vLLM framework on Amazon EKS, using AWS Inferentia2 accelerators for cost-efficient high-performance compute and Amazon FSx for NetApp ONTAP (with NetApp Astra Trident CSI driver) for persistent shared storage that only requires a one-time model download. Participants benefit from a production-ready architecture that combines EKS's automatic scaling and orchestration, vLLM's state-of-the-art serving throughput with PagedAttention and continuous batching, Inferentia2's lowest-cost inference in EC2, and FSx for ONTAP's enterprise storage features like snapshots and data tiering — all accessible through a simple Open WebUI chat interface, giving teams a complete, scalable, and cost-optimized GenAI solution without managing infrastructure complexity.
+
+#### What you will do
+
+1. Deploy a Generative AI chatbot application:
+   - Serve the Mistral-7B model using vLLM and Open WebUI Pods on Amazon EKS
+   - Store and access the model on an Amazon FSx for NetApp ONTAP file system (Persistent Volume)
+   - Leverage AWS Inferentia2 Accelerators as your compute to power inference
+   - Deploy a Grafana dashboard to view inference workload metrics
+2. Let EKS Auto Mode scale the number of EKS managed nodes based on Pod requests, enabling operational efficiency at-scale
+3. Configure Amazon FSx for NetApp ONTAP with the NetApp Astra Trident CSI driver as your performant and scalable data layer to host your model and training data
 
 
 
@@ -31,10 +35,11 @@ In this workshop, you will learn how you can:
 
 -----
 
-# Additional reading
+# Additional Reading
 
-<br></br>
+This section covers the key technologies used in this workshop — Generative AI, LLMs, vLLM, Amazon EKS, Amazon FSx for NetApp ONTAP, NetApp Astra Trident, and AWS Inferentia accelerators. Expand below to learn more about each component.
 
+::::expand{header="Click here to read more about the technologies used in this workshop"}
 
 #### Generative AI and Machine Learning
 Generative AI and Machine Learning (ML) is helping businesses transform the way they operate and innovate. Generative AI refers to a class of Artificial Intelligence that leverages Large Language Models (LLM) in order to generate new content from a prompt, content such as text, images, audio, and software code.
@@ -97,3 +102,5 @@ In this workshop the **Mistral-7B-Instruct** LLM model data is loaded onto an [*
 
 #### AWS Neuron SDK - Native Support for ML Frameworks
 [**AWS Neuron SDK**](https://aws.amazon.com/machine-learning/neuron/) is an SDK with a compiler, runtime, and profiling tools that unlocks high-performance and cost-effective deep learning (DL) acceleration. AWS Neuron SDK helps developers deploy models on the AWS Inferentia accelerators, where it integrates natively with popular frameworks, such as PyTorch and TensorFlow, so that you can continue to use your existing code and workflows and run on Inferentia accelerators.
+
+::::
