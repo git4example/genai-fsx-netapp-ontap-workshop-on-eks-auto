@@ -56,11 +56,11 @@ echo "Password: $GRAFANA_PASSWORD"
 
 ![grafana_url](/static/images/grafana_url.png)
 
-2. You will need to for 2 minutes for the Grafana URL load balancer to become online. Then open the Grafana URL (shown in the output) in your browser, and use the credentials shown to log-in.
+2. You will need to wait for 2 minutes for the Grafana URL load balancer to become online. Then open the Grafana URL (shown in the output) in your browser, and use the credentials shown to log-in.
 
 <br>
 
-3. Within the Grafana URL, click on the "**Dashboards**" option from the right window pane.
+3. Within the Grafana URL, click on the "**Dashboards**" option from the left window pane.
 
 4. In the search field, enter the name of the dashboard you want to view, such as the "**vLLM + Neuron Monitoring Dashboard**" that you created in the pervious steps.
 

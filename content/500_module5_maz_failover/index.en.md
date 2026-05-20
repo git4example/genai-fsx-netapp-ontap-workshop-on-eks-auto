@@ -25,20 +25,28 @@ This demonstrates how FSx for ONTAP provides **storage layer resiliency** for yo
 
 FSx for ONTAP Multi-AZ file systems deploy an active/standby pair of file servers across two Availability Zones:
 
-- **Preferred subnet (Active)** — The AZ where the file system actively serves data under normal conditions
-- **Standby subnet (Standby)** — The AZ where a standby file server maintains a synchronous copy of all data
+- **Preferred subnet (Active under normal conditions)** — The AZ where the file system actively serves data when both nodes are healthy
+- **Standby subnet** — The AZ where a standby file server maintains a synchronous copy of all data
 
 **Synchronous replication** ensures that every write to the active file server is simultaneously written to the standby. This means:
 - **Zero RPO** — No data is lost during failover (the standby always has the latest data)
-- **Automatic failover** — If the active AZ experiences an issue, the standby automatically promotes to active within ~60 seconds
-- **Transparent to clients** — NFS clients (including Kubernetes pods) reconnect automatically because the DNS endpoints resolve to the new active file server
+- **Automatic takeover on AZ failure** — If the active AZ experiences an issue, the standby takes over within seconds; clients see a brief NFS pause and continue
+- **Transparent to NFS clients** — The management LIF, intercluster LIF, and NFS data LIF are *floating endpoints*. Their IPs are stable; on takeover, FSx updates the registered VPC route tables so those IPs forward to the ENIs of the new active node. DNS records do not change.
 
-#### Why This Matters for GenAI Workloads
+#### Why route table registration matters
+
+This is why the Terraform configuration registers the file system with the **EKS private subnet route tables** (the same ones the worker nodes use). Without that, FSx would update the VPC main route table on takeover, which the EKS worker nodes do not consult — and pods would lose connectivity to the file system after a failover even though everything looks healthy from the FSx side.
+
+#### Why this matters for GenAI workloads
 
 For inference workloads like vLLM serving the Mistral-7B model:
 - The model data on the FSx for ONTAP volume is always available, even during an AZ failure
 - Pods can be scheduled in either AZ and still access the same data via NFS
-- No manual intervention is needed — the failover is fully automatic
-- The vLLM pod may experience a brief NFS reconnection (~30-60 seconds) but does not crash or lose state
+- No manual intervention is needed — takeover is fully automatic if AWS detects a real AZ failure
+- The vLLM pod does not crash. Active inference traffic served from the in-memory model continues uninterrupted; any subsequent disk-touching operation pauses for the few seconds the route table update takes, then resumes
 
 ::::
+
+:::alert{header="Planned failover vs unplanned takeover" type="info"}
+This module uses a **planned failover** (a manually triggered takeover via the FSx Console) to *simulate* what would happen during an unplanned AZ failure. The mechanics are identical from the client's perspective — the difference is only in who/what initiated it.
+:::

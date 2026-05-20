@@ -204,7 +204,7 @@ In the output of the `describe` command, verify the following key fields:
 - **Management LIF** — should match your SVM's management DNS name
 - **SVM** — should match your SVM name
 
-If the Phase shows anything other than `Bound` or the Status is not `Success`, check the Trident controller logs with `kubectl logs -n trident -l app=trident-controller`.
+If the Phase shows anything other than `Bound` or the Status is not `Success`, check the Trident controller logs with `kubectl logs -n trident -l app=controller.csi.trident.netapp.io`.
 :::
 
 ## Summary

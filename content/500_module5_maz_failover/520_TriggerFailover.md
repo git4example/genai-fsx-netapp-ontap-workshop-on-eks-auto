@@ -5,148 +5,154 @@ weight : 520
 
 ## Overview
 
-In this section you will trigger a **planned failover** of your FSx for ONTAP file system. This simulates an AZ failure scenario and demonstrates that:
-- The storage layer fails over automatically with zero data loss (zero RPO)
-- The vLLM inference pod continues to serve requests after a brief NFS reconnection
-- No manual intervention is needed — the failover is transparent to applications
+In this section you will trigger a **planned failover** (a manually initiated takeover) of your FSx for ONTAP file system. This simulates an AZ failure scenario and demonstrates that:
+- The storage layer fails over with zero data loss (zero RPO)
+- The vLLM inference pod continues to serve requests with at most a brief latency bump
+- No manual intervention is needed — the takeover is transparent to applications
 
 :::alert{header="What happens during failover" type="info"}
-When you trigger a failover:
-1. The active file server in the preferred AZ is demoted
-2. The standby file server in the other AZ is promoted to active
-3. DNS endpoints are updated to point to the new active file server (~30-60 seconds)
-4. NFS clients (pods) automatically reconnect to the new active file server
-5. All data is intact because replication is synchronous (zero RPO)
+1. The active file server in the preferred AZ is taken over by its standby peer in the other AZ.
+2. The standby file server promotes to active.
+3. FSx updates the VPC route tables registered with the file system so the floating endpoint IPs (management LIF, intercluster LIF, NFS data LIF) now forward to the ENIs of the new active node. **DNS records do not change**; the IPs are stable.
+4. NFS clients (pods) see a brief pause on any operation that needs to traverse the wire, then resume against the new active node.
+5. All data is intact because replication is synchronous (zero RPO).
+:::
+
+:::alert{header="API support note" type="warning"}
+As of this workshop, AWS does not expose a dedicated public CLI action for "fail over an FSx for ONTAP Multi-AZ file system." The supported way to trigger a planned failover is through the **AWS Console** (or via certain `update-file-system` operations that internally trigger an HA failover as a side effect, e.g. throughput capacity changes — but those take far longer and are not a clean teaching demo). This module uses the Console approach.
 :::
 
 ---
 
-##### Step 1: Start a continuous inference test (background)
+##### Step 1: Start the continuous inference probe (background)
 
-Before triggering the failover, start a continuous loop that sends inference requests to the vLLM service. This will help you observe the brief interruption and recovery during failover.
+Before triggering the failover, start the prober in a second terminal so you can watch the behavior in real time.
 
-Open a **second terminal** and run the following commands to start the failover monitor:
+Open a **second terminal** in your VS Code IDE and run:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-cd /home/participant/environment/scripts
+cd $HOME/environment/scripts
 chmod +x failover-test.sh
 ./failover-test.sh
 :::
 
-You should see `HTTP 200 ✓ (healthy)` every 5 seconds. Keep this running in the second terminal.
+The script opens a `kubectl port-forward` tunnel to the vLLM service and probes `/v1/models` every 5 seconds, logging the status code **and per-call latency** in milliseconds.
 
-##### Step 2: Trigger the planned failover
+Keep this running. You should see lines like:
 
-Back in your **first terminal**, trigger the failover using the AWS CLI. This command tells FSx to switch the active file server to the standby AZ:
+```
+2026-05-20T03:14:10Z  HTTP 200    37ms  OK
+2026-05-20T03:14:15Z  HTTP 200    35ms  OK
+```
+
+:::alert{header="What to watch for" type="info"}
+With a properly-configured Multi-AZ FSx ONTAP setup, you will see **continuous HTTP 200** through the failover. The interesting signal is the **latency column**: during the few seconds the route table update is in flight, you may see one or two probes spike to a few hundred milliseconds (or up to the script's per-call timeout). That latency bump is the failover window. A sustained run of non-200 codes would indicate something is genuinely broken (route table mis-registration, security group, etc.) rather than expected transient behavior.
+
+Why /v1/models stays 200: vLLM holds the model registry in memory and the model weights are mmap'd at startup, so this endpoint does not touch NFS on every request. That is exactly the resilience we want to demonstrate.
+:::
+
+##### Step 2: Capture the active AZ before failover
+
+Back in your **first terminal**, capture which AZ is currently active so you can compare after the failover:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Re-derive FSX_ID in case this is run independently
-FSX_ID=$(aws fsx describe-file-systems --query "FileSystems[?FileSystemType=='ONTAP'].FileSystemId" --output text --region $AWS_REGION)
+# Re-derive the FSx ID in case this is run independently
+export FSX_ID=$(aws fsx describe-file-systems \
+  --query "FileSystems[?FileSystemType=='ONTAP'] | [0].FileSystemId" \
+  --output text --region $AWS_REGION)
 
-echo "Triggering failover for file system: $FSX_ID"
-echo "Current time: $(date '+%H:%M:%S')"
+# The ENI that currently owns the floating endpoints lives in the active subnet
+PRE_ENI=$(aws fsx describe-file-systems \
+  --file-system-ids $FSX_ID --region $AWS_REGION \
+  --query "FileSystems[0].NetworkInterfaceIds[0]" --output text)
+PRE_SUBNET=$(aws ec2 describe-network-interfaces \
+  --network-interface-ids $PRE_ENI --region $AWS_REGION \
+  --query "NetworkInterfaces[0].SubnetId" --output text)
+PRE_AZ=$(aws ec2 describe-subnets --subnet-ids $PRE_SUBNET \
+  --region $AWS_REGION --query "Subnets[0].AvailabilityZone" --output text)
 
-aws fsx update-file-system \
-  --file-system-id $FSX_ID \
-  --region $AWS_REGION \
-  --ontap-configuration '{}' \
-  2>/dev/null
-
-# The failover is triggered by updating the file system — FSx will switch to the standby
-# Note: For a planned failover, we use the FSx console or wait for the automatic mechanism
-echo "Failover initiated. Monitor the second terminal for HTTP status changes."
+echo "Active AZ before failover: $PRE_AZ ($PRE_SUBNET)"
+echo "Time:                      $(date '+%H:%M:%S')"
 :::
 
-:::alert{header="Alternative — Trigger failover via the FSx Console" type="info"}
-You can also trigger a failover from the AWS Console:
-1. Navigate to the [Amazon FSx console](https://console.aws.amazon.com/fsx/)
-2. Select your file system
-3. Click **Actions** → **Failover to standby**
-4. Confirm the failover
+##### Step 3: Trigger the planned failover from the FSx Console
 
-This is equivalent to the CLI command above.
+1. Open the [Amazon FSx console](https://console.aws.amazon.com/fsx/) in a new browser tab.
+2. Select your ONTAP file system (its ID matches the `$FSX_ID` you captured above).
+3. Click **Actions** in the upper right.
+4. Choose **Failover file system** (the wording may also appear as **Failover to standby**, depending on the console version).
+5. Confirm the failover in the dialog.
+
+The Console shows the file system **Status** transitioning briefly during the takeover, then returning to **Available**.
+
+:::alert{header="Why the Console and not the CLI?" type="info"}
+The publicly-supported AWS CLI surface for FSx ONTAP does not currently include a dedicated `failover-file-system` action. Earlier versions of this workshop attempted to fake it with an empty `update-file-system --ontap-configuration '{}'` call — that command is invalid and triggers no failover. We have removed it. The Console workflow drives the same internal API and is the supported path.
 :::
 
-##### Step 3: Observe the failover in progress
+##### Step 4: Watch the prober during failover
 
-1. Watch the file system lifecycle status transition:
+Switch back to your **second terminal** while the failover is in progress. You should observe one of two patterns over a window of 30-90 seconds:
+
+- **Best case (typical):** continuous `HTTP 200` with one or two entries showing elevated latency (a few hundred ms to a few seconds) during the route flip, then back to baseline.
+- **Edge case:** one or two `HTTP 000` entries if the port-forward tunnel itself was racing against the failover. The script auto-restarts the tunnel and recovers.
+
+If you see sustained non-200 responses for more than 90 seconds, something is wrong. Likely culprits:
+- The file system is not registered with the EKS private route tables (check `aws fsx describe-file-systems --query 'FileSystems[0].OntapConfiguration.RouteTableIds'`).
+- The vLLM pod was rescheduled to a node that does not have NFS mounts of the affected volume (check `kubectl describe pod` for restart reasons).
+
+##### Step 5: Confirm the active AZ moved
+
+Run the same active-AZ query as Step 2 and compare:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-echo "Monitoring file system status..."
-for i in $(seq 1 24); do
-  STATUS=$(aws fsx describe-file-systems --file-system-ids $FSX_ID --region $AWS_REGION --query "FileSystems[0].Lifecycle" --output text)
-  echo "$(date '+%H:%M:%S') - File system status: $STATUS"
-  if [ "$STATUS" = "AVAILABLE" ] && [ $i -gt 2 ]; then
-    echo "Failover complete!"
-    break
-  fi
-  sleep 5
-done
+POST_ENI=$(aws fsx describe-file-systems \
+  --file-system-ids $FSX_ID --region $AWS_REGION \
+  --query "FileSystems[0].NetworkInterfaceIds[0]" --output text)
+POST_SUBNET=$(aws ec2 describe-network-interfaces \
+  --network-interface-ids $POST_ENI --region $AWS_REGION \
+  --query "NetworkInterfaces[0].SubnetId" --output text)
+POST_AZ=$(aws ec2 describe-subnets --subnet-ids $POST_SUBNET \
+  --region $AWS_REGION --query "Subnets[0].AvailabilityZone" --output text)
+
+echo "Active AZ before failover: $PRE_AZ"
+echo "Active AZ after failover:  $POST_AZ"
 :::
 
-During failover you will see the status transition:
-- `AVAILABLE` → (brief transition) → `AVAILABLE`
+The post-failover AZ should be **different** from the pre-failover AZ. Note that `OntapConfiguration.PreferredSubnetId` itself does not change — it is your configuration preference, not a live state field. The currently-active side is determined from the file system's ENIs as shown above.
 
-2. In your **second terminal**, observe the HTTP status output. You should see:
-- A brief period (30-60 seconds) where requests may timeout or return errors
-- Then requests resume with `HTTP Status: 200` — the vLLM pod has reconnected to the new active file server
+##### Step 6: Verify zero data loss and end-to-end inference
 
-:::alert{header="Expected behavior during failover" type="warning"}
-During the failover window (~30-60 seconds):
-- NFS operations may briefly hang or return `ESTALE` errors
-- The vLLM pod does **NOT** crash — it simply waits for NFS to reconnect
-- Once the DNS endpoints update and NFS reconnects, inference resumes normally
-- **No data is lost** — the standby had a synchronous copy of all data
-
-This is the key benefit of Multi-AZ: the compute layer (EKS pods) is unaffected by the storage failover. The pod stays running and automatically recovers.
-:::
-
-##### Step 4: Verify the new active AZ
-
-After the failover completes, check which AZ is now active:
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Re-derive FSX_ID in case this is run independently
-FSX_ID=$(aws fsx describe-file-systems --query "FileSystems[?FileSystemType=='ONTAP'].FileSystemId" --output text --region $AWS_REGION)
-NEW_PREFERRED=$(aws fsx describe-file-systems --file-system-ids $FSX_ID --region $AWS_REGION --query "FileSystems[0].OntapConfiguration.PreferredSubnetId" --output text)
-NEW_AZ=$(aws ec2 describe-subnets --subnet-ids $NEW_PREFERRED --region $AWS_REGION --query "Subnets[0].AvailabilityZone" --output text)
-echo "Active file server is now in AZ: $NEW_AZ"
-:::
-
-The active AZ should now be different from what you observed in the previous section.
-
-##### Step 5: Verify zero data loss
-
-1. Confirm the model data is still intact on the volume after failover:
+1. Confirm the model files are still present on the volume:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 VLLM_POD=$(kubectl get pod -l app=vllm-mistral-inf2-server -o jsonpath='{.items[0].metadata.name}')
 kubectl exec $VLLM_POD -- ls /work-dir/Mistral-7B-Instruct-v0.3/ | head -5
 :::
 
-You should see the same model files as before — confirming zero data loss.
+You should see the model files unchanged from before the failover.
 
-2. Send a final inference request to confirm the model is fully operational:
+2. Send a real inference request to confirm end-to-end behavior:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 kubectl exec $VLLM_POD -- curl -s http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model":"mistral-7b-neuron","messages":[{"role":"user","content":"What is 2+2?"}],"max_tokens":50}' | python3 -m json.tool
+  -d '{"model":"mistral-7b-neuron","messages":[{"role":"user","content":"What is 2+2?"}],"max_tokens":50}' \
+  | python3 -m json.tool
 :::
 
-You should receive a valid inference response, confirming the model is serving correctly after failover.
+You should receive a valid response. Note that this only proves the **model** is still functional — the meaningful proof of failover correctness is the active-AZ change in Step 5 plus the prober continuity in Step 4.
 
-3. Stop the continuous test in your second terminal with `Ctrl+C`.
+3. Stop the prober in your second terminal with `Ctrl+C`.
 
 ---
 
 ## Summary
 
-You have successfully demonstrated **live failover** of an FSx for ONTAP Multi-AZ file system:
+You have demonstrated **live failover** of an FSx for ONTAP Multi-AZ file system:
 
-- **Zero RPO** — No data was lost during the failover (synchronous replication)
-- **Automatic recovery** — The vLLM pod reconnected to the new active file server without manual intervention
-- **No pod restart needed** — The compute layer (EKS) was unaffected; only the storage endpoint changed
-- **Brief interruption** — NFS operations paused for ~30-60 seconds during DNS propagation, then resumed
+- **Zero RPO** — synchronous replication means no data was lost.
+- **Brief, transparent interruption** — the prober showed continuous `HTTP 200` with at most a small latency bump during the route table update.
+- **No pod restart** — the compute layer (EKS pod) was unaffected; only the storage path's underlying ENI ownership changed.
+- **No DNS change, no client reconfiguration** — failover is implemented via VPC route table updates against the route tables registered with the file system. This is why the Terraform configuration registers the FSx file system against the **EKS private route tables** rather than letting it default to the VPC main route table.
 
-This demonstrates why FSx for ONTAP Multi-AZ is ideal for production GenAI workloads: your model data is always available across AZs, and the storage layer can survive an entire AZ failure without impacting your inference pipeline. Combined with EKS Auto Mode's ability to reschedule pods across AZs, you have a fully resilient GenAI serving architecture.
+This is what makes FSx for ONTAP Multi-AZ a strong fit for production GenAI serving: the storage layer survives a full AZ failure with no manual intervention, and EKS Auto Mode separately handles compute-side resilience.

@@ -501,13 +501,22 @@ resource "aws_secretsmanager_secret_version" "fsx_ontap_svm_password" {
 }
 
 resource "aws_fsx_ontap_file_system" "fsx_ontap" {
-  provider             = aws.region1
-  storage_capacity     = 1024
-  subnet_ids           = [module.vpc.private_subnets[0], module.vpc.private_subnets[1]]
-  deployment_type      = "MULTI_AZ_1"
-  throughput_capacity  = 256
-  security_group_ids   = [aws_security_group.fsx_ontap_sg.id]
-  preferred_subnet_id  = module.vpc.private_subnets[0]
+  provider            = aws.region1
+  storage_capacity    = 1024
+  subnet_ids          = [module.vpc.private_subnets[0], module.vpc.private_subnets[1]]
+  deployment_type     = "MULTI_AZ_1"
+  throughput_capacity = 256
+  security_group_ids  = [aws_security_group.fsx_ontap_sg.id]
+  preferred_subnet_id = module.vpc.private_subnets[0]
+
+  # Pin FSx ONTAP floating-endpoint routes (management LIF, inter-cluster LIF,
+  # and the Multi-AZ floating NFS data LIF) to the SAME route tables the EKS
+  # Auto Mode worker nodes use — i.e. the private subnet route tables created
+  # by the VPC module. Without this, FSx defaults to the VPC main route table,
+  # while worker nodes resolve traffic through the private route tables, which
+  # causes NFS / ONTAP-management traffic from worker pods to take an
+  # asymmetric path and fail.
+  route_table_ids = module.vpc.private_route_table_ids
 
   tags = merge(local.tags, {
     Name = "${local.name}-fsx-ontap"
@@ -621,4 +630,9 @@ output "ontap_volume_junction_path" {
 output "fsx_ontap_az" {
   description = "Availability zone of the FSx ONTAP file system"
   value       = data.aws_subnet.fsx_ontap_subnet.availability_zone
+}
+
+output "fsx_ontap_route_table_ids" {
+  description = "Private route tables that FSx ONTAP injects floating-endpoint routes into. These match the EKS Auto Mode private subnet route tables, so worker pods and the FSx file system share the same routing path."
+  value       = module.vpc.private_route_table_ids
 }
