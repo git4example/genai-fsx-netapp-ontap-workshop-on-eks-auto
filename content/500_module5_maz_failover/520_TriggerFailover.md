@@ -85,10 +85,6 @@ echo "Time:                      $(date '+%H:%M:%S')"
 
 The Console shows the file system **Status** transitioning briefly during the takeover, then returning to **Available**.
 
-:::alert{header="Why the Console and not the CLI?" type="info"}
-The publicly-supported AWS CLI surface for FSx ONTAP does not currently include a dedicated `failover-file-system` action. Earlier versions of this workshop attempted to fake it with an empty `update-file-system --ontap-configuration '{}'` call — that command is invalid and triggers no failover. We have removed it. The Console workflow drives the same internal API and is the supported path.
-:::
-
 ##### Step 4: Watch the prober during failover
 
 Switch back to your **second terminal** while the failover is in progress. You should observe one of two patterns over a window of 30-90 seconds:

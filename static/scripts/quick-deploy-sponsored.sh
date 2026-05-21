@@ -157,6 +157,22 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snaps
 kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
 kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
 
+# --- Step 5c: Install the standalone snapshot-controller Deployment ---
+# CRDs alone do not process snapshot requests. The snapshot-controller is the
+# cluster-wide Deployment that translates VolumeSnapshot objects into
+# VolumeSnapshotContent objects, which Trident's csi-snapshotter sidecar then
+# turns into real ONTAP snapshots. Without it, every VolumeSnapshot stays
+# stuck with empty READYTOUSE / SNAPSHOTCONTENT columns indefinitely.
+echo "Installing snapshot-controller (external-snapshotter v8.2.0)..."
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
+
+# Scale to a single replica. Upstream defaults to 2 for leader-elected HA;
+# the workshop only needs one and this keeps resource usage minimal.
+kubectl -n kube-system scale deploy/snapshot-controller --replicas=1
+kubectl -n kube-system rollout status deploy/snapshot-controller --timeout=120s
+kubectl -n kube-system get pods -l app=snapshot-controller
+
 # --- Step 6: Configure Trident backend for FSx ONTAP ---
 cd "$EKS_ONTAP_DIR"
 

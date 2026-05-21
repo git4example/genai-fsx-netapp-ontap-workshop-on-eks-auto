@@ -28,12 +28,12 @@ Unlike traditional backup methods that copy all data, ONTAP snapshots use a **re
 
 Kubernetes VolumeSnapshots let you create point-in-time snapshots on demand — for example, before fine-tuning a model or modifying training data. These snapshots are fully Kubernetes-native, managed through `kubectl`, and are visible immediately after creation.
 
-##### Step 1: Install VolumeSnapshot CRDs
+##### Step 1: Install the VolumeSnapshot CRDs
 
 Kubernetes VolumeSnapshots require the **external-snapshotter** Custom Resource Definitions (CRDs) to be installed on the cluster. These CRDs define the `VolumeSnapshotClass`, `VolumeSnapshot`, and `VolumeSnapshotContent` resources. EKS Auto Mode does not install these by default.
 
 :::alert{header="Note" type="info"}
-Trident installs its own snapshot CRDs (`tridentsnapshots.trident.netapp.io`), but the **Kubernetes-native** VolumeSnapshot CRDs (`snapshot.storage.k8s.io`) are a separate component maintained by the [kubernetes-csi/external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter) project.
+Trident installs its own internal snapshot CRDs (`tridentsnapshots.trident.netapp.io`), but the **Kubernetes-native** VolumeSnapshot CRDs and controller (`snapshot.storage.k8s.io`) are a separate cluster-wide component maintained by the [kubernetes-csi/external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter) project. Both pieces — the CRDs (Step 1) **and** the standalone snapshot-controller Deployment (Step 2) — are required. Without the controller, a `VolumeSnapshot` you create will sit forever with empty `READYTOUSE` and `SNAPSHOTCONTENT` columns because nothing is translating it into a `VolumeSnapshotContent`.
 :::
 
 1. Install the VolumeSnapshot CRDs:
@@ -56,7 +56,41 @@ volumesnapshotcontents.snapshot.storage.k8s.io   2026-04-30T00:00:00Z
 volumesnapshots.snapshot.storage.k8s.io          2026-04-30T00:00:00Z
 :::
 
-##### Step 2: Create a VolumeSnapshotClass
+##### Step 2: Install the snapshot-controller Deployment
+
+The CRDs alone do not process snapshot requests — they only define the resource types. The **standalone snapshot-controller** is a cluster-wide Deployment that watches `VolumeSnapshot` objects and creates the corresponding `VolumeSnapshotContent` objects, which Trident's `csi-snapshotter` sidecar then turns into real ONTAP snapshots. Both pieces are required.
+
+1. Install the snapshot-controller RBAC and Deployment:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
+:::
+
+2. Scale the Deployment to a single replica. The upstream manifest defaults to two replicas for leader-elected high availability. For this workshop we only need one — it keeps resource usage minimal on the workshop nodes and the leader-election overhead is unnecessary at this scale.
+
+::code[kubectl -n kube-system scale deploy/snapshot-controller --replicas=1]{language=bash showLineNumbers=false showCopyAction=true}
+
+3. Wait for the rollout to complete:
+
+::code[kubectl -n kube-system rollout status deploy/snapshot-controller]{language=bash showLineNumbers=false showCopyAction=true}
+
+4. Confirm the snapshot-controller pod is Running:
+
+::code[kubectl -n kube-system get pods -l app=snapshot-controller]{language=bash showLineNumbers=false showCopyAction=true}
+
+You should see one pod with `1/1 Running`:
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=false}
+NAME                                   READY   STATUS    RESTARTS   AGE
+snapshot-controller-XXXXXXXXXX-XXXXX   1/1     Running   0          30s
+:::
+
+:::alert{header="Troubleshooting tip" type="info"}
+If a `VolumeSnapshot` you create later in this module stays with empty `READYTOUSE` and `SNAPSHOTCONTENT` columns and `kubectl describe volumesnapshot <name>` shows no `Events` and no `Status` block, the snapshot-controller is the first thing to check. Run `kubectl -n kube-system logs deploy/snapshot-controller --tail=200` and look for either RBAC errors or `the server could not find the requested resource` errors against `volumesnapshotcontents` (which would indicate a missing CRD from Step 1).
+:::
+
+##### Step 3: Create a VolumeSnapshotClass
 
 The `VolumeSnapshotClass` tells Kubernetes which CSI driver to use for snapshots. This is analogous to a `StorageClass` for volumes.
 
@@ -91,7 +125,7 @@ Key points:
 
 ::code[kubectl get volumesnapshotclass]{language=bash showLineNumbers=false showCopyAction=true}
 
-##### Step 3: Create an on-demand VolumeSnapshot
+##### Step 4: Create an on-demand VolumeSnapshot
 
 Now create a snapshot of the `ontap-model-claim` PVC. Trident will create an ONTAP snapshot on the underlying volume via the CSI interface.
 
@@ -129,7 +163,7 @@ When `READYTOUSE` shows `true`, the snapshot has been created successfully on th
 
 ::code[kubectl describe volumesnapshot model-snapshot]{language=bash showLineNumbers=false showCopyAction=true}
 
-##### Step 4: Verify snapshots from within a pod
+##### Step 5: Verify snapshots from within a pod
 
 To confirm that both automatic ONTAP snapshots and the Kubernetes VolumeSnapshot are visible on the volume, deploy a lightweight utility pod and inspect the `.snapshot` directory.
 
@@ -157,7 +191,7 @@ drwxrwxrwx    3 4294967294 4294967294      4096 Apr 30 07:16 snapshot-xxxxxxxx-x
 :::
 
 :::alert{header="Note" type="info"}
-The `hourly.0` snapshot is created by the ONTAP `default` snapshot policy at 5 minutes past the hour. If you don't see it yet, the first scheduled snapshot hasn't fired. The `snapshot-xxxxxxxx-...` entry is the Kubernetes VolumeSnapshot you created in Step 5. Each snapshot directory contains a full read-only copy of the volume data at that point in time.
+The `hourly.0` snapshot is created by the ONTAP `default` snapshot policy at 5 minutes past the hour. If you don't see it yet, the first scheduled snapshot hasn't fired. The `snapshot-xxxxxxxx-...` entry is the Kubernetes VolumeSnapshot you created in Step 4. Each snapshot directory contains a full read-only copy of the volume data at that point in time.
 :::
 
 4. Verify the model data is intact inside a snapshot:
@@ -168,7 +202,7 @@ The `hourly.0` snapshot is created by the ONTAP `default` snapshot policy at 5 m
 
 ::code[kubectl delete pod netshoot-fsxn]{language=bash showLineNumbers=false showCopyAction=true}
 
-##### Step 5: Create a PVC from the snapshot (clone)
+##### Step 6: Create a PVC from the snapshot (clone)
 
 One of the most powerful features of VolumeSnapshots is the ability to create a new PVC from a snapshot. This creates a **space-efficient clone** of the data — ideal for experimentation, A/B testing, or creating isolated environments.
 
@@ -213,7 +247,7 @@ This means every volume provisioned by Trident automatically gets:
 - **snapshotReserve: "10"** — 10% of volume capacity reserved for snapshot data (10 GiB on a 100 GiB volume — more than sufficient for static model data)
 - **snapshotDir: "true"** — the `.snapshot` directory is accessible from within pods
 
-##### Step 6: Verify the snapshot policy on your volume
+##### Step 7: Verify the snapshot policy on your volume
 
 1. Get the ONTAP volume name from the PersistentVolume:
 
@@ -232,9 +266,9 @@ aws fsx describe-volumes --volume-ids $VOLUME_ID --query "Volumes[0].OntapConfig
 
 You should see `SnapshotPolicy: default`, confirming that automatic snapshots are active.
 
-##### Step 7: View automatic snapshots from within a pod
+##### Step 8: View automatic snapshots from within a pod
 
-Each ONTAP snapshot is accessible through a hidden `.snapshot` directory at the root of the volume. If you still have the `netshoot-fsxn` pod running from Step 4, you can use it. Otherwise, redeploy it.
+Each ONTAP snapshot is accessible through a hidden `.snapshot` directory at the root of the volume. If you still have the `netshoot-fsxn` pod running from Step 5, you can use it. Otherwise, redeploy it.
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=false}
 # From within the netshoot-fsxn pod or any pod with the volume mounted:
@@ -242,7 +276,7 @@ kubectl exec -it netshoot-fsxn -- ls /work-dir/.snapshot/
 :::
 
 :::alert{header="Important — Timing of automatic snapshots" type="warning"}
-The `default` ONTAP snapshot policy creates the first `hourly.0` snapshot at **5 minutes past the hour**. If you are running this module within the same hour that the volume was created, the automatic snapshot may not have fired yet. In that case, you will only see the on-demand Kubernetes VolumeSnapshot (created in Step 3) in the `.snapshot` directory.
+The `default` ONTAP snapshot policy creates the first `hourly.0` snapshot at **5 minutes past the hour**. If you are running this module within the same hour that the volume was created, the automatic snapshot may not have fired yet. In that case, you will only see the on-demand Kubernetes VolumeSnapshot (created in Step 4) in the `.snapshot` directory.
 
 This is expected behavior. The on-demand snapshot you created earlier is always visible immediately. The automatic `hourly.0` snapshot will appear after the next hour mark.
 :::

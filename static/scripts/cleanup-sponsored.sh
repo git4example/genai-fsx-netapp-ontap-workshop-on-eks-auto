@@ -199,7 +199,11 @@ kubectl delete -f volume-snapshot-class.yaml --ignore-not-found 2>/dev/null || t
 echo "Deleting VolumeSnapshots..."
 kubectl delete volumesnapshot --all --ignore-not-found 2>/dev/null || true
 
-# Delete VolumeSnapshot CRDs (installed by deploy script)
+# Delete the snapshot-controller Deployment, RBAC, and CRDs (all installed by deploy script)
+echo "Deleting snapshot-controller Deployment and RBAC..."
+kubectl delete -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml --ignore-not-found 2>/dev/null || true
+kubectl delete -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml --ignore-not-found 2>/dev/null || true
+
 echo "Deleting VolumeSnapshot CRDs..."
 kubectl delete crd volumesnapshotclasses.snapshot.storage.k8s.io --ignore-not-found 2>/dev/null || true
 kubectl delete crd volumesnapshotcontents.snapshot.storage.k8s.io --ignore-not-found 2>/dev/null || true
