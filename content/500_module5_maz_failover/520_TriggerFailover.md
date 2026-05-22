@@ -44,7 +44,7 @@ Why /v1/models stays 200: vLLM holds the model registry in memory and the model 
 
 ##### Step 2: Note the Preferred and Standby ENIs
 
-In your **first terminal** (or in the AWS Console), identify which ENI currently belongs to the preferred subnet and which belongs to the standby subnet. The route table entries for the FSx floating endpoint range will point at one of these, and the pointer will flip during the failover.
+Identify which ENI currently belongs to the preferred subnet and which belongs to the standby subnet. The route table entries for the FSx floating endpoint range will point at one of these, and the pointer will flip during the failover.
 
 1. Navigate to the [Amazon FSx console](https://console.aws.amazon.com/fsx/). Make sure you are in the workshop's region.
 2. From the left pane select **File systems**, then click your file system ID.
