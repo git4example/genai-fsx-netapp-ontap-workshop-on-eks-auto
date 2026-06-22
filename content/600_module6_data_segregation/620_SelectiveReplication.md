@@ -39,6 +39,9 @@ echo "On-Prem Intercluster IP: $ONPREM_INTERCLUSTER_IP"
 aws fsx create-data-repository-association --region $AWS_REGION 2>/dev/null || true
 
 # Initiate cluster peering via ONTAP REST API on the on-prem system
+# Generate a random passphrase for cluster peering
+export PEER_PASSPHRASE=$(openssl rand -base64 16)
+
 curl -sk -u "vsadmin:${ONPREM_SVM_PASS}" \
   -X POST "https://${ONPREM_MGMT_IP}/api/cluster/peers" \
   -H "Content-Type: application/json" \
@@ -47,7 +50,7 @@ curl -sk -u "vsadmin:${ONPREM_SVM_PASS}" \
       "ip_addresses": ["'${CLOUD_INTERCLUSTER_IP}'"]
     },
     "authentication": {
-      "passphrase": "NetApp-Workshop-2024"
+      "passphrase": "'${PEER_PASSPHRASE}'"
     }
   }'
 :::
@@ -71,7 +74,7 @@ curl -sk -u "vsadmin:${CLOUD_SVM_PASS}" \
       "ip_addresses": ["'${ONPREM_INTERCLUSTER_IP}'"]
     },
     "authentication": {
-      "passphrase": "NetApp-Workshop-2024"
+      "passphrase": "'${PEER_PASSPHRASE}'"
     }
   }'
 :::
