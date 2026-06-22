@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: healthcare-data-pv
+  labels:
+    data-domain: healthcare
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadOnlyMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ontap-nas-segregated
+  mountOptions:
+    - nfsvers=4.1
+    - hard
+    - rsize=65536
+    - wsize=65536
+  nfs:
+    server: CLOUD_NFS_LIF_IP
+    path: /health_data
+  claimRef:
+    namespace: model-healthcare
+    name: healthcare-data-claim

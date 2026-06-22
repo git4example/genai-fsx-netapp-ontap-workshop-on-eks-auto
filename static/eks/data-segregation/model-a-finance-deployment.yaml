@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-a-mistral-finance
+  namespace: model-finance
+  labels:
+    app: model-a-finance
+    data-domain: finance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: model-a-finance
+  template:
+    metadata:
+      labels:
+        app: model-a-finance
+        data-domain: finance
+    spec:
+      serviceAccountName: finance-model-sa
+      nodeSelector:
+        node.kubernetes.io/instance-type: inf2.xlarge
+      tolerations:
+      - key: "aws.amazon.com/neuron"
+        operator: "Exists"
+        effect: "NoSchedule"
+      containers:
+      - name: inference-server
+        image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py311-sdk2.26.1-ubuntu22.04
+        command: ["vllm", "serve"]
+        args:
+        - /model-dir/Mistral-7B-Instruct-v0.3
+        - --served-model-name=mistral-7b-finance
+        - --tensor-parallel-size=2
+        - --max-model-len=4096
+        - --max-num-seqs=4
+        - --device=neuron
+        resources:
+          requests:
+            cpu: "2"
+            memory: 8Gi
+            aws.amazon.com/neuroncore: 2
+          limits:
+            aws.amazon.com/neuroncore: 2
+        env:
+        - name: NEURON_COMPILED_ARTIFACTS
+          value: /model-dir/Mistral-7B-Instruct-v0.3
+        volumeMounts:
+        - name: model-storage
+          mountPath: "/model-dir"
+          readOnly: true
+        - name: domain-data
+          mountPath: "/data"
+          readOnly: true
+        ports:
+        - containerPort: 8000
+          name: http
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: ontap-model-claim
+      - name: domain-data
+        persistentVolumeClaim:
+          claimName: finance-data-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: model-a-finance-svc
+  namespace: model-finance
+spec:
+  selector:
+    app: model-a-finance
+  ports:
+  - port: 8000
+    targetPort: 8000
+    name: http
+  type: ClusterIP

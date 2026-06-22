@@ -1,0 +1,70 @@
+---
+# ServiceAccount for finance model - restricted to model-finance namespace
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: finance-model-sa
+  namespace: model-finance
+---
+# ServiceAccount for healthcare model - restricted to model-healthcare namespace
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: healthcare-model-sa
+  namespace: model-healthcare
+---
+# Role: finance model can only access PVCs in its own namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: finance-data-access
+  namespace: model-finance
+rules:
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: finance-data-access-binding
+  namespace: model-finance
+subjects:
+- kind: ServiceAccount
+  name: finance-model-sa
+  namespace: model-finance
+roleRef:
+  kind: Role
+  name: finance-data-access
+  apiGroup: rbac.authorization.k8s.io
+---
+# Role: healthcare model can only access PVCs in its own namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: healthcare-data-access
+  namespace: model-healthcare
+rules:
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: healthcare-data-access-binding
+  namespace: model-healthcare
+subjects:
+- kind: ServiceAccount
+  name: healthcare-model-sa
+  namespace: model-healthcare
+roleRef:
+  kind: Role
+  name: healthcare-data-access
+  apiGroup: rbac.authorization.k8s.io

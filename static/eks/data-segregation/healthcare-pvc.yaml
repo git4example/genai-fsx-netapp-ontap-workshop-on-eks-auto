@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: healthcare-data-claim
+  namespace: model-healthcare
+spec:
+  accessModes:
+    - ReadOnlyMany
+  storageClassName: ontap-nas-segregated
+  resources:
+    requests:
+      storage: 50Gi
+  selector:
+    matchLabels:
+      data-domain: healthcare

@@ -1,0 +1,70 @@
+---
+# Deny all ingress to model-finance namespace except from within
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-cross-namespace-ingress
+  namespace: model-finance
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector: {}  # Only allow from same namespace
+---
+# Deny all ingress to model-healthcare namespace except from within
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-cross-namespace-ingress
+  namespace: model-healthcare
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector: {}  # Only allow from same namespace
+---
+# Deny egress from model-finance to model-healthcare
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-cross-namespace-egress
+  namespace: model-finance
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector: {}  # Allow within namespace
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system  # Allow DNS
+    ports:
+    - protocol: UDP
+      port: 53
+---
+# Deny egress from model-healthcare to model-finance
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-cross-namespace-egress
+  namespace: model-healthcare
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector: {}  # Allow within namespace
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system  # Allow DNS
+    ports:
+    - protocol: UDP
+      port: 53

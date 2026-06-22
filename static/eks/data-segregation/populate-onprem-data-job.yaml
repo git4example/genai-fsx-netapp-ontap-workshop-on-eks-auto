@@ -1,0 +1,96 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: populate-onprem-data
+spec:
+  template:
+    spec:
+      containers:
+      - name: data-generator
+        image: public.ecr.aws/amazonlinux/amazonlinux:2023
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "Creating finance domain data..."
+          mkdir -p /finance_data/transactions /finance_data/risk_models /finance_data/compliance
+
+          # Generate synthetic finance data
+          echo "transaction_id,amount,currency,timestamp,category" > /finance_data/transactions/2024_q1.csv
+          for i in $(seq 1 1000); do
+            echo "TXN-$(printf '%06d' $i),$((RANDOM % 10000)).$((RANDOM % 100)),USD,2024-0$((RANDOM % 3 + 1))-$((RANDOM % 28 + 1))T$((RANDOM % 24)):$((RANDOM % 60)):00Z,$(shuf -n1 -e retail investment transfer)" >> /finance_data/transactions/2024_q1.csv
+          done
+          echo "  - Created: /finance_data/transactions/2024_q1.csv (synthetic transaction records)"
+
+          echo '{"model_version": "v2.1", "risk_threshold": 0.75, "features": ["amount", "frequency", "location", "time_of_day"]}' > /finance_data/risk_models/parameters.json
+          echo "  - Created: /finance_data/risk_models/parameters.json (model parameters)"
+
+          echo "timestamp,action,user,resource" > /finance_data/compliance/audit_trail.log
+          for i in $(seq 1 500); do
+            echo "2024-0$((RANDOM % 3 + 1))-$((RANDOM % 28 + 1))T$((RANDOM % 24)):$((RANDOM % 60)):00Z,$(shuf -n1 -e READ WRITE ACCESS_CHECK),user$((RANDOM % 50)),resource_$((RANDOM % 100))" >> /finance_data/compliance/audit_trail.log
+          done
+          echo "  - Created: /finance_data/compliance/audit_trail.log (compliance data)"
+
+          echo ""
+          echo "Creating healthcare domain data..."
+          mkdir -p /health_data/patient_records /health_data/imaging /health_data/research
+
+          # Generate synthetic healthcare data
+          echo "record_id,age_group,condition_code,treatment_code,outcome" > /health_data/patient_records/anonymized_dataset.parquet
+          for i in $(seq 1 1000); do
+            echo "REC-$(printf '%06d' $i),$(shuf -n1 -e 18-30 31-45 46-60 61-75 76+),ICD-$(printf '%03d' $((RANDOM % 999))),CPT-$(printf '%04d' $((RANDOM % 9999))),$(shuf -n1 -e improved stable declined)" >> /health_data/patient_records/anonymized_dataset.parquet
+          done
+          echo "  - Created: /health_data/patient_records/anonymized_dataset.parquet (anonymized records)"
+
+          echo '{"total_images": 50000, "modalities": ["CT", "MRI", "X-Ray"], "storage_format": "DICOM", "index_version": "3.1"}' > /health_data/imaging/metadata_index.json
+          echo "  - Created: /health_data/imaging/metadata_index.json (imaging metadata)"
+
+          echo "trial_id,phase,enrollment,start_date,status" > /health_data/research/clinical_trials.csv
+          for i in $(seq 1 200); do
+            echo "CT-$(printf '%04d' $i),Phase $(shuf -n1 -e I II III IV),$((RANDOM % 500 + 50)),2023-$(printf '%02d' $((RANDOM % 12 + 1)))-01,$(shuf -n1 -e active completed recruiting suspended)" >> /health_data/research/clinical_trials.csv
+          done
+          echo "  - Created: /health_data/research/clinical_trials.csv (trial data)"
+
+          echo ""
+          echo "Creating retail domain data..."
+          mkdir -p /retail_data/inventory /retail_data/customer_segments /retail_data/recommendations
+
+          echo '{"catalog_version": "2024.1", "total_products": 125000, "categories": ["electronics", "clothing", "food", "home"]}' > /retail_data/inventory/catalog.json
+          echo "  - Created: /retail_data/inventory/catalog.json (product catalog)"
+
+          echo "segment_id,size,avg_spend,preferred_channel,region" > /retail_data/customer_segments/profiles.parquet
+          for i in $(seq 1 500); do
+            echo "SEG-$(printf '%03d' $i),$((RANDOM % 100000 + 1000)),$((RANDOM % 500 + 20)),$(shuf -n1 -e online store mobile),$(shuf -n1 -e northeast southeast midwest west)" >> /retail_data/customer_segments/profiles.parquet
+          done
+          echo "  - Created: /retail_data/customer_segments/profiles.parquet (customer segments)"
+
+          echo "feature_name,importance,type" > /retail_data/recommendations/model_features.csv
+          for feature in purchase_history browse_history time_of_day season demographics price_sensitivity brand_affinity; do
+            echo "$feature,0.$((RANDOM % 99 + 1)),$(shuf -n1 -e numeric categorical boolean)" >> /retail_data/recommendations/model_features.csv
+          done
+          echo "  - Created: /retail_data/recommendations/model_features.csv (recommendation features)"
+
+          echo ""
+          echo "Data population complete. Total: 9 datasets across 3 domains."
+        volumeMounts:
+        - name: finance-vol
+          mountPath: /finance_data
+        - name: health-vol
+          mountPath: /health_data
+        - name: retail-vol
+          mountPath: /retail_data
+      restartPolicy: OnFailure
+      volumes:
+      - name: finance-vol
+        nfs:
+          server: ONPREM_NFS_LIF_IP
+          path: /finance_data
+      - name: health-vol
+        nfs:
+          server: ONPREM_NFS_LIF_IP
+          path: /health_data
+      - name: retail-vol
+        nfs:
+          server: ONPREM_NFS_LIF_IP
+          path: /retail_data
+  backoffLimit: 3
