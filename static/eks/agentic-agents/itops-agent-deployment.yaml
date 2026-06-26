@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: itops-agent-pv
+  labels:
+    agent: itops
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadOnlyMany
+  nfs:
+    server: "${FSXN_NFS_IP}"
+    path: "/it_ops_data"
+  mountOptions:
+    - nfsvers=4.1
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: itops-agent-data-claim
+  namespace: agent-itops
+spec:
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: ""
+  volumeName: itops-agent-pv
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: itops-agent
+  namespace: agent-itops
+  labels:
+    app: itops-agent
+    team: itops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: itops-agent
+  template:
+    metadata:
+      labels:
+        app: itops-agent
+        team: itops
+    spec:
+      securityContext:
+        runAsUser: 1002
+        runAsGroup: 1002
+        fsGroup: 1002
+      containers:
+      - name: agent
+        image: "${AGENT_IMAGE}"
+        env:
+        - name: AGENT_ROLE
+          value: "IT Operations AI Assistant — you help engineers with runbooks, incident response, deployment logs, and infrastructure configuration"
+        - name: DATA_DIR
+          value: "/data"
+        - name: LLM_ENDPOINT
+          value: "http://vllm-mistral7b-service.default.svc.cluster.local:8000/v1"
+        volumeMounts:
+        - name: itops-data
+          mountPath: "/data"
+          readOnly: true
+        command: ["sleep", "infinity"]
+        resources:
+          requests:
+            cpu: "500m"
+            memory: 512Mi
+          limits:
+            cpu: "1"
+            memory: 1Gi
+      volumes:
+      - name: itops-data
+        persistentVolumeClaim:
+          claimName: itops-agent-data-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: itops-agent-svc
+  namespace: agent-itops
+spec:
+  selector:
+    app: itops-agent
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP

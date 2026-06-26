@@ -1,6 +1,6 @@
 ---
 title : "Selective Data Replication with SnapMirror"
-weight : 620
+weight : 720
 ---
 
 ## Overview
