@@ -73,34 +73,68 @@ All three agents used the **same Mistral-7B LLM endpoint**. The intelligence is 
 
 ### Pattern A: Team-Based Agent Segregation (What You Built)
 
-:::code{showCopyAction=false showLineNumbers=false language=bash}
-Teams → Agents → Volumes (1:1 mapping)
-Finance Team  → Finance Agent  → finance_data volume
-IT Ops Team   → IT Ops Agent   → it_ops_data volume
-HR Team       → HR Agent       → hr_data volume
-:::
+```mermaid
+flowchart LR
+    FT["Finance Team"] --> FA["Finance Agent"] --> FV["finance_data volume"]
+    IT["IT Ops Team"] --> IA["IT Ops Agent"] --> IV["it_ops_data volume"]
+    HR["HR Team"] --> HA["HR Agent"] --> HV["hr_data volume"]
+
+    style FT fill:#c8e6c9,stroke:#2e7d32
+    style FA fill:#c8e6c9,stroke:#2e7d32
+    style FV fill:#c8e6c9,stroke:#2e7d32
+    style IT fill:#bbdefb,stroke:#1565c0
+    style IA fill:#bbdefb,stroke:#1565c0
+    style IV fill:#bbdefb,stroke:#1565c0
+    style HR fill:#fff9c4,stroke:#f9a825
+    style HA fill:#fff9c4,stroke:#f9a825
+    style HV fill:#fff9c4,stroke:#f9a825
+```
 
 **Use case:** Multiple departments share a Kubernetes cluster and LLM, each with private data.
 
 ### Pattern B: On-Prem to Cloud with Agent Access (SnapMirror + Agents)
 
-:::code{showCopyAction=false showLineNumbers=false language=bash}
-On-Prem ONTAP                    AWS Cloud (EKS + FSxN)
-├─ 500TB Finance Data ──SnapMirror──→ finance_data (subset) → Finance Agent
-├─ 300TB IT Ops Data  ──SnapMirror──→ it_ops_data (subset)  → IT Ops Agent
-└─ 2PB Other Data     (stays on-prem, never replicated)
-:::
+```mermaid
+flowchart LR
+    subgraph OnPrem["On-Prem ONTAP"]
+        F500["500TB Finance Data"]
+        I300["300TB IT Ops Data"]
+        O2P["2PB Other Data"]
+    end
+
+    subgraph Cloud["AWS Cloud (EKS + FSxN)"]
+        FV["finance_data (subset)"] --> FA["Finance Agent"]
+        IV["it_ops_data (subset)"] --> IA["IT Ops Agent"]
+    end
+
+    F500 -->|SnapMirror| FV
+    I300 -->|SnapMirror| IV
+    O2P -.-x|"stays on-prem"| O2P
+
+    style O2P fill:#eeeeee,stroke:#9e9e9e
+    style FA fill:#c8e6c9,stroke:#2e7d32
+    style FV fill:#c8e6c9,stroke:#2e7d32
+    style IA fill:#bbdefb,stroke:#1565c0
+    style IV fill:#bbdefb,stroke:#1565c0
+```
 
 **Use case:** Replicate only the data subsets each cloud-hosted agent needs. Bulk data stays on-prem.
 
 ### Pattern C: Compliance-Driven Isolation (HIPAA / SOX / GDPR)
 
-:::code{showCopyAction=false showLineNumbers=false language=bash}
-Volume: patient_records   → Export Policy: only healthcare-agent subnet
-                          → UNIX: UID 2001 (healthcare service account)
-                          → Audit: every file read logged via ONTAP FPolicy
-                          → Retention: WORM (SnapLock) for compliance holds
-:::
+```mermaid
+flowchart LR
+    V["patient_records\nvolume"] --> EP["Export Policy\nhealthcare-agent subnet only"]
+    V --> UX["UNIX Permissions\nUID 2001"]
+    V --> AU["FPolicy Audit\nevery file read logged"]
+    V --> WR["WORM / SnapLock\nimmutable retention"]
+
+    style V fill:#e1bee7,stroke:#6a1b9a
+    style EP fill:#fff9c4,stroke:#f9a825
+    style UX fill:#fff9c4,stroke:#f9a825
+    style AU fill:#fff9c4,stroke:#f9a825
+    style WR fill:#ffcdd2,stroke:#c62828
+```
 
 **Use case:** Regulated industries where AI agent access must be auditable, restricted, and tamper-proof.
 
