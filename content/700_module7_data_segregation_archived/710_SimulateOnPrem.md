@@ -1,6 +1,7 @@
 ---
 title : "Simulate On-Premises Data Center"
 weight : 710
+hidden : true
 ---
 
 ## Overview

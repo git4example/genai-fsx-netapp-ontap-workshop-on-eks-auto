@@ -1,6 +1,7 @@
 ---
 title : "Multi-Model Data Segregation with On-Premises to Cloud Replication"
 weight : 700
+hidden : true
 ---
 
 ## Module Overview
