@@ -23,7 +23,7 @@ As organizations deploy autonomous AI agents that can read, analyze, and act on 
 
 ## Architecture
 
-```
+:::code{showCopyAction=false showLineNumbers=false language=bash}
                          ┌─────────────────────────────────────────────────────────┐
                          │  EKS Cluster                                            │
                          │                                                         │
@@ -61,7 +61,7 @@ As organizations deploy autonomous AI agents that can read, analyze, and act on 
                          │  └────────────┘ └────────────┘  └─────────────────┘   │
                          │                                                        │
                          └────────────────────────────────────────────────────────┘
-```
+:::
 
 **FSxN Security Layers Demonstrated:**
 

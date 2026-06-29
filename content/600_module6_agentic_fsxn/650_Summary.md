@@ -7,7 +7,7 @@ weight : 650
 
 In this module, you built a real-world scenario where **multiple AI agents** with different roles access a shared storage system — and proved that **FSx for NetApp ONTAP's native security** enforces strict data boundaries regardless of what the AI agent or LLM attempts.
 
-```
+:::code{showCopyAction=false showLineNumbers=false language=bash}
 ┌───────────────────────────────────────────────────────────────────────────┐
 │                        SECURITY ENFORCEMENT STACK                         │
 ├───────────────────────────────────────────────────────────────────────────┤
@@ -38,7 +38,7 @@ In this module, you built a real-world scenario where **multiple AI agents** wit
 │                                                                           │
 │                   FSx for NetApp ONTAP                                    │
 └───────────────────────────────────────────────────────────────────────────┘
-```
+:::
 
 ---
 
@@ -71,34 +71,34 @@ All three agents used the **same Mistral-7B LLM endpoint**. The intelligence is 
 
 ### Pattern A: Team-Based Agent Segregation (What You Built)
 
-```
+:::code{showCopyAction=false showLineNumbers=false language=bash}
 Teams → Agents → Volumes (1:1 mapping)
 Finance Team  → Finance Agent  → finance_data volume
 IT Ops Team   → IT Ops Agent   → it_ops_data volume
 HR Team       → HR Agent       → hr_data volume
-```
+:::
 
 **Use case:** Multiple departments share a Kubernetes cluster and LLM, each with private data.
 
 ### Pattern B: On-Prem to Cloud with Agent Access (SnapMirror + Agents)
 
-```
+:::code{showCopyAction=false showLineNumbers=false language=bash}
 On-Prem ONTAP                    AWS Cloud (EKS + FSxN)
 ├─ 500TB Finance Data ──SnapMirror──→ finance_data (subset) → Finance Agent
 ├─ 300TB IT Ops Data  ──SnapMirror──→ it_ops_data (subset)  → IT Ops Agent
 └─ 2PB Other Data     (stays on-prem, never replicated)
-```
+:::
 
 **Use case:** Replicate only the data subsets each cloud-hosted agent needs. Bulk data stays on-prem.
 
 ### Pattern C: Compliance-Driven Isolation (HIPAA / SOX / GDPR)
 
-```
+:::code{showCopyAction=false showLineNumbers=false language=bash}
 Volume: patient_records   → Export Policy: only healthcare-agent subnet
                           → UNIX: UID 2001 (healthcare service account)
                           → Audit: every file read logged via ONTAP FPolicy
                           → Retention: WORM (SnapLock) for compliance holds
-```
+:::
 
 **Use case:** Regulated industries where AI agent access must be auditable, restricted, and tamper-proof.
 
