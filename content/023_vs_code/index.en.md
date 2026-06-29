@@ -20,6 +20,8 @@ You will be using the Open-Source VSCode IDE terminal to copy and paste commands
 
 5. Select your VSCode UI theam
 
+![Select Theme](/static/images/get-started-with-vs-code.png)
+
 ![Select Theme](/static/images/select-theme.png)
 
 6. Click on the **TERMINAL** TAB, and maximize your terminal window.

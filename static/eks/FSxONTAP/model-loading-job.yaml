@@ -19,6 +19,18 @@ spec:
         - "Hello2pariksit/Mistral-7B-Instruct-v0.3-neuron"
         - "--local-dir"
         - "/work-dir/Mistral-7B-Instruct-v0.3"
+        env:
+          - name: HF_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: hf-token
+                key: token
+                optional: true
+        resources:
+          requests:
+            memory: 2Gi
+          limits:
+            memory: 8Gi
         volumeMounts:
         - name: persistent-storage
           mountPath: "/work-dir"
