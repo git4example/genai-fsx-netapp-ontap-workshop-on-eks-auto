@@ -26,7 +26,7 @@ This pattern addresses a critical enterprise requirement: **data governance at t
 
 ## Architecture
 
-```
+:::code{showCopyAction=false showLineNumbers=false language=bash}
 CUSTOMER ON-PREMISES                             AWS CLOUD
 (NetApp ONTAP — Simulated via                   (Region A — e.g. us-west-2)
  FSx ONTAP in Region B)
@@ -47,7 +47,7 @@ CUSTOMER ON-PREMISES                             AWS CLOUD
 │  + Other volumes (PBs)        │              │                                      │
 │    NOT needed in cloud        │              │                                      │
 └────────────────────────────────┘              └──────────────────────────────────────┘
-```
+:::
 
 **Key Design Principles:**
 - **On-premises data stays on-premises** — Only the specific subsets required by cloud models are replicated. Petabytes of unneeded data never leave the customer's data center.

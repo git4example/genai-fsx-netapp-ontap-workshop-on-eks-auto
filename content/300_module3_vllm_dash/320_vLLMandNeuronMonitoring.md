@@ -12,10 +12,10 @@ It is important to have a mechanism that provides observability into Inference w
 
 Run the below commands to deploy a Service Monitor configuration so that prometheus can scrape metrics from the vLLM service endpoint.
 
-```bash
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 cd /home/participant/environment/eks/genai/observability/
 kubectl apply -f vllm-servicemonitor.yaml
-```
+:::
 
 #### Neuron Monitoring Setup
 
@@ -23,36 +23,38 @@ Neuron monitor collects and exposes hardware metrics (utilization, memory usage,
 
 1. Run the below command to deploy the Neuron Monitor Deamonset and service to expose metrics
 
-```bash
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl apply -f neuron-monitor.yaml
-```
+:::
+
 2. Deploy Service Monitor to scrape metrics
 
-```bash
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl apply -f neuron-servicemonitor.yaml
-```
+:::
 
 #### Deploy the vLLM + Neuron Monitoring Dashboard
 
 3. Now that we have our vLLM and Neuron metrics collectors setup, run the below command to deploy our custom "**vLLM + Neuron monitoring**" Grafana based dashboard. This custom dashboard combines specific Inference metrics along with Neuron metrics into a single dashboard view.
 
-```bash
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl apply -f vllm-neuron-dashboard-configmap.yaml
-```
+:::
 
 
 #### Log into Grafana dashboard
 
 1. Run the following command to get the Grafana dashboard URL, and logon credentials.
-```bash
-GRAFANA_URL=$(kubectl get svc -n kube-system kube-prometheus-stack-grafana -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-```
 
-```bash
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+GRAFANA_URL=$(kubectl get svc -n kube-system kube-prometheus-stack-grafana -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+:::
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 echo "Grafana URL: http://$GRAFANA_URL"
 echo "Username: admin"
 echo "Password: $GRAFANA_PASSWORD"
-```
+:::
 
 ![grafana_url](/static/images/grafana_url.png)
 
@@ -69,9 +71,10 @@ echo "Password: $GRAFANA_PASSWORD"
 ![mistral_vllm_dash_1](/static/images/mistral_vllm_dash_1.png)
 
 6. Now navigate back to your **Open WebUI Chatbot session**. If you accidently closed the web session, run the below command to get the URL and then open it (remember its a HTTP URL not a HTTPS).
-```bash
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl get ing
-```
+:::
 
 7. From the left hand window pane of the Open WebUI client, **right-click** on your **previous chat session** and select **Delete**.
 
@@ -108,19 +111,19 @@ You can deploy any of the optional dashboards below to view different metrics. O
 
 1. Deploy a dashboard called "vLLM Performance Statistics" on Grafana
 
-```bash
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl apply -f vllm-performance-dashboard.yaml
-```
+:::
 
 2. Deploy a dashboard called "vLLM Query Statistics" on Grafana
 
-```bash
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl apply -f vllm-query-statistics.yaml
-```
+:::
 
 
 3. Deploy a dashboard called "AWS Neuron Hardware Monitoring" on Grafana
 
-```bash
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl apply -f neuron-monitoring-configmap.yaml
-```
+:::

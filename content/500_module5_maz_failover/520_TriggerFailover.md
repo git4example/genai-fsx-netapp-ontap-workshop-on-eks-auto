@@ -135,11 +135,12 @@ You should receive a valid response. The meaningful proof of failover correctnes
 If you see sustained non-200 responses for more than a couple of minutes during either flip:
 
 - Confirm the file system is registered with the **EKS private route tables** rather than the VPC main route table:
-  ```bash
-  aws fsx describe-file-systems \
-    --file-system-ids $FSX_ID --region $AWS_REGION \
-    --query 'FileSystems[0].OntapConfiguration.RouteTableIds'
-  ```
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+aws fsx describe-file-systems \
+  --file-system-ids $FSX_ID --region $AWS_REGION \
+  --query 'FileSystems[0].OntapConfiguration.RouteTableIds'
+:::
 - Confirm the security group on the FSx ENIs allows TCP 2049 from the EKS node security group.
 
 ---

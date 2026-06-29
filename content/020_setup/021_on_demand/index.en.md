@@ -33,7 +33,7 @@ The workshop deploys the following AWS services via CloudFormation and Terraform
 
 Below is an EXAMPLE of a broad IAM policy that you could use, which includes all the required permissions for both CloudFormation and Terraform deployments. This is suitable for the EC2 jumpbox role that runs the deployment script:
 
-```json
+:::code{showCopyAction=false showLineNumbers=true language=json}
 {
     "Version": "2012-10-17",
     "Statement": [
@@ -61,7 +61,7 @@ Below is an EXAMPLE of a broad IAM policy that you could use, which includes all
         }
     ]
 }
-```
+:::
 
 :::alert{header="Note" type="info"}
 The VSCode jumpbox role that the CloudFormation stack creates inside the workshop uses a tighter, scoped least-privilege policy. See `static/vscode_instance_role_policy.json` in the repo for the exact policy applied to the in-workshop jumpbox.
@@ -85,11 +85,11 @@ The Mistral-7B model is **not** staged to S3 by this script. It is pulled direct
 
 1. Run the below commands to start the automated workshop environment deployment script:
 
-```bash
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 curl -O https://raw.githubusercontent.com/git4example/genai-fsx-netapp-ontap-workshop-on-eks-auto/mainline/static/scripts/quick-deploy-on-demand.sh
 chmod +x quick-deploy-on-demand.sh
 ./quick-deploy-on-demand.sh
-```
+:::
 
 **Deployment time will take approx:** ~45 minutes (complete infrastructure deployment)
 
@@ -110,13 +110,13 @@ Click on the following link to access your **[Open source VSCode IDE](/023_vs_co
 
 When you're finished with the workshop, use the cleanup script to remove all resources:
 
-```bash
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 # Navigate to scripts directory (if not already there)
 cd genai-fsx-netapp-ontap-workshop-on-eks-auto/static/scripts
 
 # Run cleanup script
 ./cleanup-on-demand.sh
-```
+:::
 
 **Cleanup Features**:
 - Interactive confirmation for each cleanup step

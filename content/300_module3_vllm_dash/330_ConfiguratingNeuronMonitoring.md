@@ -10,30 +10,31 @@ Neuron Monitor runs on AWS Neuron-enabled instances to collect and expose hardwa
 
 
 1. Deploy Neuron Monitor Deamonset and Service which will expose metrics
-```bash
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 cd /home/participant/environment/eks/genai/observability/
 kubectl apply -f neuron-monitor.yaml
+:::
 
-```
 2. Deploy Service Monitor to scrape metrics
 
-```bash
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl apply -f neuron-servicemonitor.yaml
-
-```
+:::
 
 3. Deploy Neuron Dashboard
 
-```bash
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl apply -f neuron-monitoring-configmap.yaml
-```
+:::
 
 Verify dashboard on grafana "AWS Neuron Hardware Monitoring (ConfigMap)"
 
 4. Deploy vLLM + Neuron Monitoring  Dashboard
-```bash
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl apply -f vllm-neuron-dashboard-configmap.yaml
-```
+:::
 
 5. Navigate back to your Grafana URL, Click on the "**Dashboards**" option from the right window pane. Then in the search field enter "Comprehensive vLLM + Neuron Monitoring Dashboard", then select it to open the dashboard.
 

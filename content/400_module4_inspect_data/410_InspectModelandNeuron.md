@@ -95,7 +95,7 @@ The compiler takes the model's PyTorch operations, optimizes them for the Neuron
 
 Compilation is typically done on a larger instance (e.g., inf2.8xlarge or inf2.24xlarge) that has enough memory for the compiler. You run the same DLC container image used for inference — when the Neuron runtime detects no pre-compiled artifacts, it automatically invokes `neuronx-cc` to compile the model on first startup. Once compiled, the artifacts are saved alongside the model weights and can be uploaded to a model registry for reuse.
 
-```bash
+:::code{showCopyAction=false showLineNumbers=true language=bash}
 # On a larger instance (e.g., inf2.8xlarge) with sufficient memory:
 # 1. Run the vLLM DLC container with the model — it will auto-compile on first run
 docker run -v ./model:/work-dir \
@@ -113,7 +113,7 @@ docker run -v ./model:/work-dir \
 # 3. After compilation completes, the compiled artifacts are stored
 #    alongside the model weights in the mounted volume. Upload the
 #    entire directory to HuggingFace or S3 for reuse.
-```
+:::
 
 **Why pre-compilation matters for production**
 
