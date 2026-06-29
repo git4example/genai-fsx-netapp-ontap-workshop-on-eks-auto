@@ -7,38 +7,40 @@ weight : 650
 
 In this module, you built a real-world scenario where **multiple AI agents** with different roles access a shared storage system — and proved that **FSx for NetApp ONTAP's native security** enforces strict data boundaries regardless of what the AI agent or LLM attempts.
 
-:::code{showCopyAction=false showLineNumbers=false language=bash}
-┌───────────────────────────────────────────────────────────────────────────┐
-│                        SECURITY ENFORCEMENT STACK                         │
-├───────────────────────────────────────────────────────────────────────────┤
-│                                                                           │
-│  ┌─────────────┐     ┌─────────────┐     ┌──────────────────────────┐   │
-│  │  AI Agent   │     │  AI Agent   │     │  Malicious Agent         │   │
-│  │  (Finance)  │     │  (IT Ops)   │     │  (Attacker)              │   │
-│  │  UID: 1001  │     │  UID: 1002  │     │  UID: 1099              │   │
-│  └──────┬──────┘     └──────┬──────┘     └───────────┬──────────────┘   │
-│         │                   │                        │                   │
-│  ═══════╪═══════════════════╪════════════════════════╪═══════════════    │
-│         │  K8s Namespace    │  Isolation             │                   │
-│  ═══════╪═══════════════════╪════════════════════════╪═══════════════    │
-│         │                   │                        │                   │
-│  ═══════╪═══════════════════╪════════════════════════╪═══════════════    │
-│         │  ONTAP Export     │  Policy                ╳ BLOCKED          │
-│  ═══════╪═══════════════════╪════════════════════════╪═══════════════    │
-│         │                   │                        │                   │
-│  ═══════╪═══════════════════╪════════════════════════╪═══════════════    │
-│         │  UNIX Permissions │  (UID/GID)             ╳ BLOCKED          │
-│  ═══════╪═══════════════════╪════════════════════════╪═══════════════    │
-│         │                   │                        │                   │
-│         ▼                   ▼                        ▼                   │
-│  ┌────────────┐     ┌────────────┐          ┌─────────────┐            │
-│  │finance_data│     │ it_ops_data│          │ NO ACCESS   │            │
-│  │   ✓ READ  │     │   ✓ READ   │          │   ✗ DENIED  │            │
-│  └────────────┘     └────────────┘          └─────────────┘            │
-│                                                                           │
-│                   FSx for NetApp ONTAP                                    │
-└───────────────────────────────────────────────────────────────────────────┘
-:::
+```mermaid
+flowchart TD
+    subgraph Agents["AI Agents"]
+        FA["Finance Agent\nUID: 1001"]
+        IA["IT Ops Agent\nUID: 1002"]
+        MA["Malicious Agent\nUID: 1099"]
+    end
+
+    subgraph Security["Security Enforcement Stack"]
+        L1["K8s Namespace Isolation"]
+        L2["ONTAP Export Policy"]
+        L3["UNIX Permissions (UID/GID)"]
+    end
+
+    subgraph FSxN["FSx for NetApp ONTAP"]
+        FV["finance_data\nREAD"]
+        IV["it_ops_data\nREAD"]
+        BL["NO ACCESS\nDENIED"]
+    end
+
+    FA --> L1 --> L2 --> L3 --> FV
+    IA --> L1 --> L2 --> L3 --> IV
+    MA --> L1 -.-x|BLOCKED| L2 -.-x|BLOCKED| BL
+
+    style FA fill:#c8e6c9,stroke:#2e7d32
+    style IA fill:#bbdefb,stroke:#1565c0
+    style MA fill:#ffcdd2,stroke:#c62828
+    style FV fill:#c8e6c9,stroke:#2e7d32
+    style IV fill:#bbdefb,stroke:#1565c0
+    style BL fill:#ffcdd2,stroke:#c62828
+    style L1 fill:#fff9c4,stroke:#f9a825
+    style L2 fill:#fff9c4,stroke:#f9a825
+    style L3 fill:#fff9c4,stroke:#f9a825
+```
 
 ---
 

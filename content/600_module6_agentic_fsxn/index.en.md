@@ -23,45 +23,36 @@ As organizations deploy autonomous AI agents that can read, analyze, and act on 
 
 ## Architecture
 
-:::code{showCopyAction=false showLineNumbers=false language=bash}
-                         ┌─────────────────────────────────────────────────────────┐
-                         │  EKS Cluster                                            │
-                         │                                                         │
-                         │  ┌──────────────────────────────────────────────────┐   │
-                         │  │  Self-Hosted LLM (vLLM - Mistral-7B)            │   │
-                         │  │  OpenAI-compatible API endpoint                  │   │
-                         │  └────────────────────┬─────────────────────────────┘   │
-                         │                       │ API calls                        │
-                         │         ┌─────────────┼──────────────┐                  │
-                         │         │             │              │                  │
-                         │         ▼             ▼              ▼                  │
-                         │  ┌────────────┐ ┌────────────┐ ┌────────────┐          │
-                         │  │  Finance   │ │  IT Ops    │ │  Malicious │          │
-                         │  │  Agent     │ │  Agent     │ │  Agent     │          │
-                         │  │  (Strands) │ │  (Strands) │ │  (Strands) │          │
-                         │  │            │ │            │ │            │          │
-                         │  │ UID: 1001  │ │ UID: 1002  │ │ UID: 1099  │          │
-                         │  │ Pod CIDR:A │ │ Pod CIDR:B │ │ Pod CIDR:C │          │
-                         │  └─────┬──────┘ └─────┬──────┘ └──────┬─────┘          │
-                         │        │              │               │                │
-                         └────────┼──────────────┼───────────────┼────────────────┘
-                                  │              │               │
-                         ┌────────┼──────────────┼───────────────┼────────────────┐
-                         │  FSx for NetApp ONTAP │               │                │
-                         │        │              │               │                │
-                         │        ▼              ▼               ▼                │
-                         │  ┌────────────┐ ┌────────────┐  ┌─────────────────┐   │
-                         │  │finance_data│ │ it_ops_data│  │  BLOCKED ✗      │   │
-                         │  │            │ │            │  │                 │   │
-                         │  │Export: CIDR │ │Export: CIDR│  │ Export Policy:  │   │
-                         │  │  A only    │ │  B only    │  │ Denies CIDR C  │   │
-                         │  │            │ │            │  │                 │   │
-                         │  │Owner: 1001 │ │Owner: 1002 │  │ UNIX Perms:    │   │
-                         │  │Perms: 0750 │ │Perms: 0750 │  │ Denies UID 1099│   │
-                         │  └────────────┘ └────────────┘  └─────────────────┘   │
-                         │                                                        │
-                         └────────────────────────────────────────────────────────┘
-:::
+```mermaid
+flowchart TD
+    subgraph EKS["EKS Cluster"]
+        LLM["Self-Hosted LLM\n(vLLM - Mistral-7B)\nOpenAI-compatible API"]
+        LLM -->|API calls| FA
+        LLM -->|API calls| IA
+        LLM -->|API calls| MA
+
+        FA["Finance Agent\n(Strands SDK)\nUID: 1001"]
+        IA["IT Ops Agent\n(Strands SDK)\nUID: 1002"]
+        MA["Malicious Agent\n(Strands SDK)\nUID: 1099"]
+    end
+
+    subgraph FSxN["FSx for NetApp ONTAP"]
+        FV["finance_data\n\nExport: Pod CIDR A only\nOwner: 1001 | Perms: 0750"]
+        IV["it_ops_data\n\nExport: Pod CIDR B only\nOwner: 1002 | Perms: 0750"]
+        BL["BLOCKED\n\nExport Policy: Denies CIDR C\nUNIX Perms: Denies UID 1099"]
+    end
+
+    FA -->|"READ"| FV
+    IA -->|"READ"| IV
+    MA -.-x|"DENIED"| BL
+
+    style FA fill:#c8e6c9,stroke:#2e7d32
+    style IA fill:#bbdefb,stroke:#1565c0
+    style MA fill:#ffcdd2,stroke:#c62828
+    style FV fill:#c8e6c9,stroke:#2e7d32
+    style IV fill:#bbdefb,stroke:#1565c0
+    style BL fill:#ffcdd2,stroke:#c62828
+```
 
 **FSxN Security Layers Demonstrated:**
 
