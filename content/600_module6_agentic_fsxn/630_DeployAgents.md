@@ -230,9 +230,8 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  selector:
-    matchLabels:
-      agent: finance
+  storageClassName: ""
+  volumeName: finance-agent-pv
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -271,8 +270,7 @@ spec:
         - name: finance-data
           mountPath: "/data"
           readOnly: true
-        command: ["python", "agent.py"]
-        args: ["sleep"]  # Keeps pod running for interactive testing
+        command: ["sleep", "infinity"]
         resources:
           requests:
             cpu: "500m"
@@ -341,9 +339,8 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  selector:
-    matchLabels:
-      agent: itops
+  storageClassName: ""
+  volumeName: itops-agent-pv
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -382,8 +379,7 @@ spec:
         - name: itops-data
           mountPath: "/data"
           readOnly: true
-        command: ["python", "agent.py"]
-        args: ["sleep"]
+        command: ["sleep", "infinity"]
         resources:
           requests:
             cpu: "500m"
