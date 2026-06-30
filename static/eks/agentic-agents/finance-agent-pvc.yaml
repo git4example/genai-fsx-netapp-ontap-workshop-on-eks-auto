@@ -1,0 +1,11 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: finance-agent-data-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ontap-nas-sc
+  resources:
+    requests:
+      storage: 10Gi

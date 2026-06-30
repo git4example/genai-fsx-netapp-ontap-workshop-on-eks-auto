@@ -456,12 +456,10 @@ spec:
           mountPath: /it_ops_data
       volumes:
       - name: finance-vol
-        nfs:
-          server: "${FSXN_NFS_IP}"
-          path: /finance_data
+        persistentVolumeClaim:
+          claimName: finance-agent-data-pvc
       - name: itops-vol
-        nfs:
-          server: "${FSXN_NFS_IP}"
-          path: /it_ops_data
+        persistentVolumeClaim:
+          claimName: itops-agent-data-pvc
       restartPolicy: Never
   backoffLimit: 2

@@ -20,16 +20,8 @@ This defense-in-depth approach means that even if one layer is bypassed, the oth
 
 First, determine the pod CIDR ranges for each agent namespace. We'll use Kubernetes Network Policies combined with ONTAP export policies to restrict access.
 
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Create namespaces for each agent
-kubectl create namespace agent-finance
-kubectl create namespace agent-itops
-kubectl create namespace agent-malicious
+All three agents will run in the `default` namespace (same as the LLM endpoint) but with **different UIDs**. The ONTAP UNIX permissions enforce which UID can read which volume's files.
 
-# Label them for identification
-kubectl label namespace agent-finance team=finance role=authorized
-kubectl label namespace agent-itops team=itops role=authorized
-kubectl label namespace agent-malicious team=external role=unauthorized
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
@@ -167,7 +159,8 @@ Set ownership and permissions on the volume files so that even if a volume could
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 # Deploy a job to set UNIX ownership and permissions
-envsubst '$FSXN_NFS_IP' < set-volume-permissions-job.yaml | kubectl apply -f -
+cd /home/participant/environment/eks/agentic-agents
+kubectl apply -f set-volume-permissions-job.yaml
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}

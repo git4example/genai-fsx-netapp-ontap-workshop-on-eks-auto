@@ -1,39 +1,8 @@
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: itops-agent-pv
-  labels:
-    agent: itops
-spec:
-  capacity:
-    storage: 10Gi
-  accessModes:
-    - ReadOnlyMany
-  nfs:
-    server: "${FSXN_NFS_IP}"
-    path: "/it_ops_data"
-  mountOptions:
-    - nfsvers=4.1
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: itops-agent-data-claim
-  namespace: agent-itops
-spec:
-  accessModes:
-    - ReadOnlyMany
-  resources:
-    requests:
-      storage: 10Gi
-  storageClassName: ""
-  volumeName: itops-agent-pv
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: itops-agent
-  namespace: agent-itops
+  namespace: default
   labels:
     app: itops-agent
     team: itops
@@ -77,13 +46,13 @@ spec:
       volumes:
       - name: itops-data
         persistentVolumeClaim:
-          claimName: itops-agent-data-claim
+          claimName: itops-agent-data-pvc
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: itops-agent-svc
-  namespace: agent-itops
+  namespace: default
 spec:
   selector:
     app: itops-agent

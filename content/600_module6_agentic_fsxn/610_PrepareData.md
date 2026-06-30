@@ -118,23 +118,49 @@ Expected output:
 +-------------+--------------+---------------------+
 :::
 
-##### Step 3: Populate Volumes with Sample Data
+##### Step 3: Import Volumes into Trident for Kubernetes Access
 
-First, retrieve the NFS endpoint for the FSxN SVM — this is the IP the pods will use to mount the volumes:
+EKS Auto Mode nodes do not have NFS client utilities pre-installed, so we use the **Trident CSI driver** (already installed in Module 1) to mount ONTAP volumes into pods. Trident performs the NFS mount from within its own pod, then exposes the volume to workloads via PVCs.
 
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-export FSXN_NFS_IP=$(aws fsx describe-storage-virtual-machines \
-  --filters Name=file-system-id,Values=$FSXN_FS_ID \
-  --query "StorageVirtualMachines[0].Endpoints.Nfs.IpAddresses[0]" --output text --region $AWS_REGION)
-
-echo "FSxN NFS IP: $FSXN_NFS_IP"
-:::
-
-Deploy a Kubernetes Job that mounts both volumes and populates them with realistic sample documents:
+Since we created the volumes directly via `aws fsx`, we need to **import** them into Trident so Kubernetes can consume them as PVCs:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/agentic-agents
-envsubst '$FSXN_NFS_IP' < populate-agent-data-job.yaml | kubectl apply -f -
+
+# Import the finance_agent_data volume into Trident as a PVC
+kubectl apply -f finance-agent-pvc.yaml
+tridentctl import volume backend-ontap-nas finance_agent_data -f finance-agent-pvc.yaml -n trident
+
+# Import the itops_agent_data volume into Trident as a PVC
+kubectl apply -f itops-agent-pvc.yaml
+tridentctl import volume backend-ontap-nas itops_agent_data -f itops-agent-pvc.yaml -n trident
+:::
+
+Verify the PVCs are bound:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl get pvc finance-agent-data-pvc itops-agent-data-pvc
+:::
+
+Expected output:
+
+:::code{showCopyAction=false showLineNumbers=false language=bash}
+NAME                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
+finance-agent-data-pvc   Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   10Gi       RWX            ontap-nas-sc
+itops-agent-data-pvc     Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   10Gi       RWX            ontap-nas-sc
+:::
+
+:::alert{header="Why Trident Import?" type="info"}
+The `tridentctl import volume` command tells Trident: "this ONTAP volume already exists — take ownership and expose it as a Kubernetes PVC." This is a common real-world pattern when organizations have pre-existing data on ONTAP volumes that need to be consumed by Kubernetes workloads without copying the data.
+:::
+
+##### Step 4: Populate Volumes with Sample Data
+
+Deploy a Kubernetes Job that mounts both volumes via the Trident-managed PVCs and populates them with realistic sample documents:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl delete job populate-agent-data --ignore-not-found
+kubectl apply -f populate-agent-data-job.yaml
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
@@ -182,5 +208,5 @@ In a real environment, these volumes would contain terabytes of actual business 
 
 ### Summary
 
-You have created two isolated FSxN volumes with sample data for the Finance and IT Operations teams. In the next section, you will configure FSxN's native access controls (export policies and UNIX permissions) to restrict which agents can access which volumes.
+You have created two isolated FSxN volumes, imported them into Trident for Kubernetes consumption, and populated them with sample data for the Finance and IT Operations teams. In the next section, you will configure FSxN's native access controls (export policies and UNIX permissions) to restrict which agents can access which volumes.
 

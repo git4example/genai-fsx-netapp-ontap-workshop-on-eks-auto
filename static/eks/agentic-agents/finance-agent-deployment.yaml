@@ -1,39 +1,8 @@
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: finance-agent-pv
-  labels:
-    agent: finance
-spec:
-  capacity:
-    storage: 10Gi
-  accessModes:
-    - ReadOnlyMany
-  nfs:
-    server: "${FSXN_NFS_IP}"
-    path: "/finance_data"
-  mountOptions:
-    - nfsvers=4.1
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: finance-agent-data-claim
-  namespace: agent-finance
-spec:
-  accessModes:
-    - ReadOnlyMany
-  resources:
-    requests:
-      storage: 10Gi
-  storageClassName: ""
-  volumeName: finance-agent-pv
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: finance-agent
-  namespace: agent-finance
+  namespace: default
   labels:
     app: finance-agent
     team: finance
@@ -77,13 +46,13 @@ spec:
       volumes:
       - name: finance-data
         persistentVolumeClaim:
-          claimName: finance-agent-data-claim
+          claimName: finance-agent-data-pvc
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: finance-agent-svc
-  namespace: agent-finance
+  namespace: default
 spec:
   selector:
     app: finance-agent
