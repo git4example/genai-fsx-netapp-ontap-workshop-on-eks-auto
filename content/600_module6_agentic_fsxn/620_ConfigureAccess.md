@@ -179,12 +179,7 @@ kubectl exec ontap-admin -- curl -sk -w " (HTTP %{http_code})\n" \
   -d '{"nas": {"export_policy": {"name": "eks_cluster_only"}}}'
 :::
 
-Expected: `HTTP 200` for both patches.
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Clean up the helper pod
-kubectl delete pod ontap-admin --ignore-not-found
-:::
+Expected: `HTTP 202` (accepted) for both patches.
 
 :::alert{header="Export Policy + UNIX Permissions = Defense in Depth" type="warning"}
 The two layers work together:
