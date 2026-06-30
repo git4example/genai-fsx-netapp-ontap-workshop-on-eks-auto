@@ -152,44 +152,30 @@ spec:
       storage: 10Gi
 :::
 
-Now import the volumes using `tridentctl` (available inside the Trident controller pod):
+Now import the volumes using `tridentctl` (available inside the Trident controller pod). We first copy the PVC definitions into the pod, then run the import:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+# Get the Trident controller pod name
+export TRIDENT_POD=$(kubectl get pod -n trident -l app=controller.csi.trident.netapp.io -o jsonpath='{.items[0].metadata.name}')
+echo "Trident controller pod: $TRIDENT_POD"
+
+# Copy PVC files into the Trident controller pod
+kubectl cp finance-agent-pvc.yaml trident/${TRIDENT_POD}:/tmp/finance-agent-pvc.yaml -c trident-main
+kubectl cp itops-agent-pvc.yaml trident/${TRIDENT_POD}:/tmp/itops-agent-pvc.yaml -c trident-main
+:::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 # Import finance_agent_data volume — Trident takes ownership and creates a PVC
-kubectl exec -n trident deploy/trident-controller -c trident-main -- \
+kubectl exec -n trident ${TRIDENT_POD} -c trident-main -- \
   tridentctl import volume backend-ontap-nas finance_agent_data \
-  --filename /dev/stdin -n trident <<EOF
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: finance-agent-data-pvc
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: ontap-nas-sc
-  resources:
-    requests:
-      storage: 10Gi
-EOF
+  --filename /tmp/finance-agent-pvc.yaml -n trident
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 # Import itops_agent_data volume
-kubectl exec -n trident deploy/trident-controller -c trident-main -- \
+kubectl exec -n trident ${TRIDENT_POD} -c trident-main -- \
   tridentctl import volume backend-ontap-nas itops_agent_data \
-  --filename /dev/stdin -n trident <<EOF
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: itops-agent-data-pvc
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: ontap-nas-sc
-  resources:
-    requests:
-      storage: 10Gi
-EOF
+  --filename /tmp/itops-agent-pvc.yaml -n trident
 :::
 
 Verify the PVCs are bound:
