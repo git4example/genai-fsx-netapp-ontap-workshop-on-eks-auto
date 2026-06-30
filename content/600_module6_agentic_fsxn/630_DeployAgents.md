@@ -35,7 +35,7 @@ from strands.models.openai import OpenAIModel
 # Connect to the self-hosted vLLM endpoint (Mistral-7B)
 model = OpenAIModel(
     client_args={
-        "base_url": os.environ.get("LLM_ENDPOINT", "http://vllm-mistral7b-service.default.svc.cluster.local:8000/v1"),
+        "base_url": os.environ.get("LLM_ENDPOINT", "http://vllm-mistral7b-service.default.svc.cluster.local/v1"),
         "api_key": "not-needed"
     },
     model_id="mistral-7b-neuron"
@@ -114,7 +114,7 @@ RUN pip install --no-cache-dir strands-agents strands-agents-tools openai
 COPY agent.py .
 ENV DATA_DIR=/data
 ENV AGENT_ROLE="general assistant"
-ENV LLM_ENDPOINT="http://vllm-mistral7b-service.default.svc.cluster.local:8000/v1"
+ENV LLM_ENDPOINT="http://vllm-mistral7b-service.default.svc.cluster.local/v1"
 ENTRYPOINT ["python", "agent.py"]
 :::
 
@@ -159,7 +159,7 @@ spec:
         - name: DATA_DIR
           value: "/data"
         - name: LLM_ENDPOINT
-          value: "http://vllm-mistral7b-service.default.svc.cluster.local:8000/v1"
+          value: "http://vllm-mistral7b-service.default.svc.cluster.local/v1"
         volumeMounts:
         - name: finance-data
           mountPath: "/data"

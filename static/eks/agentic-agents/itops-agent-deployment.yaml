@@ -30,7 +30,7 @@ spec:
         - name: DATA_DIR
           value: "/data"
         - name: LLM_ENDPOINT
-          value: "http://vllm-mistral7b-service.default.svc.cluster.local:8000/v1"
+          value: "http://vllm-mistral7b-service.default.svc.cluster.local/v1"
         volumeMounts:
         - name: itops-data
           mountPath: "/data"
