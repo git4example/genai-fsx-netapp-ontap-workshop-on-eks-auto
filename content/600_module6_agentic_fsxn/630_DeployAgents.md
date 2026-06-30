@@ -164,7 +164,7 @@ spec:
         - name: finance-data
           mountPath: "/data"
           readOnly: true
-        command: ["python", "-c", "import time; time.sleep(999999)"]
+        command: ["sleep", "infinity"]
       volumes:
       - name: finance-data
         persistentVolumeClaim:

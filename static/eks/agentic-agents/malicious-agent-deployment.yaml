@@ -31,7 +31,7 @@ spec:
           value: "/data"
         - name: LLM_ENDPOINT
           value: "http://vllm-mistral7b-service.default.svc.cluster.local:8000/v1"
-        command: ["python", "-c", "import time; time.sleep(999999)"]
+        command: ["sleep", "infinity"]
         resources:
           requests:
             cpu: "250m"
