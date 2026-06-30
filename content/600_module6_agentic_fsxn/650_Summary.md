@@ -161,18 +161,11 @@ flowchart LR
 If you want to remove the resources created in this module:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Delete agent deployments
-kubectl delete deployment finance-agent itops-agent malicious-agent --ignore-not-found
-kubectl delete svc finance-agent-svc itops-agent-svc --ignore-not-found
+# Delete agent namespaces (this deletes all resources within them)
+kubectl delete namespace agent-finance agent-itops agent-malicious
 
-# Delete test pods
-kubectl delete pod malicious-read-attempt malicious-itops-attempt finance-cross-access-attempt --ignore-not-found
-
-# Delete jobs
-kubectl delete job populate-agent-data set-volume-permissions --ignore-not-found
-
-# Delete PVCs (with Retain policy, ONTAP volumes are preserved)
-kubectl delete pvc finance-agent-data-pvc itops-agent-data-pvc --ignore-not-found
+# Delete jobs in default namespace (if any remain)
+kubectl delete job populate-finance-data populate-itops-data --ignore-not-found
 
 # Optionally delete the FSxN volumes
 # aws fsx delete-volume --volume-id <finance-vol-id> --region $AWS_REGION

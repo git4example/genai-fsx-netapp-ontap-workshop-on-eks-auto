@@ -1,0 +1,306 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: populate-itops-data
+  namespace: agent-itops
+spec:
+  template:
+    spec:
+      containers:
+      - name: data-populator
+        image: public.ecr.aws/amazonlinux/amazonlinux:2023
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "=== Populating IT Operations Data Volume ==="
+
+          mkdir -p /it_ops_data/runbooks /it_ops_data/logs /it_ops_data/configs
+
+          cat > /it_ops_data/runbooks/eks_cluster_restart.md << 'OPSEOF'
+          # EKS Cluster Node Restart Runbook
+
+          **Severity:** P3 | **Owner:** Platform Engineering | **Last Updated:** 2024-03-01
+
+          ## When to Use
+          - Node is in NotReady state for >10 minutes
+          - kubelet unresponsive after drain attempt
+          - Kernel panic or OOM detected on node
+
+          ## Steps
+
+          1. **Identify the affected node**
+             ```
+             kubectl get nodes | grep NotReady
+             kubectl describe node <node-name>
+             ```
+
+          2. **Cordon and drain (if possible)**
+             ```
+             kubectl cordon <node-name>
+             kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data --timeout=120s
+             ```
+
+          3. **Terminate the EC2 instance** (Auto Scaling will replace it)
+             ```
+             aws ec2 terminate-instances --instance-ids <instance-id>
+             ```
+
+          4. **Verify replacement node joins**
+             ```
+             watch kubectl get nodes
+             # Wait for new node to show Ready (usually 3-5 minutes)
+             ```
+
+          5. **Verify workloads rescheduled**
+             ```
+             kubectl get pods --all-namespaces | grep -v Running | grep -v Completed
+             ```
+
+          ## Escalation
+          If new node doesn't join within 10 minutes, escalate to P2 and page AWS TAM.
+          OPSEOF
+          echo "  Created: /it_ops_data/runbooks/eks_cluster_restart.md"
+
+          cat > /it_ops_data/runbooks/database_failover.md << 'OPSEOF'
+          # Database Failover Runbook (RDS Aurora)
+
+          **Severity:** P1 | **Owner:** Data Engineering | **Last Updated:** 2024-02-15
+
+          ## When to Use
+          - Primary DB instance unreachable
+          - Replication lag >30 seconds
+          - Storage full (>90% utilized)
+
+          ## Pre-Flight Checks
+          - Confirm failover is necessary (not a network blip)
+          - Notify #database-oncall channel
+          - Check CloudWatch: DBConnections, ReplicaLag, FreeStorageSpace
+
+          ## Failover Steps
+
+          1. **Initiate failover**
+             ```
+             aws rds failover-db-cluster --db-cluster-identifier production-cluster
+             ```
+
+          2. **Monitor failover progress** (typically 30-60 seconds)
+             ```
+             aws rds describe-db-clusters --db-cluster-identifier production-cluster \
+               --query 'DBClusters[0].Status'
+             ```
+
+          3. **Verify application connectivity**
+             ```
+             # Test connection via cluster endpoint (auto-routes to new primary)
+             psql -h production-cluster.cluster-xxx.us-west-2.rds.amazonaws.com -c "SELECT 1"
+             ```
+
+          4. **Check application health**
+             ```
+             curl -s http://api-service/health | jq .database_status
+             ```
+
+          ## Post-Failover
+          - Old primary becomes new replica
+          - Review CloudWatch for any connection errors during switchover
+          - Update incident ticket with timeline
+          OPSEOF
+          echo "  Created: /it_ops_data/runbooks/database_failover.md"
+
+          cat > /it_ops_data/runbooks/incident_response.md << 'OPSEOF'
+          # Incident Response Procedure
+
+          **Owner:** SRE Team | **Last Updated:** 2024-03-10
+
+          ## Severity Definitions
+          - P1: Customer-facing outage, revenue impact
+          - P2: Degraded service, >10% of users affected
+          - P3: Internal service issue, no direct customer impact
+          - P4: Minor issue, can wait for next business day
+
+          ## Response Steps
+
+          ### Step 1: Acknowledge & Assess (0-5 min)
+          - Acknowledge the alert within 5 minutes
+          - Assess severity (P1-P4) based on customer impact
+          - Join the incident bridge: https://meet.internal/incident-room
+
+          ### Step 2: Communicate (5-10 min)
+          - Post in #incident-response Slack channel
+          - Page on-call if P1/P2
+          - For P1: Notify VP Engineering and Customer Support lead
+
+          ### Step 3: Isolate (10-15 min)
+          - If issue is spreading, isolate the affected component
+          - Options: kill traffic, scale down, failover to standby
+          - Document every action taken with timestamp
+
+          ### Step 4: Investigate (15-60 min)
+          - Check recent deployments (last 4 hours)
+          - Review metrics dashboards
+          - Examine application logs
+          - Check upstream dependencies
+
+          ### Step 5: Mitigate
+          - Apply fix or rollback
+          - Verify fix resolves the issue
+          - Monitor for 15 minutes post-fix
+
+          ### Step 6: Post-Mortem (within 48 hours)
+          - Write incident report
+          - Identify root cause
+          - Define action items to prevent recurrence
+          - Share in weekly SRE review
+          OPSEOF
+          echo "  Created: /it_ops_data/runbooks/incident_response.md"
+
+          cat > /it_ops_data/logs/app_errors_2024-03.log << 'OPSEOF'
+          2024-03-01 08:15:22 INFO  [api-gateway] Service started on port 8080
+          2024-03-01 09:33:01 WARN  [api-gateway] Slow response from auth-service (2.3s)
+          2024-03-01 14:22:31 ERROR [api-gateway] Connection timeout to downstream service: payment-processor (timeout=5s)
+          2024-03-01 14:22:45 INFO  [api-gateway] Retry succeeded for payment-processor
+          2024-03-02 03:00:00 INFO  [batch-jobs] Nightly data sync started
+          2024-03-02 03:45:12 WARN  [batch-jobs] Data sync slow: 45 minutes (threshold: 30 minutes)
+          2024-03-02 09:15:44 ERROR [auth-service] Token validation failed: expired certificate (cert expires: 2024-03-01)
+          2024-03-02 09:16:01 INFO  [auth-service] Certificate auto-renewed, service recovering
+          2024-03-03 11:00:00 INFO  [deployment] Starting deploy: app-service v2.4.0
+          2024-03-03 11:05:33 INFO  [deployment] Deploy v2.4.0 completed successfully, all health checks passing
+          2024-03-04 16:22:00 WARN  [monitoring] Memory usage high on node ip-10-0-3-42: 87%
+          2024-03-04 18:00:01 INFO  [monitoring] Memory stabilized after pod eviction: 62%
+          2024-03-05 14:00:00 INFO  [deployment] Starting deploy: app-service v2.4.1
+          2024-03-05 14:08:22 WARN  [deployment] Health check failing for v2.4.1: /health returning 503
+          2024-03-05 16:30:00 ERROR [deployment] Deploy v2.4.1 rolled back: health check failed after 3 retries
+          2024-03-05 16:30:15 INFO  [deployment] Rollback to v2.4.0 complete, service healthy
+          OPSEOF
+          echo "  Created: /it_ops_data/logs/app_errors_2024-03.log"
+
+          cat > /it_ops_data/logs/deployment_history.log << 'OPSEOF'
+          # Deployment History - 2024 Q1
+          # Format: date | service | version | status | deployer | duration
+
+          2024-01-08 | api-gateway | v3.1.0 | SUCCESS | ci-pipeline | 4m22s
+          2024-01-15 | auth-service | v2.8.0 | SUCCESS | ci-pipeline | 3m15s
+          2024-01-22 | payment-processor | v1.12.0 | SUCCESS | ci-pipeline | 5m01s
+          2024-02-01 | api-gateway | v3.2.0 | SUCCESS | ci-pipeline | 4m18s
+          2024-02-05 | batch-jobs | v4.0.0 | ROLLBACK | ci-pipeline | 6m44s | reason: memory leak detected
+          2024-02-06 | batch-jobs | v4.0.1 | SUCCESS | ci-pipeline | 5m30s | hotfix for memory leak
+          2024-02-12 | auth-service | v2.9.0 | SUCCESS | ci-pipeline | 3m22s
+          2024-02-19 | notification-service | v1.5.0 | SUCCESS | ci-pipeline | 2m55s
+          2024-03-03 | app-service | v2.4.0 | SUCCESS | ci-pipeline | 4m33s
+          2024-03-05 | app-service | v2.4.1 | ROLLBACK | ci-pipeline | 8m30s | reason: health check failure
+          OPSEOF
+          echo "  Created: /it_ops_data/logs/deployment_history.log"
+
+          cat > /it_ops_data/configs/network_topology.yaml << 'OPSEOF'
+          # Network Topology - Production Environment
+          vpc:
+            id: vpc-0abc123def456
+            cidr: 10.0.0.0/16
+            region: us-west-2
+
+          subnets:
+            public:
+              - id: subnet-pub-1a
+                cidr: 10.0.1.0/24
+                az: us-west-2a
+              - id: subnet-pub-1b
+                cidr: 10.0.2.0/24
+                az: us-west-2b
+            private:
+              - id: subnet-priv-1a
+                cidr: 10.0.10.0/24
+                az: us-west-2a
+                purpose: eks-nodes
+              - id: subnet-priv-1b
+                cidr: 10.0.11.0/24
+                az: us-west-2b
+                purpose: eks-nodes
+              - id: subnet-priv-2a
+                cidr: 10.0.20.0/24
+                az: us-west-2a
+                purpose: databases
+              - id: subnet-priv-2b
+                cidr: 10.0.21.0/24
+                az: us-west-2b
+                purpose: databases
+
+          load_balancers:
+            - name: prod-alb
+              type: application
+              scheme: internet-facing
+              listeners:
+                - port: 443
+                  protocol: HTTPS
+                  target: eks-ingress
+
+          security_groups:
+            eks_nodes: sg-eks001
+            databases: sg-db001
+            fsxn: sg-fsx001
+          OPSEOF
+          echo "  Created: /it_ops_data/configs/network_topology.yaml"
+
+          cat > /it_ops_data/configs/monitoring_alerts.yaml << 'OPSEOF'
+          # Monitoring Alert Definitions
+          alerts:
+            - name: high_cpu_usage
+              metric: node_cpu_utilization
+              threshold: 85
+              duration: 5m
+              severity: warning
+              channel: "#platform-alerts"
+
+            - name: critical_cpu_usage
+              metric: node_cpu_utilization
+              threshold: 95
+              duration: 2m
+              severity: critical
+              channel: "#incident-response"
+              page: true
+
+            - name: memory_pressure
+              metric: node_memory_usage_percent
+              threshold: 90
+              duration: 3m
+              severity: warning
+              channel: "#platform-alerts"
+
+            - name: pod_restart_loop
+              metric: kube_pod_container_status_restarts_total
+              threshold: 5
+              duration: 10m
+              severity: warning
+              channel: "#platform-alerts"
+
+            - name: api_error_rate
+              metric: http_requests_total{status=~"5.."}
+              threshold: 5  # percent
+              duration: 2m
+              severity: critical
+              channel: "#incident-response"
+              page: true
+
+            - name: deployment_failed
+              metric: deployment_status
+              condition: "status == ROLLBACK"
+              severity: critical
+              channel: "#deployments"
+              page: true
+          OPSEOF
+          echo "  Created: /it_ops_data/configs/monitoring_alerts.yaml"
+
+          echo ""
+          echo "=== Data population complete ==="
+          echo "Finance volume: 7 files across 3 directories"
+          echo "IT Ops volume:  7 files across 3 directories"
+          echo "IT Ops volume: 7 files across 3 directories"
+        volumeMounts:
+        - name: itops-vol
+          mountPath: /it_ops_data
+      volumes:
+      - name: itops-vol
+        persistentVolumeClaim:
+          claimName: itops-agent-data-pvc
+      restartPolicy: Never
+  backoffLimit: 2

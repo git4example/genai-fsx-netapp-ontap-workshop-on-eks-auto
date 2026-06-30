@@ -118,9 +118,18 @@ Expected output:
 +--------------------+------------------+
 :::
 
-##### Step 3: Import Existing Volumes into Kubernetes via Trident
+##### Step 3: Create Namespaces and Import Volumes into Kubernetes via Trident
 
-Now we bring these **existing ONTAP volumes** into Kubernetes using Trident's **annotation-based volume import**. This is the pattern you would use when you already have data on FSxN (e.g., migrated from on-prem via SnapMirror) and want Kubernetes pods to consume it.
+First, create isolated namespaces for each agent. The PVCs will be created **inside** these namespaces — meaning the malicious agent's namespace will have no PVC and therefore no access to any data volume.
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+# Create namespaces for each agent team
+kubectl create namespace agent-finance 2>/dev/null || true
+kubectl create namespace agent-itops 2>/dev/null || true
+kubectl create namespace agent-malicious 2>/dev/null || true
+:::
+
+Now we bring the **existing ONTAP volumes** into Kubernetes using Trident's **annotation-based volume import**. Each PVC is created in its designated team's namespace — this is the first layer of access control.
 
 :::alert{header="Why import instead of dynamic provisioning?" type="info"}
 Trident can either **create new volumes** (dynamic provisioning via PVC) or **import existing ones**. Import is the right choice when:
@@ -143,6 +152,7 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: finance-agent-data-pvc
+  namespace: agent-finance
   annotations:
     trident.netapp.io/importVolume: "finance_agent_data"
     trident.netapp.io/importBackend: "fsx-ontap-nas"
@@ -159,20 +169,23 @@ The key annotations:
 - `trident.netapp.io/importVolume` — The exact ONTAP volume name to import
 - `trident.netapp.io/importBackend` — The Trident backend that manages this volume
 
+Notice the PVC is in the `agent-finance` namespace — only pods in that namespace can mount it.
+
 Apply both PVCs to trigger the import:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Import finance_agent_data volume — Trident adopts it and binds the PVC
+# Import finance_agent_data volume into the agent-finance namespace
 kubectl apply -f finance-agent-pvc.yaml
 
-# Import itops_agent_data volume
+# Import itops_agent_data volume into the agent-itops namespace
 kubectl apply -f itops-agent-pvc.yaml
 :::
 
 Verify the PVCs are bound:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-kubectl get pvc finance-agent-data-pvc itops-agent-data-pvc
+kubectl get pvc -n agent-finance finance-agent-data-pvc
+kubectl get pvc -n agent-itops itops-agent-data-pvc
 :::
 
 Expected output:
@@ -180,31 +193,41 @@ Expected output:
 :::code{showCopyAction=false showLineNumbers=false language=bash}
 NAME                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
 finance-agent-data-pvc   Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   10Gi       RWX            ontap-nas-sc
+
+NAME                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
 itops-agent-data-pvc     Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   10Gi       RWX            ontap-nas-sc
 :::
 
-:::alert{header="What just happened?" type="info"}
-Trident imported the existing ONTAP volumes without moving or copying any data. The volumes now appear as standard Kubernetes PVCs that any pod can mount. If these volumes had contained data replicated from on-premises via SnapMirror, that data would be immediately accessible to Kubernetes workloads — **zero data movement required**.
+:::alert{header="Two layers of access control in place" type="info"}
+1. **Namespace scoping** — The finance PVC exists only in `agent-finance`; the IT ops PVC only in `agent-itops`. The `agent-malicious` namespace has **no PVC** — there's nothing for a malicious pod to mount.
+2. **UNIX permissions** (configured in the next section) — Even within the authorized namespace, only the correct UID can read files.
+
+Trident imported the existing ONTAP volumes without moving or copying data. If these volumes contained data replicated from on-premises via SnapMirror, that data would be immediately accessible — **zero data movement required**.
 :::
 
 ##### Step 4: Populate Volumes with Sample Data
 
-Deploy a Kubernetes Job that mounts both volumes via the Trident-managed PVCs and populates them with realistic sample documents:
+Deploy Kubernetes Jobs in each namespace to populate the volumes with sample documents. Each job runs in its own namespace and mounts the PVC available in that namespace:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-kubectl delete job populate-agent-data --ignore-not-found
-kubectl apply -f populate-agent-data-job.yaml
-:::
+# Populate finance data (job runs in agent-finance namespace)
+kubectl apply -f populate-finance-data-job.yaml
+kubectl wait --for=condition=complete job/populate-finance-data -n agent-finance --timeout=300s
 
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Wait for data population to complete
-kubectl wait --for=condition=complete job/populate-agent-data --timeout=300s -n default
+# Populate IT ops data (job runs in agent-itops namespace)
+kubectl apply -f populate-itops-data-job.yaml
+kubectl wait --for=condition=complete job/populate-itops-data -n agent-itops --timeout=300s
 :::
 
 Verify the data was created:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-kubectl logs job/populate-agent-data
+echo "=== Finance Data ==="
+kubectl logs job/populate-finance-data -n agent-finance
+
+echo ""
+echo "=== IT Ops Data ==="
+kubectl logs job/populate-itops-data -n agent-itops
 :::
 
 Expected output:

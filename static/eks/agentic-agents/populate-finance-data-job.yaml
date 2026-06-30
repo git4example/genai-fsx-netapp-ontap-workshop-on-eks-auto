@@ -1,0 +1,180 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: populate-finance-data
+  namespace: agent-finance
+spec:
+  template:
+    spec:
+      containers:
+      - name: data-populator
+        image: public.ecr.aws/amazonlinux/amazonlinux:2023
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "=== Populating Finance Data Volume ==="
+
+          mkdir -p /finance_data/reports /finance_data/transactions /finance_data/compliance
+
+          cat > /finance_data/reports/q1_2024_earnings.txt << 'FINEOF'
+          Q1 2024 Earnings Report — ACME Corporation
+          ==========================================
+          Period: January 1 - March 31, 2024
+
+          FINANCIAL HIGHLIGHTS:
+          - Total Revenue: $142.3M (up 12% YoY)
+          - Operating Income: $33.3M
+          - Operating Margin: 23.4%
+          - Net Income: $28.1M
+          - EPS: $2.34 (diluted)
+
+          SEGMENT PERFORMANCE:
+          - Cloud Services: $67.8M (+34% YoY) — strong enterprise adoption
+          - Enterprise Software: $52.1M (+3% YoY) — stable recurring revenue
+          - Legacy Products: $22.4M (-8% YoY) — planned decline
+
+          GUIDANCE:
+          - Full-year revenue: $580-600M
+          - R&D spending: 18% of revenue (increased investment in AI/ML)
+          - Capital expenditure: $45-50M
+
+          Approved by: CFO, March 28, 2024
+          FINEOF
+          echo "  Created: /finance_data/reports/q1_2024_earnings.txt"
+
+          cat > /finance_data/reports/q2_2024_earnings.txt << 'FINEOF'
+          Q2 2024 Earnings Report — ACME Corporation
+          ==========================================
+          Period: April 1 - June 30, 2024
+
+          FINANCIAL HIGHLIGHTS:
+          - Total Revenue: $156.7M (up 15% YoY)
+          - Operating Income: $38.8M
+          - Operating Margin: 24.8%
+          - Net Income: $31.2M
+          - EPS: $2.60 (diluted)
+
+          SEGMENT PERFORMANCE:
+          - Cloud Services: $78.4M (+41% YoY)
+          - Enterprise Software: $54.2M (+5% YoY)
+          - Legacy Products: $24.1M (-5% YoY)
+
+          KEY DEVELOPMENTS:
+          - Launched AI-powered analytics platform (Q2)
+          - 15 new enterprise customers (cloud segment)
+          - Completed acquisition of DataFlow Inc. ($28M)
+          FINEOF
+          echo "  Created: /finance_data/reports/q2_2024_earnings.txt"
+
+          cat > /finance_data/reports/annual_budget_2024.txt << 'FINEOF'
+          Annual Budget Plan — FY 2024
+          ============================
+
+          DEPARTMENT ALLOCATIONS:
+          - Engineering: $95M (38%)
+          - Sales & Marketing: $62M (25%)
+          - Operations: $45M (18%)
+          - G&A: $28M (11%)
+          - R&D Innovation: $20M (8%)
+
+          CAPITAL INVESTMENTS:
+          - Data center expansion: $22M
+          - Cloud infrastructure: $15M
+          - Office renovations: $8M
+          - Security upgrades: $5M
+
+          HEADCOUNT PLAN:
+          - Current: 1,247 FTEs
+          - Planned additions: 180 (net)
+          - End of year target: 1,427 FTEs
+          FINEOF
+          echo "  Created: /finance_data/reports/annual_budget_2024.txt"
+
+          cat > /finance_data/transactions/vendor_payments_jan.csv << 'FINEOF'
+          date,vendor,amount,category,status,approver
+          2024-01-03,AWS,245000.00,cloud_infrastructure,paid,jsmith
+          2024-01-05,Datadog,18500.00,monitoring,paid,jsmith
+          2024-01-10,Accenture,125000.00,consulting,paid,mwilliams
+          2024-01-12,WeWork,45000.00,facilities,paid,klee
+          2024-01-15,Salesforce,67000.00,crm,paid,jsmith
+          2024-01-20,PagerDuty,8200.00,oncall,paid,dtaylor
+          2024-01-25,GitHub Enterprise,32000.00,development_tools,paid,jsmith
+          2024-01-28,Snowflake,89000.00,data_warehouse,paid,mwilliams
+          FINEOF
+          echo "  Created: /finance_data/transactions/vendor_payments_jan.csv"
+
+          cat > /finance_data/transactions/vendor_payments_feb.csv << 'FINEOF'
+          date,vendor,amount,category,status,approver
+          2024-02-01,AWS,252000.00,cloud_infrastructure,paid,jsmith
+          2024-02-05,NetApp,78000.00,storage,paid,dtaylor
+          2024-02-08,CrowdStrike,42000.00,security,paid,klee
+          2024-02-12,Confluent,35000.00,streaming,paid,jsmith
+          2024-02-15,HashiCorp,28000.00,infrastructure,paid,dtaylor
+          2024-02-20,MongoDB Atlas,19500.00,database,paid,mwilliams
+          2024-02-25,Twilio,15000.00,communications,paid,klee
+          2024-02-28,Zoom,12000.00,collaboration,paid,klee
+          FINEOF
+          echo "  Created: /finance_data/transactions/vendor_payments_feb.csv"
+
+          cat > /finance_data/compliance/sox_audit_notes.txt << 'FINEOF'
+          SOX Compliance Audit Notes - Q1 2024
+          =====================================
+          Auditor: Deloitte & Touche LLP
+          Period: January - March 2024
+
+          Internal audit completed March 15, 2024.
+
+          FINDINGS:
+          1. [LOW] Expense report approvals delayed >5 days for 3% of submissions
+          2. [INFO] New vendor onboarding process documentation updated
+          3. [CLEAR] All financial controls operating effectively
+          4. [CLEAR] Segregation of duties maintained across all finance functions
+
+          RECOMMENDATIONS:
+          - Implement automated expense routing for approvals
+          - Add quarterly access reviews for financial systems
+
+          NEXT AUDIT: June 2024
+          STATUS: COMPLIANT
+          FINEOF
+          echo "  Created: /finance_data/compliance/sox_audit_notes.txt"
+
+          cat > /finance_data/compliance/expense_policy.txt << 'FINEOF'
+          Corporate Expense Policy v3.2
+          ==============================
+          Effective: January 1, 2024
+
+          APPROVAL THRESHOLDS:
+          - Under $500: Auto-approved (manager notification)
+          - $500 - $5,000: Manager approval required
+          - $5,000 - $25,000: Director approval required
+          - $25,000 - $100,000: VP approval + finance review
+          - Over $100,000: CFO approval + board notification
+
+          All expenses over $5,000 require audit trail documentation.
+
+          TRAVEL POLICY:
+          - Domestic flights: Economy class
+          - International flights (>6hrs): Business class permitted
+          - Hotels: Up to $250/night (domestic), $350/night (international)
+          - Per diem: $75/day (domestic), $100/day (international)
+
+          VIOLATIONS:
+          First occurrence: Written warning
+          Second occurrence: Expense privileges suspended 30 days
+          Third occurrence: Escalation to HR
+          FINEOF
+          echo "  Created: /finance_data/compliance/expense_policy.txt"
+
+          echo ""
+          echo "Finance volume: 7 files across 3 directories"
+        volumeMounts:
+        - name: finance-vol
+          mountPath: /finance_data
+      volumes:
+      - name: finance-vol
+        persistentVolumeClaim:
+          claimName: finance-agent-data-pvc
+      restartPolicy: Never
+  backoffLimit: 2

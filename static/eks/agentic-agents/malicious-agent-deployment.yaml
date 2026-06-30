@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: malicious-agent
-  namespace: default
+  namespace: agent-malicious
   labels:
     app: malicious-agent
     team: external

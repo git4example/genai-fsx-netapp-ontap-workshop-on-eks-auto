@@ -146,7 +146,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: finance-agent
-  namespace: default
+  namespace: agent-finance
 spec:
   replicas: 1
   selector:
@@ -203,15 +203,15 @@ envsubst '$AGENT_IMAGE' < malicious-agent-deployment.yaml | kubectl apply -f -
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 echo "=== Finance Agent (UID 1001) ==="
-kubectl get pods -l app=finance-agent
+kubectl get pods -n agent-finance -l app=finance-agent
 
 echo ""
 echo "=== IT Ops Agent (UID 1002) ==="
-kubectl get pods -l app=itops-agent
+kubectl get pods -n agent-itops -l app=itops-agent
 
 echo ""
 echo "=== Malicious Agent (UID 1099) ==="
-kubectl get pods -l app=malicious-agent
+kubectl get pods -n agent-malicious -l app=malicious-agent
 :::
 
 Expected output:

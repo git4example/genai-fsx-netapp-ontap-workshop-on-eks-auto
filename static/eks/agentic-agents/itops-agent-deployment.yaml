@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: itops-agent
-  namespace: default
+  namespace: agent-itops
   labels:
     app: itops-agent
     team: itops
@@ -52,7 +52,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: itops-agent-svc
-  namespace: default
+  namespace: agent-itops
 spec:
   selector:
     app: itops-agent

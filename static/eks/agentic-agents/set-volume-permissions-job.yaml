@@ -1,8 +1,8 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: set-volume-permissions
-  namespace: default
+  name: set-finance-permissions
+  namespace: agent-finance
 spec:
   template:
     spec:
@@ -13,36 +13,55 @@ spec:
         - /bin/bash
         - -c
         - |
-          echo "Setting permissions on /finance_data..."
-          chown -R 1001:1001 /finance_data
-          chmod -R 750 /finance_data
-          echo "  chown -R 1001:1001 /finance_data"
-          echo "  chmod -R 750 /finance_data"
+          echo "Setting permissions on /data (finance volume)..."
+          chown -R 1001:1001 /data
+          chmod -R 750 /data
+          echo "  chown -R 1001:1001 /data"
+          echo "  chmod -R 750 /data"
           echo "  Verified: only UID 1001 (finance agent) can read"
           echo ""
-
-          echo "Setting permissions on /it_ops_data..."
-          chown -R 1002:1002 /it_ops_data
-          chmod -R 750 /it_ops_data
-          echo "  chown -R 1002:1002 /it_ops_data"
-          echo "  chmod -R 750 /it_ops_data"
-          echo "  Verified: only UID 1002 (IT ops agent) can read"
-          echo ""
-
-          echo "Permission setup complete."
-          echo "  finance_data: owner=1001, group=1001, mode=750"
-          echo "  it_ops_data:  owner=1002, group=1002, mode=750"
+          echo "Permission setup complete: owner=1001, group=1001, mode=750"
         securityContext:
           runAsUser: 0
         volumeMounts:
         - name: finance-vol
-          mountPath: /finance_data
-        - name: itops-vol
-          mountPath: /it_ops_data
+          mountPath: /data
       volumes:
       - name: finance-vol
         persistentVolumeClaim:
           claimName: finance-agent-data-pvc
+      restartPolicy: Never
+  backoffLimit: 2
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: set-itops-permissions
+  namespace: agent-itops
+spec:
+  template:
+    spec:
+      containers:
+      - name: permission-setter
+        image: public.ecr.aws/amazonlinux/amazonlinux:2023
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "Setting permissions on /data (IT ops volume)..."
+          chown -R 1002:1002 /data
+          chmod -R 750 /data
+          echo "  chown -R 1002:1002 /data"
+          echo "  chmod -R 750 /data"
+          echo "  Verified: only UID 1002 (IT ops agent) can read"
+          echo ""
+          echo "Permission setup complete: owner=1002, group=1002, mode=750"
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: itops-vol
+          mountPath: /data
+      volumes:
       - name: itops-vol
         persistentVolumeClaim:
           claimName: itops-agent-data-pvc

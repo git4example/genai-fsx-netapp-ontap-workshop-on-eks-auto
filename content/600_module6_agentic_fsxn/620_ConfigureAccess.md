@@ -40,31 +40,38 @@ Set ownership and permissions on the volume files so that only the correct UID c
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/agentic-agents
-kubectl delete job set-volume-permissions --ignore-not-found
+kubectl delete job set-finance-permissions -n agent-finance --ignore-not-found
+kubectl delete job set-itops-permissions -n agent-itops --ignore-not-found
 kubectl apply -f set-volume-permissions-job.yaml
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-kubectl wait --for=condition=complete job/set-volume-permissions --timeout=120s
-kubectl logs job/set-volume-permissions
+kubectl wait --for=condition=complete job/set-finance-permissions -n agent-finance --timeout=120s
+kubectl wait --for=condition=complete job/set-itops-permissions -n agent-itops --timeout=120s
+
+echo "=== Finance volume permissions ==="
+kubectl logs job/set-finance-permissions -n agent-finance
+echo ""
+echo "=== IT Ops volume permissions ==="
+kubectl logs job/set-itops-permissions -n agent-itops
 :::
 
 Expected output:
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
-Setting permissions on /finance_data...
-  chown -R 1001:1001 /finance_data
-  chmod -R 750 /finance_data
+=== Finance volume permissions ===
+Setting permissions on /data (finance volume)...
+  chown -R 1001:1001 /data
+  chmod -R 750 /data
   Verified: only UID 1001 (finance agent) can read
+Permission setup complete: owner=1001, group=1001, mode=750
 
-Setting permissions on /it_ops_data...
-  chown -R 1002:1002 /it_ops_data
-  chmod -R 750 /it_ops_data
+=== IT Ops volume permissions ===
+Setting permissions on /data (IT ops volume)...
+  chown -R 1002:1002 /data
+  chmod -R 750 /data
   Verified: only UID 1002 (IT ops agent) can read
-
-Permission setup complete.
-  finance_data: owner=1001, group=1001, mode=750
-  it_ops_data:  owner=1002, group=1002, mode=750
+Permission setup complete: owner=1002, group=1002, mode=750
 :::
 
 :::alert{header="Why UID-based isolation works" type="info"}
