@@ -87,7 +87,17 @@ Wait for volumes to become available:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 echo "Waiting for volumes to become available..."
-sleep 60
+while true; do
+  STATUS=$(aws fsx describe-volumes --region $AWS_REGION \
+    --filters Name=file-system-id,Values=$FSXN_FS_ID \
+    --query "Volumes[?Name=='finance_agent_data' || Name=='itops_agent_data'].Lifecycle" \
+    --output text)
+  if echo "$STATUS" | grep -qv "CREATING"; then
+    break
+  fi
+  echo "  Still creating... checking again in 15s"
+  sleep 15
+done
 
 aws fsx describe-volumes --region $AWS_REGION \
   --filters Name=file-system-id,Values=$FSXN_FS_ID \
