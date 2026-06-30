@@ -5,161 +5,42 @@ weight : 620
 
 ## Overview
 
-In this section, you will configure **FSx for NetApp ONTAP's native security mechanisms** to enforce data segregation between AI agents. This demonstrates the RBAC capabilities of FSxN — giving each agent pod exactly the access it needs and nothing more.
+In this section, you will configure **FSx for NetApp ONTAP's native security mechanisms** to enforce data segregation between AI agents. Even though all agents mount volumes through the same Trident CSI driver, ONTAP's **UNIX permissions** ensure that each agent can only read the files it's authorized to access.
 
-You will configure two independent security layers:
+You will configure two security layers:
 
-1. **Export Policies** — Control which pod IP ranges (CIDRs) can NFS-mount each volume
-2. **UNIX Permissions** — Control which UIDs/GIDs can read files even if the volume is mounted
-
-This defense-in-depth approach means that even if one layer is bypassed, the other still blocks unauthorized access.
+1. **UNIX Permissions (UID/GID)** — The primary enforcement. Each volume's files are owned by a specific UID. Agents running as a different UID get "Permission denied."
+2. **Export Policies** — Network-level guardrail restricting NFS access to only the EKS cluster subnet.
 
 ---
 
-##### Step 1: Identify Pod Network CIDRs
+##### How Access Control Works with Trident
 
-First, determine the pod CIDR ranges for each agent namespace. We'll use Kubernetes Network Policies combined with ONTAP export policies to restrict access.
+When a pod mounts a Trident-managed PVC, the NFS connection is established by the Trident CSI node plugin running on the EKS node. However, **file-level access** is still governed by the UID/GID of the process inside the pod:
 
-All three agents will run in the `default` namespace (same as the LLM endpoint) but with **different UIDs**. The ONTAP UNIX permissions enforce which UID can read which volume's files.
-
+:::code{showCopyAction=false showLineNumbers=false language=bash}
+Pod (UID 1001) → reads file owned by UID 1001 → ALLOWED
+Pod (UID 1099) → reads file owned by UID 1001, mode 750 → PERMISSION DENIED
 :::
+
+ONTAP enforces UNIX permissions at the storage controller level. The UID from the pod's `securityContext.runAsUser` is what ONTAP sees when the process attempts to read a file. This is enforced regardless of:
+- What the LLM instructs the agent to do
+- Whether the volume is mounted (it is — but reading is blocked)
+- What container image the agent uses
+
+---
+
+##### Step 1: Configure UNIX Permissions (Primary Security Layer)
+
+Set ownership and permissions on the volume files so that only the correct UID can read each volume's data:
+
+- `finance_agent_data` → owned by UID **1001** (Finance agent)
+- `itops_agent_data` → owned by UID **1002** (IT Ops agent)
+- Both with mode **750** — owner can read/execute, group can read/execute, others get nothing
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Get the cluster's pod CIDR (we'll use pod IPs for export policies)
-export POD_CIDR=$(kubectl get nodes -o jsonpath='{.items[0].spec.podCIDR}')
-echo "Pod CIDR: $POD_CIDR"
-:::
-
-:::alert{header="Export Policy Strategy" type="info"}
-In production, you would use more granular CIDR ranges (e.g., per-namespace pod CIDRs via Multus or VPC-CNI prefix delegation). For this workshop, we demonstrate the concept using pod IP addresses that we capture after deployment. The principle is identical: **the ONTAP export policy only allows specific IP ranges to mount each volume**.
-:::
-
-##### Step 2: Create Export Policies via ONTAP REST API
-
-Configure export policies on the FSxN SVM so that:
-- `finance_data` volume → accessible only by finance agent pods
-- `it_ops_data` volume → accessible only by IT ops agent pods
-- Both volumes → **deny** the malicious agent pods
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Create export policy for Finance data volume
-curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
-  -X POST "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "finance_agents_only",
-    "svm": {"name": "'${FSXN_SVM_NAME}'"},
-    "rules": [
-      {
-        "clients": [{"match": "'${POD_CIDR}'"}],
-        "ro_rule": ["sys"],
-        "rw_rule": ["never"],
-        "superuser": ["none"],
-        "protocols": ["nfs3", "nfs4"]
-      }
-    ]
-  }'
-
-echo "Created export policy: finance_agents_only"
-:::
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Create export policy for IT Ops data volume
-curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
-  -X POST "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "itops_agents_only",
-    "svm": {"name": "'${FSXN_SVM_NAME}'"},
-    "rules": [
-      {
-        "clients": [{"match": "'${POD_CIDR}'"}],
-        "ro_rule": ["sys"],
-        "rw_rule": ["never"],
-        "superuser": ["none"],
-        "protocols": ["nfs3", "nfs4"]
-      }
-    ]
-  }'
-
-echo "Created export policy: itops_agents_only"
-:::
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Create a restrictive export policy that DENIES all access (for testing the malicious agent)
-curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
-  -X POST "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "deny_all",
-    "svm": {"name": "'${FSXN_SVM_NAME}'"},
-    "rules": [
-      {
-        "clients": [{"match": "0.0.0.0/0"}],
-        "ro_rule": ["never"],
-        "rw_rule": ["never"],
-        "superuser": ["none"],
-        "protocols": ["nfs3", "nfs4"]
-      }
-    ]
-  }'
-
-echo "Created export policy: deny_all (blocks everyone)"
-:::
-
-##### Step 3: Apply Export Policies to Volumes
-
-Assign the restrictive export policies to each volume:
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Get volume UUIDs
-export FINANCE_VOL_UUID=$(curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
-  "https://${FSXN_MGMT_IP}/api/storage/volumes?name=finance_agent_data&svm.name=${FSXN_SVM_NAME}" | \
-  jq -r '.records[0].uuid')
-
-export ITOPS_VOL_UUID=$(curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
-  "https://${FSXN_MGMT_IP}/api/storage/volumes?name=itops_agent_data&svm.name=${FSXN_SVM_NAME}" | \
-  jq -r '.records[0].uuid')
-
-echo "Finance volume UUID: $FINANCE_VOL_UUID"
-echo "IT Ops volume UUID: $ITOPS_VOL_UUID"
-:::
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Apply finance export policy to finance volume
-curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
-  -X PATCH "https://${FSXN_MGMT_IP}/api/storage/volumes/${FINANCE_VOL_UUID}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nas": {
-      "export_policy": {"name": "finance_agents_only"}
-    }
-  }'
-
-echo "Applied 'finance_agents_only' policy to finance_data volume"
-:::
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Apply IT ops export policy to IT ops volume
-curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
-  -X PATCH "https://${FSXN_MGMT_IP}/api/storage/volumes/${ITOPS_VOL_UUID}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nas": {
-      "export_policy": {"name": "itops_agents_only"}
-    }
-  }'
-
-echo "Applied 'itops_agents_only' policy to it_ops_data volume"
-:::
-
-##### Step 4: Configure UNIX Permissions (Second Layer)
-
-Set ownership and permissions on the volume files so that even if a volume could be mounted, only the correct UID can read the data:
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Deploy a job to set UNIX ownership and permissions
 cd /home/participant/environment/eks/agentic-agents
+kubectl delete job set-volume-permissions --ignore-not-found
 kubectl apply -f set-volume-permissions-job.yaml
 :::
 
@@ -186,49 +67,110 @@ Permission setup complete.
   it_ops_data:  owner=1002, group=1002, mode=750
 :::
 
-:::alert{header="Defense in Depth — Two Layers" type="warning"}
-We now have **two independent security layers** protecting each volume:
+:::alert{header="Why UID-based isolation works" type="info"}
+When the Finance agent pod runs with `runAsUser: 1001`, every file operation from that pod authenticates as UID 1001 against ONTAP. Since the finance volume is owned by UID 1001 with mode 750:
+- **Finance Agent (UID 1001)** → owner match → **can read**
+- **IT Ops Agent (UID 1002)** → not owner, not in group → **permission denied**
+- **Malicious Agent (UID 1099)** → not owner, not in group → **permission denied**
 
-**Layer 1 — Export Policy (Network Level):** Controls which IP addresses can NFS-mount the volume. The malicious agent pod's IP won't match the allowed CIDR.
-
-**Layer 2 — UNIX Permissions (File Level):** Even if an attacker somehow mounts the volume, only the designated UID (1001 for finance, 1002 for IT ops) can read files. The malicious agent runs as UID 1099 and gets "Permission denied."
-
-These layers are enforced by the **ONTAP storage controller itself** — not by the application, not by Kubernetes, not by the LLM. The agent cannot bypass them regardless of what instructions it receives.
+This is enforced by the **ONTAP storage controller**, not by the pod, not by Kubernetes, and not by the LLM. The agent cannot bypass it.
 :::
 
-##### Step 5: Verify Export Policy Configuration
+##### Step 2: Configure Export Policies (Network Security Layer)
+
+Export policies control which IP ranges can NFS-mount the volumes at the network level. Since Trident's CSI node pods perform the NFS mounts, we configure the export policy to allow only the EKS node subnet — blocking any unauthorized hosts from mounting the volumes.
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# List all export policies on the SVM
+# Get the EKS node subnet CIDR (Trident mounts from these nodes)
+export NODE_CIDR=$(kubectl get nodes -o jsonpath='{.items[0].spec.podCIDR}' | sed 's|\.[0-9]*/.*|.0/16|')
+echo "Node network range: $NODE_CIDR"
+:::
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+# Create an export policy that only allows the EKS cluster to mount
+curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
+  -X POST "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "eks_cluster_only",
+    "svm": {"name": "'${FSXN_SVM_NAME}'"},
+    "rules": [
+      {
+        "clients": [{"match": "'${NODE_CIDR}'"}],
+        "ro_rule": ["sys"],
+        "rw_rule": ["sys"],
+        "superuser": ["sys"],
+        "protocols": ["nfs3", "nfs4"]
+      }
+    ]
+  }'
+
+echo "Created export policy: eks_cluster_only (allows only EKS nodes)"
+:::
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+# Get volume UUIDs (Trident may have renamed them with a prefix)
+export FINANCE_VOL_UUID=$(curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
+  "https://${FSXN_MGMT_IP}/api/storage/volumes?name=*finance_agent_data*&svm.name=${FSXN_SVM_NAME}" | \
+  jq -r '.records[0].uuid')
+
+export ITOPS_VOL_UUID=$(curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
+  "https://${FSXN_MGMT_IP}/api/storage/volumes?name=*itops_agent_data*&svm.name=${FSXN_SVM_NAME}" | \
+  jq -r '.records[0].uuid')
+
+echo "Finance volume UUID: $FINANCE_VOL_UUID"
+echo "IT Ops volume UUID: $ITOPS_VOL_UUID"
+:::
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+# Apply the export policy to both volumes
+curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
+  -X PATCH "https://${FSXN_MGMT_IP}/api/storage/volumes/${FINANCE_VOL_UUID}" \
+  -H "Content-Type: application/json" \
+  -d '{"nas": {"export_policy": {"name": "eks_cluster_only"}}}'
+
+curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
+  -X PATCH "https://${FSXN_MGMT_IP}/api/storage/volumes/${ITOPS_VOL_UUID}" \
+  -H "Content-Type: application/json" \
+  -d '{"nas": {"export_policy": {"name": "eks_cluster_only"}}}'
+
+echo "Applied 'eks_cluster_only' export policy to both volumes"
+:::
+
+:::alert{header="Export Policy + UNIX Permissions = Defense in Depth" type="warning"}
+The two layers work together:
+
+| Layer | What It Controls | Enforced By |
+|-------|-----------------|-------------|
+| **Export Policy** | Which hosts can NFS-mount the volume (network level) | ONTAP — rejects mount from unauthorized IPs |
+| **UNIX Permissions** | Which UIDs can read files (file level) | ONTAP — denies read/write for wrong UID |
+
+Even if an attacker gains access to an EKS node (passing the export policy), they still need the correct UID to read files. And a malicious agent pod running with the wrong UID gets "Permission denied" from ONTAP — the storage controller enforces it, not the application.
+:::
+
+##### Step 3: Verify Configuration
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+# Verify export policies on the SVM
 curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
   "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies?svm.name=${FSXN_SVM_NAME}" | \
   jq '.records[] | {name: .name, id: .id}'
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Show rules for finance policy
+# Verify the export policy rules
 curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
-  "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies?name=finance_agents_only&svm.name=${FSXN_SVM_NAME}&fields=rules" | \
+  "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies?name=eks_cluster_only&svm.name=${FSXN_SVM_NAME}&fields=rules" | \
   jq '.records[0].rules[] | {clients: .clients[].match, ro_rule: .ro_rule, rw_rule: .rw_rule}'
-:::
-
-Expected output:
-
-:::code{showCopyAction=false showLineNumbers=false language=bash}
-{
-  "clients": "10.0.x.0/24",
-  "ro_rule": ["sys"],
-  "rw_rule": ["never"]
-}
 :::
 
 ---
 
 ### Summary
 
-You have configured FSxN's native access control with two independent security layers:
-1. **Export policies** restrict which pod IPs can mount each volume at the NFS protocol level
-2. **UNIX permissions** restrict which UIDs can read files at the filesystem level
+You have configured FSxN's native access control:
+1. **UNIX permissions** — Each volume's files are owned by a specific UID (1001 or 1002) with mode 750. Only the designated agent UID can read the files.
+2. **Export policy** — Only EKS cluster nodes can NFS-mount the volumes, blocking access from any other hosts.
 
-In the next section, you will deploy the AI agents using Strands Agents SDK — each running with its designated UID and in its designated namespace.
+In the next section, you will deploy the AI agents using Strands Agents SDK — each running with its designated UID — and prove that UNIX permissions block unauthorized access.
 
