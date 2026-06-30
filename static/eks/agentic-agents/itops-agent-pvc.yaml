@@ -2,6 +2,9 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: itops-agent-data-pvc
+  annotations:
+    trident.netapp.io/importVolume: "itops_agent_data"
+    trident.netapp.io/importBackend: "fsx-ontap-nas"
 spec:
   accessModes:
     - ReadWriteMany

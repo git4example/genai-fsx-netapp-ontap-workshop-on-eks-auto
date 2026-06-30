@@ -120,7 +120,7 @@ Expected output:
 
 ##### Step 3: Import Existing Volumes into Kubernetes via Trident
 
-Now we bring these **existing ONTAP volumes** into Kubernetes using Trident's volume import feature. This is the pattern you would use when you already have data on FSxN (e.g., migrated from on-prem via SnapMirror) and want Kubernetes pods to consume it.
+Now we bring these **existing ONTAP volumes** into Kubernetes using Trident's **annotation-based volume import**. This is the pattern you would use when you already have data on FSxN (e.g., migrated from on-prem via SnapMirror) and want Kubernetes pods to consume it.
 
 :::alert{header="Why import instead of dynamic provisioning?" type="info"}
 Trident can either **create new volumes** (dynamic provisioning via PVC) or **import existing ones**. Import is the right choice when:
@@ -128,10 +128,10 @@ Trident can either **create new volumes** (dynamic provisioning via PVC) or **im
 - Another team created the volumes outside of Kubernetes
 - You want to preserve the volume name and junction path
 
-The `tridentctl import` command tells Trident: "take ownership of this existing ONTAP volume and expose it as a Kubernetes PVC — without copying or moving any data."
+When Trident sees a PVC with the `trident.netapp.io/importVolume` annotation, it adopts the named ONTAP volume and exposes it as a Kubernetes PVC — **without copying or moving any data**.
 :::
 
-First, create the PVC definitions that Trident will bind to the imported volumes:
+Review the PVC definition with import annotations:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/agentic-agents
@@ -143,6 +143,9 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: finance-agent-data-pvc
+  annotations:
+    trident.netapp.io/importVolume: "finance_agent_data"
+    trident.netapp.io/importBackend: "fsx-ontap-nas"
 spec:
   accessModes:
     - ReadWriteMany
@@ -152,30 +155,18 @@ spec:
       storage: 10Gi
 :::
 
-Now import the volumes using `tridentctl` (available inside the Trident controller pod). We first copy the PVC definitions into the pod, then run the import:
+The key annotations:
+- `trident.netapp.io/importVolume` — The exact ONTAP volume name to import
+- `trident.netapp.io/importBackend` — The Trident backend that manages this volume
+
+Apply both PVCs to trigger the import:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Get the Trident controller pod name
-export TRIDENT_POD=$(kubectl get pod -n trident -l app=controller.csi.trident.netapp.io -o jsonpath='{.items[0].metadata.name}')
-echo "Trident controller pod: $TRIDENT_POD"
+# Import finance_agent_data volume — Trident adopts it and binds the PVC
+kubectl apply -f finance-agent-pvc.yaml
 
-# Copy PVC files into the Trident controller pod
-kubectl cp finance-agent-pvc.yaml trident/${TRIDENT_POD}:/tmp/finance-agent-pvc.yaml -c trident-main
-kubectl cp itops-agent-pvc.yaml trident/${TRIDENT_POD}:/tmp/itops-agent-pvc.yaml -c trident-main
-:::
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Import finance_agent_data volume — Trident takes ownership and creates a PVC
-kubectl exec -n trident ${TRIDENT_POD} -c trident-main -- \
-  tridentctl import volume backend-ontap-nas finance_agent_data \
-  --filename /tmp/finance-agent-pvc.yaml -n trident
-:::
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
 # Import itops_agent_data volume
-kubectl exec -n trident ${TRIDENT_POD} -c trident-main -- \
-  tridentctl import volume backend-ontap-nas itops_agent_data \
-  --filename /tmp/itops-agent-pvc.yaml -n trident
+kubectl apply -f itops-agent-pvc.yaml
 :::
 
 Verify the PVCs are bound:
