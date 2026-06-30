@@ -191,11 +191,11 @@ kubectl get pvc -n agent-itops itops-agent-data-pvc
 Expected output:
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
-NAME                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
-finance-agent-data-pvc   Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   10Gi       RWX            ontap-nas-sc
+NAME                      STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+finance-agent-data-pvc    Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   10Gi       RWX            ontap-nas-sc   <unset>                 8s
 
-NAME                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
-itops-agent-data-pvc     Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   10Gi       RWX            ontap-nas-sc
+NAME                      STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+itops-agent-data-pvc      Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   10Gi       RWX            ontap-nas-sc   <unset>                 8s
 :::
 
 :::alert{header="Two layers of access control in place" type="info"}
@@ -233,6 +233,7 @@ kubectl logs job/populate-itops-data -n agent-itops
 Expected output:
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
+=== Finance Data ===
 === Populating Finance Data Volume ===
   Created: /finance_data/reports/q1_2024_earnings.txt
   Created: /finance_data/reports/q2_2024_earnings.txt
@@ -242,6 +243,9 @@ Expected output:
   Created: /finance_data/compliance/sox_audit_notes.txt
   Created: /finance_data/compliance/expense_policy.txt
 
+Finance volume: 7 files across 3 directories
+
+=== IT Ops Data ===
 === Populating IT Operations Data Volume ===
   Created: /it_ops_data/runbooks/eks_cluster_restart.md
   Created: /it_ops_data/runbooks/database_failover.md
@@ -254,6 +258,7 @@ Expected output:
 === Data population complete ===
 Finance volume: 7 files across 3 directories
 IT Ops volume:  7 files across 3 directories
+IT Ops volume: 7 files across 3 directories
 :::
 
 :::alert{header="Enterprise Context" type="info"}
