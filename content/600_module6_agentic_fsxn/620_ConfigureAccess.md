@@ -97,7 +97,7 @@ echo "Node network range (for export policy): $NODE_CIDR"
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 # Create an export policy that only allows the EKS cluster to mount
-curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
+RESPONSE=$(curl -sk -w "\n%{http_code}" -u "vsadmin:${FSXN_SVM_PASS}" \
   -X POST "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies" \
   -H "Content-Type: application/json" \
   -d '{
@@ -112,9 +112,19 @@ curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
         "protocols": ["nfs3", "nfs4"]
       }
     ]
-  }'
+  }')
 
-echo "Created export policy: eks_cluster_only (allows only EKS nodes)"
+HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+BODY=$(echo "$RESPONSE" | sed '$d')
+
+if [[ "$HTTP_CODE" == "201" ]]; then
+  echo "Export policy 'eks_cluster_only' created successfully (HTTP $HTTP_CODE)"
+elif [[ "$HTTP_CODE" == "409" ]]; then
+  echo "Export policy 'eks_cluster_only' already exists (HTTP $HTTP_CODE) — continuing"
+else
+  echo "Unexpected response (HTTP $HTTP_CODE):"
+  echo "$BODY" | jq . 2>/dev/null || echo "$BODY"
+fi
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
@@ -129,21 +139,28 @@ export ITOPS_VOL_UUID=$(curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
 
 echo "Finance volume UUID: $FINANCE_VOL_UUID"
 echo "IT Ops volume UUID: $ITOPS_VOL_UUID"
+
+if [[ "$FINANCE_VOL_UUID" == "null" || -z "$FINANCE_VOL_UUID" ]]; then
+  echo "WARNING: Could not find finance volume. Check volume name."
+fi
+if [[ "$ITOPS_VOL_UUID" == "null" || -z "$ITOPS_VOL_UUID" ]]; then
+  echo "WARNING: Could not find IT ops volume. Check volume name."
+fi
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 # Apply the export policy to both volumes
-curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
+echo "Applying export policy to finance volume..."
+curl -sk -w " (HTTP %{http_code})\n" -u "vsadmin:${FSXN_SVM_PASS}" \
   -X PATCH "https://${FSXN_MGMT_IP}/api/storage/volumes/${FINANCE_VOL_UUID}" \
   -H "Content-Type: application/json" \
   -d '{"nas": {"export_policy": {"name": "eks_cluster_only"}}}'
 
-curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
+echo "Applying export policy to IT ops volume..."
+curl -sk -w " (HTTP %{http_code})\n" -u "vsadmin:${FSXN_SVM_PASS}" \
   -X PATCH "https://${FSXN_MGMT_IP}/api/storage/volumes/${ITOPS_VOL_UUID}" \
   -H "Content-Type: application/json" \
   -d '{"nas": {"export_policy": {"name": "eks_cluster_only"}}}'
-
-echo "Applied 'eks_cluster_only' export policy to both volumes"
 :::
 
 :::alert{header="Export Policy + UNIX Permissions = Defense in Depth" type="warning"}
