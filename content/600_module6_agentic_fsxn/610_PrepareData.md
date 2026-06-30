@@ -5,9 +5,9 @@ weight : 610
 
 ## Overview
 
-In this section, you will create **two isolated data volumes** on your FSx for NetApp ONTAP file system — one for each team's AI agent. You'll populate them with sample documents that represent real enterprise data: financial reports for the Finance team, and operational runbooks/logs for the IT Operations team.
+In this section, you will create **two isolated data volumes** on your FSx for NetApp ONTAP file system — one for each team's AI agent. You'll then **import** these existing volumes into Kubernetes via Trident, and populate them with sample documents representing real enterprise data.
 
-This simulates how enterprises store different business domains' data on separate ONTAP volumes, each with its own access controls — ensuring that an AI agent for one team cannot access another team's sensitive data.
+This simulates a real-world scenario where customers **already have data volumes on FSxN** (perhaps migrated from on-premises via SnapMirror, or from existing workloads) and want to give AI agents secure access to that data through Kubernetes.
 
 ---
 
@@ -45,9 +45,9 @@ echo "SVM: $FSXN_SVM_NAME ($FSXN_SVM_ID)"
 echo "Secret: $FSXN_SECRET_NAME"
 :::
 
-##### Step 2: Create Isolated Data Volumes
+##### Step 2: Create Data Volumes on FSxN
 
-Create two separate volumes — one for Finance data and one for IT Operations data. Each volume will have its own junction path (mount point within the SVM namespace).
+Create two separate ONTAP volumes — one for Finance data and one for IT Operations data. In a real-world scenario, these would be **pre-existing volumes** on FSxN (e.g., replicated from on-premises via SnapMirror or created by another team).
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 # Create Finance data volume (10GB)
@@ -55,7 +55,7 @@ aws fsx create-volume \
   --volume-type ONTAP \
   --name finance_agent_data \
   --ontap-configuration '{
-    "JunctionPath": "/finance_data",
+    "JunctionPath": "/finance_agent_data",
     "SizeInMegabytes": 10240,
     "StorageVirtualMachineId": "'$FSXN_SVM_ID'",
     "StorageEfficiencyEnabled": true,
@@ -63,7 +63,7 @@ aws fsx create-volume \
     "SecurityStyle": "UNIX"
   }' --region $AWS_REGION
 
-echo "Created volume: finance_agent_data (/finance_data)"
+echo "Created volume: finance_agent_data"
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
@@ -72,7 +72,7 @@ aws fsx create-volume \
   --volume-type ONTAP \
   --name itops_agent_data \
   --ontap-configuration '{
-    "JunctionPath": "/it_ops_data",
+    "JunctionPath": "/itops_agent_data",
     "SizeInMegabytes": 10240,
     "StorageVirtualMachineId": "'$FSXN_SVM_ID'",
     "StorageEfficiencyEnabled": true,
@@ -80,7 +80,7 @@ aws fsx create-volume \
     "SecurityStyle": "UNIX"
   }' --region $AWS_REGION
 
-echo "Created volume: itops_agent_data (/it_ops_data)"
+echo "Created volume: itops_agent_data"
 :::
 
 Wait for volumes to become available:
@@ -101,39 +101,95 @@ done
 
 aws fsx describe-volumes --region $AWS_REGION \
   --filters Name=file-system-id,Values=$FSXN_FS_ID \
-  --query "Volumes[?Name=='finance_agent_data' || Name=='itops_agent_data'].{Name:Name, Status:Lifecycle, JunctionPath:OntapConfiguration.JunctionPath}" \
+  --query "Volumes[?Name=='finance_agent_data' || Name=='itops_agent_data'].{Name:Name, Status:Lifecycle}" \
   --output table
 :::
 
 Expected output:
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
-------------------------------------------------------
-|                  DescribeVolumes                   |
-+-------------+--------------+---------------------+
-| JunctionPath|    Name      |      Status         |
-+-------------+--------------+---------------------+
-| /finance_data| finance_agent_data |  AVAILABLE   |
-| /it_ops_data | itops_agent_data   |  AVAILABLE   |
-+-------------+--------------+---------------------+
+-----------------------------------------
+|            DescribeVolumes            |
++--------------------+------------------+
+|        Name        |     Status       |
++--------------------+------------------+
+|  finance_agent_data|    AVAILABLE     |
+|  itops_agent_data  |    AVAILABLE     |
++--------------------+------------------+
 :::
 
-##### Step 3: Import Volumes into Trident for Kubernetes Access
+##### Step 3: Import Existing Volumes into Kubernetes via Trident
 
-EKS Auto Mode nodes do not have NFS client utilities pre-installed, so we use the **Trident CSI driver** (already installed in Module 1) to mount ONTAP volumes into pods. Trident performs the NFS mount from within its own pod, then exposes the volume to workloads via PVCs.
+Now we bring these **existing ONTAP volumes** into Kubernetes using Trident's volume import feature. This is the pattern you would use when you already have data on FSxN (e.g., migrated from on-prem via SnapMirror) and want Kubernetes pods to consume it.
 
-Since we created the volumes directly via `aws fsx`, we need to **import** them into Trident so Kubernetes can consume them as PVCs:
+:::alert{header="Why import instead of dynamic provisioning?" type="info"}
+Trident can either **create new volumes** (dynamic provisioning via PVC) or **import existing ones**. Import is the right choice when:
+- Data already lives on ONTAP volumes (e.g., replicated from on-prem)
+- Another team created the volumes outside of Kubernetes
+- You want to preserve the volume name and junction path
+
+The `tridentctl import` command tells Trident: "take ownership of this existing ONTAP volume and expose it as a Kubernetes PVC — without copying or moving any data."
+:::
+
+First, create the PVC definitions that Trident will bind to the imported volumes:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/agentic-agents
+cat finance-agent-pvc.yaml
+:::
 
-# Import the finance_agent_data volume into Trident as a PVC
-kubectl apply -f finance-agent-pvc.yaml
-tridentctl import volume backend-ontap-nas finance_agent_data -f finance-agent-pvc.yaml -n trident
+:::code[]{language=yaml showLineNumbers=true showCopyAction=false}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: finance-agent-data-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ontap-nas-sc
+  resources:
+    requests:
+      storage: 10Gi
+:::
 
-# Import the itops_agent_data volume into Trident as a PVC
-kubectl apply -f itops-agent-pvc.yaml
-tridentctl import volume backend-ontap-nas itops_agent_data -f itops-agent-pvc.yaml -n trident
+Now import the volumes using `tridentctl` (available inside the Trident controller pod):
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+# Import finance_agent_data volume — Trident takes ownership and creates a PVC
+kubectl exec -n trident deploy/trident-controller -c trident-main -- \
+  tridentctl import volume backend-ontap-nas finance_agent_data \
+  --filename /dev/stdin -n trident <<EOF
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: finance-agent-data-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ontap-nas-sc
+  resources:
+    requests:
+      storage: 10Gi
+EOF
+:::
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+# Import itops_agent_data volume
+kubectl exec -n trident deploy/trident-controller -c trident-main -- \
+  tridentctl import volume backend-ontap-nas itops_agent_data \
+  --filename /dev/stdin -n trident <<EOF
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: itops-agent-data-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ontap-nas-sc
+  resources:
+    requests:
+      storage: 10Gi
+EOF
 :::
 
 Verify the PVCs are bound:
@@ -150,8 +206,8 @@ finance-agent-data-pvc   Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   10G
 itops-agent-data-pvc     Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   10Gi       RWX            ontap-nas-sc
 :::
 
-:::alert{header="Why Trident Import?" type="info"}
-The `tridentctl import volume` command tells Trident: "this ONTAP volume already exists — take ownership and expose it as a Kubernetes PVC." This is a common real-world pattern when organizations have pre-existing data on ONTAP volumes that need to be consumed by Kubernetes workloads without copying the data.
+:::alert{header="What just happened?" type="info"}
+Trident imported the existing ONTAP volumes without moving or copying any data. The volumes now appear as standard Kubernetes PVCs that any pod can mount. If these volumes had contained data replicated from on-premises via SnapMirror, that data would be immediately accessible to Kubernetes workloads — **zero data movement required**.
 :::
 
 ##### Step 4: Populate Volumes with Sample Data
@@ -201,12 +257,12 @@ IT Ops volume:  7 files across 3 directories
 :::
 
 :::alert{header="Enterprise Context" type="info"}
-In a real environment, these volumes would contain terabytes of actual business data — financial systems exports, audit logs, operational runbooks, infrastructure documentation. The data might be replicated from on-premises via SnapMirror (as shown in Module 7 — Multi-Model Data Segregation with On-Premises to Cloud Replication). The key point: **each volume is a self-contained data domain** with independent access controls at the storage layer.
+In a real environment, these volumes would already contain terabytes of business data — financial systems exports, audit logs, operational runbooks. The import step would simply expose that existing data to Kubernetes. The key point: **Trident import brings existing ONTAP data into Kubernetes without any data movement** — the AI agents access the original volume directly.
 :::
 
 ---
 
 ### Summary
 
-You have created two isolated FSxN volumes, imported them into Trident for Kubernetes consumption, and populated them with sample data for the Finance and IT Operations teams. In the next section, you will configure FSxN's native access controls (export policies and UNIX permissions) to restrict which agents can access which volumes.
+You have created two FSxN volumes (simulating pre-existing enterprise data), imported them into Kubernetes via Trident, and populated them with sample data for the Finance and IT Operations teams. In the next section, you will configure FSxN's native access controls (export policies and UNIX permissions) to restrict which agents can access which volumes.
 
