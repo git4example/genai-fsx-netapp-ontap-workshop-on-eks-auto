@@ -87,8 +87,12 @@ This is enforced by the **ONTAP storage controller**, not by the pod, not by Kub
 
 Export policies control which IP ranges can NFS-mount the volumes at the network level. Since Trident's CSI node pods perform the NFS mounts, we configure the export policy to allow only the EKS node subnet — blocking any unauthorized hosts from mounting the volumes.
 
+:::alert{header="Why run from a pod?" type="info"}
+The FSxN management endpoint (`198.19.x.x`) is only reachable from within the EKS VPC. Since the VSCode server is in a separate VPC, we run ONTAP REST API calls from a helper pod inside the EKS cluster.
+:::
+
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Get the EKS node subnet CIDR from the node's internal IP
+# Get the EKS node subnet CIDR
 NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
 export NODE_CIDR=$(echo $NODE_IP | sed 's|\.[0-9]*$|.0/16|')
 echo "Node IP: $NODE_IP"
@@ -96,8 +100,26 @@ echo "Node network range (for export policy): $NODE_CIDR"
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Create an export policy that only allows the EKS cluster to mount
-RESPONSE=$(curl -sk -w "\n%{http_code}" -u "vsadmin:${FSXN_SVM_PASS}" \
+# Create and apply export policy via a helper pod inside the EKS VPC
+kubectl run ontap-admin --image=curlimages/curl --restart=Never \
+  --overrides='{
+    "spec": {
+      "containers": [{
+        "name": "ontap-admin",
+        "image": "curlimages/curl",
+        "command": ["sh", "-c", "sleep 3600"]
+      }]
+    }
+  }' 2>/dev/null || true
+
+kubectl wait --for=condition=Ready pod/ontap-admin --timeout=60s
+echo "Helper pod ready — running ONTAP API calls from inside EKS VPC"
+:::
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+# Create export policy that allows only EKS nodes
+kubectl exec ontap-admin -- curl -sk -w "\nHTTP %{http_code}\n" \
+  -u "vsadmin:${FSXN_SVM_PASS}" \
   -X POST "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies" \
   -H "Content-Type: application/json" \
   -d '{
@@ -112,55 +134,49 @@ RESPONSE=$(curl -sk -w "\n%{http_code}" -u "vsadmin:${FSXN_SVM_PASS}" \
         "protocols": ["nfs3", "nfs4"]
       }
     ]
-  }')
-
-HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-BODY=$(echo "$RESPONSE" | sed '$d')
-
-if [[ "$HTTP_CODE" == "201" ]]; then
-  echo "Export policy 'eks_cluster_only' created successfully (HTTP $HTTP_CODE)"
-elif [[ "$HTTP_CODE" == "409" ]]; then
-  echo "Export policy 'eks_cluster_only' already exists (HTTP $HTTP_CODE) — continuing"
-else
-  echo "Unexpected response (HTTP $HTTP_CODE):"
-  echo "$BODY" | jq . 2>/dev/null || echo "$BODY"
-fi
+  }'
 :::
 
+Expected: `HTTP 201` (created) or `HTTP 409` (already exists).
+
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Get volume UUIDs (Trident may have renamed them with a prefix)
-export FINANCE_VOL_UUID=$(curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
+# Get volume UUIDs and apply the export policy
+export FINANCE_VOL_UUID=$(kubectl exec ontap-admin -- curl -sk \
+  -u "vsadmin:${FSXN_SVM_PASS}" \
   "https://${FSXN_MGMT_IP}/api/storage/volumes?name=*finance_agent_data*&svm.name=${FSXN_SVM_NAME}" | \
   jq -r '.records[0].uuid')
 
-export ITOPS_VOL_UUID=$(curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
+export ITOPS_VOL_UUID=$(kubectl exec ontap-admin -- curl -sk \
+  -u "vsadmin:${FSXN_SVM_PASS}" \
   "https://${FSXN_MGMT_IP}/api/storage/volumes?name=*itops_agent_data*&svm.name=${FSXN_SVM_NAME}" | \
   jq -r '.records[0].uuid')
 
 echo "Finance volume UUID: $FINANCE_VOL_UUID"
 echo "IT Ops volume UUID: $ITOPS_VOL_UUID"
-
-if [[ "$FINANCE_VOL_UUID" == "null" || -z "$FINANCE_VOL_UUID" ]]; then
-  echo "WARNING: Could not find finance volume. Check volume name."
-fi
-if [[ "$ITOPS_VOL_UUID" == "null" || -z "$ITOPS_VOL_UUID" ]]; then
-  echo "WARNING: Could not find IT ops volume. Check volume name."
-fi
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Apply the export policy to both volumes
+# Apply export policy to both volumes
 echo "Applying export policy to finance volume..."
-curl -sk -w " (HTTP %{http_code})\n" -u "vsadmin:${FSXN_SVM_PASS}" \
+kubectl exec ontap-admin -- curl -sk -w " (HTTP %{http_code})\n" \
+  -u "vsadmin:${FSXN_SVM_PASS}" \
   -X PATCH "https://${FSXN_MGMT_IP}/api/storage/volumes/${FINANCE_VOL_UUID}" \
   -H "Content-Type: application/json" \
   -d '{"nas": {"export_policy": {"name": "eks_cluster_only"}}}'
 
 echo "Applying export policy to IT ops volume..."
-curl -sk -w " (HTTP %{http_code})\n" -u "vsadmin:${FSXN_SVM_PASS}" \
+kubectl exec ontap-admin -- curl -sk -w " (HTTP %{http_code})\n" \
+  -u "vsadmin:${FSXN_SVM_PASS}" \
   -X PATCH "https://${FSXN_MGMT_IP}/api/storage/volumes/${ITOPS_VOL_UUID}" \
   -H "Content-Type: application/json" \
   -d '{"nas": {"export_policy": {"name": "eks_cluster_only"}}}'
+:::
+
+Expected: `HTTP 200` for both patches.
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+# Clean up the helper pod
+kubectl delete pod ontap-admin --ignore-not-found
 :::
 
 :::alert{header="Export Policy + UNIX Permissions = Defense in Depth" type="warning"}
@@ -177,17 +193,22 @@ Even if an attacker gains access to an EKS node (passing the export policy), the
 ##### Step 3: Verify Configuration
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Verify export policies on the SVM
-curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
+# Verify export policies on the SVM (using the helper pod)
+kubectl exec ontap-admin -- curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
   "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies?svm.name=${FSXN_SVM_NAME}" | \
   jq '.records[] | {name: .name, id: .id}'
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 # Verify the export policy rules
-curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
+kubectl exec ontap-admin -- curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
   "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies?name=eks_cluster_only&svm.name=${FSXN_SVM_NAME}&fields=rules" | \
   jq '.records[0].rules[] | {clients: .clients[].match, ro_rule: .ro_rule, rw_rule: .rw_rule}'
+:::
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+# Clean up the helper pod
+kubectl delete pod ontap-admin --ignore-not-found
 :::
 
 ---
