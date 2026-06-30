@@ -120,11 +120,21 @@ Expected output:
 
 ##### Step 3: Populate Volumes with Sample Data
 
-Deploy a Kubernetes Job that mounts both volumes and populates them with realistic sample documents.
+First, retrieve the NFS endpoint for the FSxN SVM — this is the IP the pods will use to mount the volumes:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+export FSXN_NFS_IP=$(aws fsx describe-storage-virtual-machines \
+  --filters Name=file-system-id,Values=$FSXN_FS_ID \
+  --query "StorageVirtualMachines[0].Endpoints.Nfs.IpAddresses[0]" --output text --region $AWS_REGION)
+
+echo "FSxN NFS IP: $FSXN_NFS_IP"
+:::
+
+Deploy a Kubernetes Job that mounts both volumes and populates them with realistic sample documents:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/agentic-agents
-kubectl apply -f populate-agent-data-job.yaml
+envsubst '$FSXN_NFS_IP' < populate-agent-data-job.yaml | kubectl apply -f -
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}

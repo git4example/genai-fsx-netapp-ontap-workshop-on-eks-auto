@@ -298,7 +298,7 @@ spec:
 :::
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
-envsubst < finance-agent-deployment.yaml | kubectl apply -f -
+envsubst '$FSXN_NFS_IP $AGENT_IMAGE' < finance-agent-deployment.yaml | kubectl apply -f -
 :::
 
 ##### Step 4: Deploy the IT Operations Agent
@@ -407,7 +407,7 @@ spec:
 :::
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
-envsubst < itops-agent-deployment.yaml | kubectl apply -f -
+envsubst '$FSXN_NFS_IP $AGENT_IMAGE' < itops-agent-deployment.yaml | kubectl apply -f -
 :::
 
 ##### Step 5: Deploy the Malicious Agent (Simulated Attacker)
@@ -466,7 +466,7 @@ spec:
 :::
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
-envsubst < malicious-agent-deployment.yaml | kubectl apply -f -
+envsubst '$AGENT_IMAGE' < malicious-agent-deployment.yaml | kubectl apply -f -
 :::
 
 ##### Step 6: Verify All Agents Are Running

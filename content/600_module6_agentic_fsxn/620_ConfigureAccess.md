@@ -167,7 +167,7 @@ Set ownership and permissions on the volume files so that even if a volume could
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 # Deploy a job to set UNIX ownership and permissions
-kubectl apply -f set-volume-permissions-job.yaml
+envsubst '$FSXN_NFS_IP' < set-volume-permissions-job.yaml | kubectl apply -f -
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
