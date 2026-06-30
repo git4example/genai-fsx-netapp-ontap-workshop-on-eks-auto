@@ -92,9 +92,16 @@ The FSxN management endpoint (`198.19.x.x`) is only reachable from within the EK
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
+# Get the SVM management LIF (vsadmin authenticates against SVM endpoint, not FS endpoint)
+export FSXN_SVM_MGMT_IP=$(aws fsx describe-storage-virtual-machines \
+  --filters Name=file-system-id,Values=$FSXN_FS_ID \
+  --query "StorageVirtualMachines[0].Endpoints.Management.IpAddresses[0]" \
+  --output text --region $AWS_REGION)
+echo "SVM Management IP: $FSXN_SVM_MGMT_IP"
+
 # Get the EKS node subnet CIDR
 NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
-export NODE_CIDR=$(echo $NODE_IP | sed 's|\.[0-9]*$|.0/16|')
+export NODE_CIDR=$(echo $NODE_IP | awk -F. '{print $1"."$2".0.0/16"}')
 echo "Node IP: $NODE_IP"
 echo "Node network range (for export policy): $NODE_CIDR"
 :::
@@ -120,7 +127,7 @@ echo "Helper pod ready — running ONTAP API calls from inside EKS VPC"
 # Create export policy that allows only EKS nodes
 kubectl exec ontap-admin -- curl -sk -w "\nHTTP %{http_code}\n" \
   -u "vsadmin:${FSXN_SVM_PASS}" \
-  -X POST "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies" \
+  -X POST "https://${FSXN_SVM_MGMT_IP}/api/protocols/nfs/export-policies" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "eks_cluster_only",
@@ -143,12 +150,12 @@ Expected: `HTTP 201` (created) or `HTTP 409` (already exists).
 # Get volume UUIDs and apply the export policy
 export FINANCE_VOL_UUID=$(kubectl exec ontap-admin -- curl -sk \
   -u "vsadmin:${FSXN_SVM_PASS}" \
-  "https://${FSXN_MGMT_IP}/api/storage/volumes?name=*finance_agent_data*&svm.name=${FSXN_SVM_NAME}" | \
+  "https://${FSXN_SVM_MGMT_IP}/api/storage/volumes?name=*finance_agent_data*&svm.name=${FSXN_SVM_NAME}" | \
   jq -r '.records[0].uuid')
 
 export ITOPS_VOL_UUID=$(kubectl exec ontap-admin -- curl -sk \
   -u "vsadmin:${FSXN_SVM_PASS}" \
-  "https://${FSXN_MGMT_IP}/api/storage/volumes?name=*itops_agent_data*&svm.name=${FSXN_SVM_NAME}" | \
+  "https://${FSXN_SVM_MGMT_IP}/api/storage/volumes?name=*itops_agent_data*&svm.name=${FSXN_SVM_NAME}" | \
   jq -r '.records[0].uuid')
 
 echo "Finance volume UUID: $FINANCE_VOL_UUID"
@@ -160,14 +167,14 @@ echo "IT Ops volume UUID: $ITOPS_VOL_UUID"
 echo "Applying export policy to finance volume..."
 kubectl exec ontap-admin -- curl -sk -w " (HTTP %{http_code})\n" \
   -u "vsadmin:${FSXN_SVM_PASS}" \
-  -X PATCH "https://${FSXN_MGMT_IP}/api/storage/volumes/${FINANCE_VOL_UUID}" \
+  -X PATCH "https://${FSXN_SVM_MGMT_IP}/api/storage/volumes/${FINANCE_VOL_UUID}" \
   -H "Content-Type: application/json" \
   -d '{"nas": {"export_policy": {"name": "eks_cluster_only"}}}'
 
 echo "Applying export policy to IT ops volume..."
 kubectl exec ontap-admin -- curl -sk -w " (HTTP %{http_code})\n" \
   -u "vsadmin:${FSXN_SVM_PASS}" \
-  -X PATCH "https://${FSXN_MGMT_IP}/api/storage/volumes/${ITOPS_VOL_UUID}" \
+  -X PATCH "https://${FSXN_SVM_MGMT_IP}/api/storage/volumes/${ITOPS_VOL_UUID}" \
   -H "Content-Type: application/json" \
   -d '{"nas": {"export_policy": {"name": "eks_cluster_only"}}}'
 :::
@@ -195,14 +202,14 @@ Even if an attacker gains access to an EKS node (passing the export policy), the
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 # Verify export policies on the SVM (using the helper pod)
 kubectl exec ontap-admin -- curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
-  "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies?svm.name=${FSXN_SVM_NAME}" | \
+  "https://${FSXN_SVM_MGMT_IP}/api/protocols/nfs/export-policies?svm.name=${FSXN_SVM_NAME}" | \
   jq '.records[] | {name: .name, id: .id}'
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 # Verify the export policy rules
 kubectl exec ontap-admin -- curl -sk -u "vsadmin:${FSXN_SVM_PASS}" \
-  "https://${FSXN_MGMT_IP}/api/protocols/nfs/export-policies?name=eks_cluster_only&svm.name=${FSXN_SVM_NAME}&fields=rules" | \
+  "https://${FSXN_SVM_MGMT_IP}/api/protocols/nfs/export-policies?name=eks_cluster_only&svm.name=${FSXN_SVM_NAME}&fields=rules" | \
   jq '.records[0].rules[] | {clients: .clients[].match, ro_rule: .ro_rule, rw_rule: .rw_rule}'
 :::
 
