@@ -43,6 +43,15 @@
             "Resource": "*"
         },
         {
+            "Sid": "EC2ManagedResourceVisibility",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:GetManagedResourceVisibility",
+                "ec2:ModifyManagedResourceVisibility"
+            ],
+            "Resource": "*"
+        },
+        {
             "Sid": "IAMForEksctl",
             "Effect": "Allow",
             "Action": [
