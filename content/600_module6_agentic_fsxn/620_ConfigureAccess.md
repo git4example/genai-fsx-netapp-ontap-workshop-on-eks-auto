@@ -88,9 +88,11 @@ This is enforced by the **ONTAP storage controller**, not by the pod, not by Kub
 Export policies control which IP ranges can NFS-mount the volumes at the network level. Since Trident's CSI node pods perform the NFS mounts, we configure the export policy to allow only the EKS node subnet — blocking any unauthorized hosts from mounting the volumes.
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Get the EKS node subnet CIDR (Trident mounts from these nodes)
-export NODE_CIDR=$(kubectl get nodes -o jsonpath='{.items[0].spec.podCIDR}' | sed 's|\.[0-9]*/.*|.0/16|')
-echo "Node network range: $NODE_CIDR"
+# Get the EKS node subnet CIDR from the node's internal IP
+NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+export NODE_CIDR=$(echo $NODE_IP | sed 's|\.[0-9]*$|.0/16|')
+echo "Node IP: $NODE_IP"
+echo "Node network range (for export policy): $NODE_CIDR"
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
