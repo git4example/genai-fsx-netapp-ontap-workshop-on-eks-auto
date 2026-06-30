@@ -34,7 +34,7 @@ from strands.models.openai import OpenAIModel
 
 # Connect to the self-hosted vLLM endpoint (Mistral-7B)
 model = OpenAIModel(
-    client_kwargs={
+    client_args={
         "base_url": os.environ.get("LLM_ENDPOINT", "http://vllm-mistral7b-service.default.svc.cluster.local:8000/v1"),
         "api_key": "not-needed"
     },
