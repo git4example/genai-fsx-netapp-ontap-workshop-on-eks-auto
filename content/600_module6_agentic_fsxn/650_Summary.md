@@ -183,7 +183,7 @@ kubectl delete job set-volume-permissions --ignore-not-found
 
 This module demonstrated AI agent data segregation on a **single FSx for ONTAP file system**. To extend this pattern:
 
-- **Module 7 (Archived)** — Shows how to replicate data from on-premises to cloud using SnapMirror, then apply the same agent access controls to the replicated volumes
+- **Module 7 — Multi-Model Data Segregation with On-Premises to Cloud Replication** — Shows how to replicate data from on-premises to cloud using SnapMirror, then apply the same agent access controls to the replicated volumes
 - **FlexClone for Agent Testing** — Clone a production data volume instantly (zero-copy) to create a sandbox for testing new agent tools without risking production data
 - **FPolicy Audit Logging** — Enable ONTAP FPolicy to capture every file access event per agent UID, feeding into your SIEM for compliance reporting
 

@@ -7,7 +7,7 @@ weight : 630
 
 In this section, you will deploy **three AI agents** built with the [AWS Strands Agents SDK](https://github.com/strands-agents/sdk-python). Each agent:
 
-- Uses the **same self-hosted Mistral-7B LLM** (via the vLLM OpenAI-compatible endpoint from Module 2)
+- Uses the **same self-hosted Mistral-7B LLM** (via the vLLM OpenAI-compatible endpoint from Module 2 — Deploy Generative AI Chat application)
 - Has the **same tool capabilities** (list files, read files, search documents)
 - Runs in its **own Kubernetes namespace** with a specific **UID/GID**
 - Mounts (or attempts to mount) FSxN volumes for its data access

@@ -80,7 +80,11 @@ In this module, each agent has file-access tools (`list_files`, `read_file`, `se
 ::::
 
 :::alert{header="Prerequisites" type="info"}
-This module assumes you have completed **Modules 1-2** and have:
+This module assumes you have completed the following modules:
+- **Module 1** — Configure storage for model hosting using Amazon FSx for NetApp ONTAP
+- **Module 2** — Deploy Generative AI Chat application
+
+You should have:
 - A working EKS cluster with Trident CSI driver installed
 - The vLLM Mistral-7B inference endpoint running (`vllm-mistral7b-service`)
 - The primary FSx for NetApp ONTAP file system available

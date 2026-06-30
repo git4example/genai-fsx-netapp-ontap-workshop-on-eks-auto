@@ -151,7 +151,7 @@ IT Ops volume:  7 files across 3 directories
 :::
 
 :::alert{header="Enterprise Context" type="info"}
-In a real environment, these volumes would contain terabytes of actual business data — financial systems exports, audit logs, operational runbooks, infrastructure documentation. The data might be replicated from on-premises via SnapMirror (as shown in Module 7). The key point: **each volume is a self-contained data domain** with independent access controls at the storage layer.
+In a real environment, these volumes would contain terabytes of actual business data — financial systems exports, audit logs, operational runbooks, infrastructure documentation. The data might be replicated from on-premises via SnapMirror (as shown in Module 7 — Multi-Model Data Segregation with On-Premises to Cloud Replication). The key point: **each volume is a self-contained data domain** with independent access controls at the storage layer.
 :::
 
 ---
