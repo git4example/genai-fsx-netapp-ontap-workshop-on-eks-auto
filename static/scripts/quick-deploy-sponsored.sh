@@ -67,6 +67,11 @@ export CLUSTER_NAME=eksworkshop
 echo "AWS_REGION: $AWS_REGION"
 echo "AWS_ACCOUNTID: $AWS_ACCOUNTID"
 echo "CLUSTER_NAME: $CLUSTER_NAME"
+
+# Enable visibility of EKS Auto Mode managed EC2 instances in the console
+aws ec2 modify-managed-resource-visibility --default-visibility visible --region $AWS_REGION 2>/dev/null || true
+echo "EC2 managed resource visibility: enabled"
+
 aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
 
 echo ""
