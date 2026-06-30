@@ -35,7 +35,7 @@ spec:
         - name: itops-data
           mountPath: "/data"
           readOnly: true
-        command: ["sleep", "infinity"]
+        command: ["python", "-c", "import time; time.sleep(999999)"]
         resources:
           requests:
             cpu: "500m"
