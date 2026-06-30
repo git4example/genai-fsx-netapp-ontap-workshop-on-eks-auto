@@ -274,22 +274,11 @@ kubectl label namespace agent-malicious team=external role=unauthorized --overwr
 
 echo ""
 echo "============================================================"
-echo "  Step 7: Build and Push Agent Container Image"
+echo "  Step 7: Set Agent Container Image"
 echo "============================================================"
 
-export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export AGENT_IMAGE="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/fsxn-strands-agent:latest"
-
-aws ecr create-repository --repository-name fsxn-strands-agent --region $AWS_REGION 2>/dev/null || true
-
-aws ecr get-login-password --region $AWS_REGION | \
-  docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-
-docker build -t fsxn-strands-agent:latest "$EKS_AGENTS_DIR/agent-app/"
-docker tag fsxn-strands-agent:latest $AGENT_IMAGE
-docker push $AGENT_IMAGE
-
-echo "Agent image pushed: $AGENT_IMAGE"
+export AGENT_IMAGE="public.ecr.aws/parikshit/fsxn-strands-agent:latest"
+echo "Using pre-built agent image: $AGENT_IMAGE"
 
 echo ""
 echo "============================================================"

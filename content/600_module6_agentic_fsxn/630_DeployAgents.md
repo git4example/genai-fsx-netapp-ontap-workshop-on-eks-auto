@@ -99,7 +99,9 @@ def search_documents(query: str) -> str:
     return f"No results found for '{query}' in accessible documents."
 :::
 
-##### Step 2: Build and Push the Agent Container Image
+##### Step 2: Review the Agent Container Image
+
+The agent is packaged as a container. Review the Dockerfile to understand what's included:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cat agent-app/Dockerfile
@@ -116,21 +118,11 @@ ENV LLM_ENDPOINT="http://vllm-mistral7b-service.default.svc.cluster.local:8000/v
 ENTRYPOINT ["python", "agent.py"]
 :::
 
+For this workshop, we provide a **pre-built container image** so you don't need to build or push anything:
+
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Build and push the agent image to ECR
-export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export AGENT_IMAGE="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/fsxn-strands-agent:latest"
-
-# Create ECR repository
-aws ecr create-repository --repository-name fsxn-strands-agent --region $AWS_REGION 2>/dev/null || true
-
-# Login and build
-aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-docker build -t fsxn-strands-agent:latest agent-app/
-docker tag fsxn-strands-agent:latest $AGENT_IMAGE
-docker push $AGENT_IMAGE
-
-echo "Agent image pushed: $AGENT_IMAGE"
+export AGENT_IMAGE="public.ecr.aws/parikshit/fsxn-strands-agent:latest"
+echo "Using pre-built agent image: $AGENT_IMAGE"
 :::
 
 ##### Step 3: Deploy the Finance Agent (UID 1001)
