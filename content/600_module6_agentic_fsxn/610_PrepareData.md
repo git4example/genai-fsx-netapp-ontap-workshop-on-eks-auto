@@ -14,9 +14,9 @@ This simulates how enterprises store different business domains' data on separat
 ##### Step 1: Set Environment Variables
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Get the primary FSx ONTAP file system details
+# Get the primary FSx ONTAP file system ID (filter by ONTAP type)
 export FSXN_FS_ID=$(aws fsx describe-file-systems --region $AWS_REGION \
-  --query "FileSystems[?Tags[?Key=='Name' && contains(Value,'genaifsxnworkshop')]].FileSystemId" \
+  --query "FileSystems[?FileSystemType=='ONTAP'].FileSystemId" \
   --output text)
 
 export FSXN_MGMT_IP=$(aws fsx describe-file-systems --region $AWS_REGION \
@@ -32,13 +32,17 @@ export FSXN_SVM_NAME=$(aws fsx describe-storage-virtual-machines \
   --filters Name=file-system-id,Values=$FSXN_FS_ID \
   --query "StorageVirtualMachines[0].Name" --output text --region $AWS_REGION)
 
+# Retrieve SVM password from Secrets Manager (secret name starts with trident-fsx-ontap-svm-)
+export FSXN_SECRET_NAME=$(aws secretsmanager list-secrets --region $AWS_REGION \
+  --query "SecretList[?starts_with(Name,'trident-fsx-ontap-svm-')].Name" --output text)
 export FSXN_SVM_PASS=$(aws secretsmanager get-secret-value \
-  --secret-id "fsxn-svm-credentials" \
-  --query 'SecretString' --output text --region $AWS_REGION | jq -r '.password')
+  --secret-id "$FSXN_SECRET_NAME" \
+  --query 'SecretString' --output text --region $AWS_REGION)
 
 echo "FSx ONTAP FS ID: $FSXN_FS_ID"
 echo "Management IP: $FSXN_MGMT_IP"
 echo "SVM: $FSXN_SVM_NAME ($FSXN_SVM_ID)"
+echo "Secret: $FSXN_SECRET_NAME"
 :::
 
 ##### Step 2: Create Isolated Data Volumes

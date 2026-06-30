@@ -58,7 +58,7 @@ echo "  Step 1: Retrieve FSxN Details"
 echo "============================================================"
 
 export FSXN_FS_ID=$(aws fsx describe-file-systems --region $AWS_REGION \
-  --query "FileSystems[?Tags[?Key=='Name' && contains(Value,'genaifsxnworkshop')]].FileSystemId" \
+  --query "FileSystems[?FileSystemType=='ONTAP'].FileSystemId" \
   --output text)
 
 export FSXN_MGMT_IP=$(aws fsx describe-file-systems --region $AWS_REGION \
@@ -74,9 +74,11 @@ export FSXN_SVM_NAME=$(aws fsx describe-storage-virtual-machines \
   --filters Name=file-system-id,Values=$FSXN_FS_ID \
   --query "StorageVirtualMachines[0].Name" --output text --region $AWS_REGION)
 
+FSXN_SECRET_NAME=$(aws secretsmanager list-secrets --region $AWS_REGION \
+  --query "SecretList[?starts_with(Name,'trident-fsx-ontap-svm-')].Name" --output text)
 export FSXN_SVM_PASS=$(aws secretsmanager get-secret-value \
-  --secret-id "fsxn-svm-credentials" \
-  --query 'SecretString' --output text --region $AWS_REGION | jq -r '.password')
+  --secret-id "$FSXN_SECRET_NAME" \
+  --query 'SecretString' --output text --region $AWS_REGION)
 
 export FSXN_NFS_IP=$(aws fsx describe-storage-virtual-machines \
   --filters Name=file-system-id,Values=$FSXN_FS_ID \
