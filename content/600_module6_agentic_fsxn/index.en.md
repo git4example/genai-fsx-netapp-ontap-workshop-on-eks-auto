@@ -37,9 +37,9 @@ flowchart TD
     end
 
     subgraph FSxN["FSx for NetApp ONTAP"]
-        FV["finance_data\n\nExport: Pod CIDR A only\nOwner: 1001 | Perms: 0750"]
-        IV["it_ops_data\n\nExport: Pod CIDR B only\nOwner: 1002 | Perms: 0750"]
-        BL["BLOCKED\n\nExport Policy: Denies CIDR C\nUNIX Perms: Denies UID 1099"]
+        FV["finance_agent_data\n\nOwner: UID 1001 | Perms: 0750"]
+        IV["itops_agent_data\n\nOwner: UID 1002 | Perms: 0750"]
+        BL["BLOCKED\n\nUID 1099 ≠ owner\nPermission Denied"]
     end
 
     FA -->|"READ"| FV
@@ -58,9 +58,9 @@ flowchart TD
 
 | Layer | Mechanism | What It Blocks |
 |-------|-----------|---------------|
-| **Export Policy** | IP/CIDR-based NFS access rules per volume | Unauthorized pod subnets cannot mount the volume |
-| **UNIX Permissions** | UID/GID ownership + file mode (0750) | Even if mounted, wrong UID cannot read files |
-| **Volume Isolation** | Separate ONTAP volumes per domain | No shared filesystem namespace between domains |
+| **UNIX Permissions** | UID/GID ownership + file mode (0750) | Wrong UID cannot read files — primary per-agent enforcement |
+| **Export Policy** | IP/CIDR-based NFS access rules | Only EKS cluster nodes can mount — network guardrail |
+| **Volume Isolation** | Separate ONTAP volumes per domain | Each agent only sees its own PVC mount |
 
 ---
 

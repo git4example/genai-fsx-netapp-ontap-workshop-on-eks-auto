@@ -9,27 +9,26 @@ In this module, you built a real-world scenario where **multiple AI agents** wit
 
 ```mermaid
 flowchart TD
-    subgraph Agents["AI Agents"]
+    subgraph Agents["AI Agents (same LLM, same tools)"]
         FA["Finance Agent\nUID: 1001"]
         IA["IT Ops Agent\nUID: 1002"]
         MA["Malicious Agent\nUID: 1099"]
     end
 
-    subgraph Security["Security Enforcement Stack"]
-        L1["K8s Namespace Isolation"]
-        L2["ONTAP Export Policy"]
-        L3["UNIX Permissions (UID/GID)"]
+    subgraph Security["FSxN Security Enforcement"]
+        L1["UNIX Permissions\n(UID/GID + mode 750)"]
+        L2["Export Policy\n(EKS subnet only)"]
     end
 
     subgraph FSxN["FSx for NetApp ONTAP"]
-        FV["finance_data\nREAD"]
-        IV["it_ops_data\nREAD"]
-        BL["NO ACCESS\nDENIED"]
+        FV["finance_agent_data\nOwner: UID 1001\nREAD ALLOWED"]
+        IV["itops_agent_data\nOwner: UID 1002\nREAD ALLOWED"]
+        BL["Both Volumes\nUID 1099 ≠ owner\nPERMISSION DENIED"]
     end
 
-    FA --> L1 --> L2 --> L3 --> FV
-    IA --> L1 --> L2 --> L3 --> IV
-    MA --> L1 -.-x|BLOCKED| L2 -.-x|BLOCKED| BL
+    FA -->|"UID 1001 = owner"| FV
+    IA -->|"UID 1002 = owner"| IV
+    MA -.-x|"UID 1099 ≠ owner"| BL
 
     style FA fill:#c8e6c9,stroke:#2e7d32
     style IA fill:#bbdefb,stroke:#1565c0
@@ -39,7 +38,6 @@ flowchart TD
     style BL fill:#ffcdd2,stroke:#c62828
     style L1 fill:#fff9c4,stroke:#f9a825
     style L2 fill:#fff9c4,stroke:#f9a825
-    style L3 fill:#fff9c4,stroke:#f9a825
 ```
 
 ---
@@ -54,7 +52,8 @@ Unlike application-layer controls (API keys, prompt guardrails, output filters),
 
 | Security Layer | FSxN Feature | What It Controls |
 |---------------|-------------|-----------------|
-| **Network Access** | Export Policies | Which IPs/CIDRs can NFS-mount a volume |
+| **File Access (Primary)** | UNIX Permissions (UID/GID) | Which process UIDs can read/write files |
+| **Network Access** | Export Policies | Which host IPs can NFS-mount a volume |
 | **File Access** | UNIX Security Style | Which UIDs/GIDs can read/write files |
 | **Data Isolation** | Volumes / Qtrees | Separate filesystem namespaces per domain |
 | **Protocol** | Read-Only Mounts | Agents can read but never modify source data |
@@ -163,16 +162,19 @@ If you want to remove the resources created in this module:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 # Delete agent deployments
-kubectl delete namespace agent-finance agent-itops agent-malicious
+kubectl delete deployment finance-agent itops-agent malicious-agent --ignore-not-found
+kubectl delete svc finance-agent-svc itops-agent-svc --ignore-not-found
 
-# Delete PVs
-kubectl delete pv finance-agent-pv itops-agent-pv --ignore-not-found
+# Delete test pods
+kubectl delete pod malicious-read-attempt malicious-itops-attempt finance-cross-access-attempt --ignore-not-found
 
-# Delete the data population job
-kubectl delete job populate-agent-data --ignore-not-found
-kubectl delete job set-volume-permissions --ignore-not-found
+# Delete jobs
+kubectl delete job populate-agent-data set-volume-permissions --ignore-not-found
 
-# Optionally delete the FSxN volumes (keep them if continuing to other modules)
+# Delete PVCs (with Retain policy, ONTAP volumes are preserved)
+kubectl delete pvc finance-agent-data-pvc itops-agent-data-pvc --ignore-not-found
+
+# Optionally delete the FSxN volumes
 # aws fsx delete-volume --volume-id <finance-vol-id> --region $AWS_REGION
 # aws fsx delete-volume --volume-id <itops-vol-id> --region $AWS_REGION
 :::
