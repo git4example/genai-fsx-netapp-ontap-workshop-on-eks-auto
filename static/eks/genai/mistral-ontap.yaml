@@ -95,6 +95,8 @@ spec:
             - --max-model-len=4096
             - --max-num-seqs=4
             - --device=neuron
+            - --enable-auto-tool-choice
+            - --tool-call-parser=mistral
           env:
             - name: NEURON_COMPILED_ARTIFACTS
               value: /work-dir/Mistral-7B-Instruct-v0.3
