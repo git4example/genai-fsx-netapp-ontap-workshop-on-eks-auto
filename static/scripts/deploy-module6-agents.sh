@@ -95,10 +95,10 @@ echo "  Step 2: Create Data Volumes"
 echo "============================================================"
 
 # Create Finance volume
-echo "Creating finance-agent-data volume..."
+echo "Creating finance_agent_data volume..."
 aws fsx create-volume \
   --volume-type ONTAP \
-  --name finance-agent-data \
+  --name finance_agent_data \
   --ontap-configuration '{
     "JunctionPath": "/finance_data",
     "SizeInMegabytes": 10240,
@@ -109,10 +109,10 @@ aws fsx create-volume \
   }' --region $AWS_REGION 2>/dev/null || echo "Volume may already exist, continuing..."
 
 # Create IT Ops volume
-echo "Creating itops-agent-data volume..."
+echo "Creating itops_agent_data volume..."
 aws fsx create-volume \
   --volume-type ONTAP \
-  --name itops-agent-data \
+  --name itops_agent_data \
   --ontap-configuration '{
     "JunctionPath": "/it_ops_data",
     "SizeInMegabytes": 10240,
@@ -127,7 +127,7 @@ sleep 60
 
 aws fsx describe-volumes --region $AWS_REGION \
   --filters Name=file-system-id,Values=$FSXN_FS_ID \
-  --query "Volumes[?Name=='finance-agent-data' || Name=='itops-agent-data'].{Name:Name, Status:Lifecycle}" \
+  --query "Volumes[?Name=='finance_agent_data' || Name=='itops_agent_data'].{Name:Name, Status:Lifecycle}" \
   --output table
 
 echo ""

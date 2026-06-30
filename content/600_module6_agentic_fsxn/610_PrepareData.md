@@ -53,7 +53,7 @@ Create two separate volumes — one for Finance data and one for IT Operations d
 # Create Finance data volume (10GB)
 aws fsx create-volume \
   --volume-type ONTAP \
-  --name finance-agent-data \
+  --name finance_agent_data \
   --ontap-configuration '{
     "JunctionPath": "/finance_data",
     "SizeInMegabytes": 10240,
@@ -63,14 +63,14 @@ aws fsx create-volume \
     "SecurityStyle": "UNIX"
   }' --region $AWS_REGION
 
-echo "Created volume: finance-agent-data (/finance_data)"
+echo "Created volume: finance_agent_data (/finance_data)"
 :::
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 # Create IT Operations data volume (10GB)
 aws fsx create-volume \
   --volume-type ONTAP \
-  --name itops-agent-data \
+  --name itops_agent_data \
   --ontap-configuration '{
     "JunctionPath": "/it_ops_data",
     "SizeInMegabytes": 10240,
@@ -80,7 +80,7 @@ aws fsx create-volume \
     "SecurityStyle": "UNIX"
   }' --region $AWS_REGION
 
-echo "Created volume: itops-agent-data (/it_ops_data)"
+echo "Created volume: itops_agent_data (/it_ops_data)"
 :::
 
 Wait for volumes to become available:
@@ -91,7 +91,7 @@ sleep 60
 
 aws fsx describe-volumes --region $AWS_REGION \
   --filters Name=file-system-id,Values=$FSXN_FS_ID \
-  --query "Volumes[?Name=='finance-agent-data' || Name=='itops-agent-data'].{Name:Name, Status:Lifecycle, JunctionPath:OntapConfiguration.JunctionPath}" \
+  --query "Volumes[?Name=='finance_agent_data' || Name=='itops_agent_data'].{Name:Name, Status:Lifecycle, JunctionPath:OntapConfiguration.JunctionPath}" \
   --output table
 :::
 
@@ -103,8 +103,8 @@ Expected output:
 +-------------+--------------+---------------------+
 | JunctionPath|    Name      |      Status         |
 +-------------+--------------+---------------------+
-| /finance_data| finance-agent-data |  AVAILABLE   |
-| /it_ops_data | itops-agent-data   |  AVAILABLE   |
+| /finance_data| finance_agent_data |  AVAILABLE   |
+| /it_ops_data | itops_agent_data   |  AVAILABLE   |
 +-------------+--------------+---------------------+
 :::
 
