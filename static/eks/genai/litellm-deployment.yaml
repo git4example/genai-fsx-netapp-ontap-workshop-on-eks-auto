@@ -25,7 +25,7 @@ spec:
       serviceAccountName: litellm
       containers:
         - name: litellm
-          image: ghcr.io/berriai/litellm:main-v1.72.0
+          image: ghcr.io/berriai/litellm:main-latest
           command: ["litellm", "--config", "/app/config.yaml", "--port", "4000"]
           ports:
             - containerPort: 4000
