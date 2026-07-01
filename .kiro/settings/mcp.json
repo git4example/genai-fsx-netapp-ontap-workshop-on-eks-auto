@@ -1,0 +1,232 @@
+{
+  "mcpServers": {
+    "aws-support-troubleshooting-mcp": {
+      "command": "aws-support-troubleshooting-mcp-server",
+      "disabled": true
+    },
+    "eks-mcp": {
+      "type": "stdio",
+      "command": "/opt/homebrew/bin/uvx",
+      "args": [
+        "mcp-proxy-for-aws@latest",
+        "https://eks-mcp.ap-southeast-2.api.aws/mcp",
+        "--service",
+        "eks-mcp",
+        "--profile",
+        "default",
+        "--region",
+        "ap-southeast-2",
+        "--read-only"
+      ],
+      "autoApprove": [
+        "get_k8s_events",
+        "list_k8s_resources",
+        "get_pod_logs",
+        "read_k8s_resource"
+      ],
+      "disabled": true
+    },
+    "ecs-mcp": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "mcp-proxy-for-aws@latest",
+        "https://ecs-mcp.ap-southeast-2.api.aws/mcp",
+        "--service",
+        "ecs-mcp",
+        "--profile",
+        "default",
+        "--region",
+        "ap-southeast-2"
+      ],
+      "disabled": true
+    },
+    "awslabs_support_mcp_server": {
+      "command": "uvx",
+      "args": [
+        "awslabs.aws-support-mcp-server@latest"
+      ],
+      "env": {
+        "AWS_PROFILE": "default",
+        "AWS_REGION": "us-east-1"
+      },
+      "disabled": true
+    },
+    "builder-mcp": {
+      "command": "/Users/ppariksh/.toolbox/bin/builder-mcp",
+      "args": [],
+      "env": {},
+      "autoApprove": [
+        "ReadInternalWebsites",
+        "InternalSearch",
+        "InternalCodeSearch",
+        "WorkspaceSearch",
+        "ReadRemoteTestRun",
+        "BrazilBuildAnalyzerTool",
+        "BrazilPackageBuilderAnalyzerTool",
+        "WorkspaceGitDetails",
+        "TaskeiGetTask",
+        "TaskeiGetRooms",
+        "TaskeiGetRoomResources",
+        "TaskeiListTasks",
+        "GetPipelinesRelevantToUser",
+        "GetPipelineHealth",
+        "GetPipelineDetails",
+        "GetSasRisks",
+        "GetSasCampaigns",
+        "ApolloReadActions",
+        "MechanicDiscoverTools",
+        "MechanicDescribeTool",
+        "OncallReadActions",
+        "TicketingReadActions",
+        "SearchSoftwareRecommendations",
+        "GetSoftwareRecommendation",
+        "SearchAcronymCentral",
+        "QuipEditor"
+      ],
+      "disabled": false
+    },
+    "presentation-builder-mcp": {
+      "command": "presentation-builder-mcp",
+      "args": [],
+      "disabled": true
+    },
+    "slack-mcp": {
+      "command": "/Users/ppariksh/.aim/mcp-servers/slack-mcp",
+      "args": [],
+      "autoApprove": [
+        "get_messages",
+        "get_thread",
+        "get_reactions",
+        "list_my_channels",
+        "get_channel",
+        "get_conversation_details",
+        "search",
+        "download_file",
+        "list_emojis",
+        "lookup_user",
+        "get_status",
+        "list_dms",
+        "get_canvas_content",
+        "get_channel_tabs",
+        "list_canvases",
+        "get_list_content",
+        "list_lists",
+        "list_scheduled_messages",
+        "list_reminders",
+        "list_saved_messages",
+        "list_channel_members",
+        "list_channel_managers",
+        "list_drafts",
+        "get_unreads",
+        "get_diagnostics",
+        "health_check",
+        "batch_get_messages",
+        "batch_get_threads",
+        "ask_slackbot"
+      ],
+      "disabled": true
+    },
+    "harbinger-mcp": {
+      "command": "/Users/ppariksh/.aim/mcp-servers/harbinger-mcp",
+      "args": [],
+      "env": {
+        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+      },
+      "disabled": true
+    },
+    "tickety-aws-mcp": {
+      "command": "/Users/ppariksh/.aim/mcp-servers/tickety-aws-mcp",
+      "args": [],
+      "disabled": true
+    },
+    "baywatch-mcp": {
+      "command": "/Users/ppariksh/.aim/mcp-servers/baywatch-mcp",
+      "args": [],
+      "env": {
+        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+      },
+      "disabled": true
+    },
+    "flexbot-mcp": {
+      "command": "/Users/ppariksh/.toolbox/bin/flexbot",
+      "args": [],
+      "autoApprove": [
+        "view_my_context",
+        "get_available_gse_options",
+        "get_flex_framework_context",
+        "get_sprint_proposal",
+        "get_sprint_team_names",
+        "get_team_blockers",
+        "get_team_capacity_overview",
+        "find_old_sprints",
+        "find_stale_tasks",
+        "format_task_summary",
+        "list_my_tasks",
+        "list_user_tasks",
+        "list_sprints",
+        "list_tasks_in_sprint",
+        "read_gse_task",
+        "clear_labels_cache",
+        "setup_user_context",
+        "create_gse_task",
+        "manage_monthly_sprints",
+        "update_gse_task",
+        "bulk_update_tasks",
+        "move_tasks_to_sprint",
+        "close_sprint",
+        "generate_sprint_report"
+      ],
+      "disabled": true
+    },
+    "atoz-mcp": {
+      "command": "/Users/ppariksh/.aim/mcp-servers/atoz-mcp",
+      "args": [],
+      "env": {
+        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+      },
+      "disabled": true
+    },
+    "aws-outlook-mcp": {
+      "command": "/Users/ppariksh/.toolbox/bin/aws-outlook-mcp",
+      "args": [],
+      "env": {
+        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+      },
+      "autoApprove": [
+        "email_read",
+        "email_search",
+        "email_folders",
+        "email_attachments",
+        "email_contacts",
+        "email_inbox",
+        "email_categories",
+        "email_list_folders",
+        "calendar_view",
+        "calendar_meeting",
+        "calendar_availability",
+        "calendar_room_booking",
+        "calendar_search",
+        "calendar_shared_list",
+        "enable_write_tools"
+      ],
+      "disabled": true
+    }
+  },
+  "powers": {
+    "mcpServers": {
+      "power-aws-devops-agent-aws-mcp": {
+        "command": "uvx",
+        "timeout": 100000,
+        "transport": "stdio",
+        "args": [
+          "mcp-proxy-for-aws@latest",
+          "https://aws-mcp.us-east-1.api.aws/mcp",
+          "--metadata",
+          "AWS_REGION=us-east-1"
+        ],
+        "disabled": true
+      }
+    }
+  }
+}

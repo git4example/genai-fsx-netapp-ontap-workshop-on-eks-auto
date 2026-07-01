@@ -34,7 +34,7 @@ spec:
         - name: LLM_MODEL_ID
           value: "workshop-llm"
         - name: LLM_API_KEY
-          value: "sk-workshop-key"
+          value: "not-needed"
         volumeMounts:
         - name: itops-data
           mountPath: "/data"

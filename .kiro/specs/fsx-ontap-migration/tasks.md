@@ -215,8 +215,8 @@ This plan migrates the GenAI FSx Workshop on EKS from FSx for Lustre to FSx for 
     - Update any references to FSx for Lustre with FSx for ONTAP if present
     - _Requirements: 9.3_
 
-- [ ] 14. Remove obsolete FSx for Lustre files
-  - [-] 14.1 Remove obsolete manifest and script files
+- [x] 14. Remove obsolete FSx for Lustre files
+  - [x] 14.1 Remove obsolete manifest and script files
     - Delete `static/download/sysprep.yaml` (Lustre HSM restore pre-warming job — no longer needed)
     - Delete `static/download/sysprep.sh` if it exists (Lustre sysprep script)
     - Delete `static/download/check.yaml` (Lustre data verification deployment — no longer needed)
@@ -227,7 +227,7 @@ This plan migrates the GenAI FSx Workshop on EKS from FSx for Lustre to FSx for 
     - Delete `static/eks/FSxL/pod.yaml` and `static/eks/FSxL/pod_performance.yaml` if they are Lustre-specific test pods
     - _Requirements: 6.5, 11.1_
 
-- [~] 15. Final checkpoint - Full validation
+- [x] 15. Final checkpoint - Full validation
   - Verify no residual FSx for Lustre references remain across all updated files (search for "Lustre", "fsx-lustre", "fsxL", "fsx-pv")
   - Verify PVC name consistency (`ontap-model-claim`) across all manifests, scripts, and content
   - Verify model path consistency (`/work-dir/Mistral-7B-Instruct-v0.3/`) across Job, Deployment, and content

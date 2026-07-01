@@ -41,7 +41,7 @@ extraEnvVars:
   - name: ENABLE_EVALUATION_ARENA_MODELS
     value: "False"
   - name: OPENAI_API_KEY
-    value: "sk-workshop-key"
+    value: "not-needed"
 
 # ---- Resources ----
 resources:

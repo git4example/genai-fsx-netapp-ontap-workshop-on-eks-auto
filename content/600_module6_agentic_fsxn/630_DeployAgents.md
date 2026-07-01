@@ -42,7 +42,7 @@ from strands.models.openai import OpenAIModel
 model = OpenAIModel(
     client_args={
         "base_url": os.environ.get("LLM_ENDPOINT", "http://litellm-service.default.svc.cluster.local:4000/v1"),
-        "api_key": os.environ.get("LLM_API_KEY", "sk-workshop-key"),
+        "api_key": os.environ.get("LLM_API_KEY", "not-needed"),
     },
     model_id=os.environ.get("LLM_MODEL_ID", "workshop-llm"),
 )
@@ -122,7 +122,7 @@ ENV DATA_DIR=/data
 ENV AGENT_ROLE="general assistant"
 ENV LLM_ENDPOINT="http://litellm-service.default.svc.cluster.local:4000/v1"
 ENV LLM_MODEL_ID="workshop-llm"
-ENV LLM_API_KEY="sk-workshop-key"
+ENV LLM_API_KEY="not-needed"
 ENTRYPOINT ["python", "agent.py"]
 :::
 
@@ -171,7 +171,7 @@ spec:
         - name: LLM_MODEL_ID
           value: "workshop-llm"
         - name: LLM_API_KEY
-          value: "sk-workshop-key"
+          value: "not-needed"
         volumeMounts:
         - name: finance-data
           mountPath: "/data"

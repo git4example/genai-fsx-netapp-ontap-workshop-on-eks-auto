@@ -10,6 +10,6 @@ ENV DATA_DIR=/data
 ENV AGENT_ROLE="general assistant"
 ENV LLM_ENDPOINT="http://litellm-service.default.svc.cluster.local:4000/v1"
 ENV LLM_MODEL_ID="workshop-llm"
-ENV LLM_API_KEY="sk-workshop-key"
+ENV LLM_API_KEY="not-needed"
 
 ENTRYPOINT ["python", "agent.py"]
