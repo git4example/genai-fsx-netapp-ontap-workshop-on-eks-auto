@@ -7,17 +7,21 @@ weight : 630
 
 In this section, you will deploy **three AI agents** built with the [AWS Strands Agents SDK](https://github.com/strands-agents/sdk-python). Each agent:
 
-- Uses the **LiteLLM AI Gateway** (`workshop-llm` model) — which routes tool-calling requests to Amazon Bedrock Claude Haiku 4.5 for reliable structured tool use
+- Uses the **LiteLLM AI Gateway** (`workshop-llm-tools` model) — which routes to Amazon Bedrock Claude Haiku 4.5 for reliable tool-calling
 - Has the **same tool capabilities** (list files, read files, search documents)
 - Runs with a specific **UID/GID** that determines which volume's files it can access
 - Mounts FSxN volumes via **Trident-managed PVCs**
 
 The difference: **ONTAP's UNIX permissions** determine which data each agent can actually read — based purely on UID.
 
-:::alert{header="AI Gateway Intelligent Routing" type="info"}
-In Module 2, you deployed the LiteLLM AI Gateway that routes requests based on capabilities. When these agents send requests with **tools** (function schemas), the gateway automatically routes them to **Bedrock Claude Haiku 4.5** — a model with strong tool-calling capability. The agents don't need to know which model serves them; the gateway handles this transparently.
+:::alert{header="AI Gateway Model Routing" type="info"}
+In Module 2, you deployed the LiteLLM AI Gateway with two named models:
+- **`workshop-llm`** → self-hosted Mistral-7B (used by OpenWebUI for chat)
+- **`workshop-llm-tools`** → Bedrock Claude Haiku 4.5 (used by agents for tool-calling)
 
-In production with larger self-hosted models (70B+), you could route everything locally. The gateway pattern remains valuable for cost optimization, failover, and routing complex agentic workloads to the most capable available model.
+These agents request `workshop-llm-tools` because agentic workloads require reliable structured tool execution. The gateway routes this to Bedrock Claude Haiku 4.5, which excels at selecting and calling tools with properly formatted arguments.
+
+In production with larger self-hosted models (70B+), you could route everything locally. The gateway pattern remains valuable for cost optimization, failover, and routing different workloads to the most appropriate model.
 :::
 
 ---
@@ -44,7 +48,7 @@ model = OpenAIModel(
         "base_url": os.environ.get("LLM_ENDPOINT", "http://litellm-service.default.svc.cluster.local:4000/v1"),
         "api_key": os.environ.get("LLM_API_KEY", "not-needed"),
     },
-    model_id=os.environ.get("LLM_MODEL_ID", "workshop-llm"),
+    model_id=os.environ.get("LLM_MODEL_ID", "workshop-llm-tools"),
 )
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
@@ -121,7 +125,7 @@ COPY agent.py .
 ENV DATA_DIR=/data
 ENV AGENT_ROLE="general assistant"
 ENV LLM_ENDPOINT="http://litellm-service.default.svc.cluster.local:4000/v1"
-ENV LLM_MODEL_ID="workshop-llm"
+ENV LLM_MODEL_ID="workshop-llm-tools"
 ENV LLM_API_KEY="not-needed"
 ENTRYPOINT ["python", "agent.py"]
 :::
@@ -169,7 +173,7 @@ spec:
         - name: LLM_ENDPOINT
           value: "http://litellm-service.default.svc.cluster.local:4000/v1"
         - name: LLM_MODEL_ID
-          value: "workshop-llm"
+          value: "workshop-llm-tools"
         - name: LLM_API_KEY
           value: "not-needed"
         volumeMounts:

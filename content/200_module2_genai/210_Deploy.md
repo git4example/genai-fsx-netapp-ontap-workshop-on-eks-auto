@@ -301,34 +301,34 @@ In the EKS console Compute tab, you should see the `inf2.xlarge` node listed und
 
 In production environments, it is best practice to front your LLM backends with an **AI Gateway** — a proxy layer that provides unified routing, observability, cost management, and intelligent model selection. In this workshop, we deploy [LiteLLM](https://github.com/BerriAI/litellm) as our AI Gateway.
 
-The gateway exposes a single OpenAI-compatible endpoint (`workshop-llm`) and intelligently routes requests:
-- **Plain chat** (no tools) → self-hosted Mistral-7B on Inferentia (fast, zero API cost)
-- **Tool-calling** (agentic workloads) → Amazon Bedrock Claude Haiku 4.5 (reliable structured output)
+The gateway exposes two named model endpoints through a single service:
+- **`workshop-llm`** → self-hosted Mistral-7B on Inferentia (chat, zero API cost)
+- **`workshop-llm-tools`** → Amazon Bedrock Claude Haiku 4.5 (tool-calling, reliable structured output)
 
-This routing happens **automatically** — the gateway inspects the incoming request and decides where to send it. Applications don't need to be aware of which backend serves them.
+Consumers select the appropriate model for their workload. OpenWebUI requests `workshop-llm` for everyday chat; AI agents request `workshop-llm-tools` for reliable tool execution.
 
 ```mermaid
 flowchart TB
-    subgraph Consumers["Consumers (same endpoint)"]
-        WEB["OpenWebUI<br/>(plain chat)"]
-        AGT["Strands Agents<br/>(tool-calling)"]
+    subgraph Consumers["Consumers"]
+        WEB["OpenWebUI<br/>model: workshop-llm"]
+        AGT["Strands Agents<br/>model: workshop-llm-tools"]
     end
 
-    subgraph GW["LiteLLM AI Gateway — model: workshop-llm"]
+    subgraph GW["LiteLLM AI Gateway (single endpoint)"]
         direction LR
-        ROUTER["Router<br/>enable_pre_call_checks: true"]
+        ROUTER["Router<br/>litellm-service:4000/v1"]
     end
 
     subgraph Backends["LLM Backends"]
         direction LR
-        BA["Backend A<br/>vLLM (Mistral-7B)<br/>Self-hosted on Inferentia<br/>supports_tools: NO<br/>cost: $0 (infra only)"]
-        BB["Backend B<br/>Bedrock (Claude Haiku 4.5)<br/>Managed<br/>supports_tools: YES<br/>cost: ~$0.25/1M tokens"]
+        BA["workshop-llm<br/>vLLM (Mistral-7B)<br/>Self-hosted on Inferentia<br/>cost: $0 (infra only)"]
+        BB["workshop-llm-tools<br/>Bedrock (Claude Haiku 4.5)<br/>Managed<br/>cost: ~$0.25/1M tokens"]
     end
 
-    WEB -->|chat request| ROUTER
-    AGT -->|request with tools| ROUTER
-    ROUTER -->|"no tools → Backend A"| BA
-    ROUTER -->|"tools detected → Backend B"| BB
+    WEB -->|"model: workshop-llm"| ROUTER
+    AGT -->|"model: workshop-llm-tools"| ROUTER
+    ROUTER --> BA
+    ROUTER --> BB
 
     style BA fill:#e8f5e9,stroke:#2e7d32
     style BB fill:#e3f2fd,stroke:#1565c0
@@ -336,9 +336,9 @@ flowchart TB
 ```
 
 :::alert{header="Why an AI Gateway?" type="info"}
-In enterprise environments, you may self-host smaller models for cost-effective basic inference, while routing complex reasoning or tool-use to larger managed models. The AI Gateway pattern gives you:
-- **Single endpoint** for all consumers (WebUI, agents, APIs)
-- **Intelligent routing** based on request capabilities (tool-calling, context length, etc.)
+In enterprise environments, you typically self-host smaller models for cost-effective basic inference and route complex agentic workloads to larger, more capable models. The AI Gateway pattern gives you:
+- **Single service endpoint** for all consumers — one DNS name, multiple model backends
+- **Model-per-workload routing** — consumers pick the right model for the job
 - **Fallback and retry** across multiple backends
 - **Cost tracking** and per-model usage visibility
 
@@ -354,30 +354,23 @@ cat /home/participant/environment/eks/genai/litellm-config.yaml
 :::code[]{language=yaml showLineNumbers=true showCopyAction=false}
 # litellm-config.yaml — AI Gateway routing configuration
 model_list:
-  - model_name: "workshop-llm"
+  - model_name: "workshop-llm"                                          # ← OpenWebUI uses this
     litellm_params:
       model: "openai/mistral-7b-neuron"
       api_base: "http://vllm-mistral7b-service.default.svc.cluster.local/v1"
       api_key: "not-needed"
-    model_info:
-      supports_function_calling: false      # ← Mistral-7B: chat only
 
-  - model_name: "workshop-llm"
+  - model_name: "workshop-llm-tools"                                    # ← Agents use this
     litellm_params:
       model: "bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0"
-    model_info:
-      supports_function_calling: true       # ← Haiku 4.5: tool-calling capable
-
-router_settings:
-  enable_pre_call_checks: true              # ← Inspect request → route to capable backend
 :::
 
 :::alert{header="How routing works" type="info"}
-When `enable_pre_call_checks` is enabled, LiteLLM inspects each incoming request:
-- If the request contains `tools` (function schemas) → only backends with `supports_function_calling: true` are eligible
-- If the request is plain chat → any backend can serve it (prefers the first one listed)
+Each model name maps to a specific backend:
+- Requests for `workshop-llm` → routed to the self-hosted vLLM (Mistral-7B on Inferentia)
+- Requests for `workshop-llm-tools` → routed to Amazon Bedrock (Claude Haiku 4.5)
 
-This means OpenWebUI chat goes to your self-hosted Mistral-7B, while AI agents with tools automatically route to Bedrock — all through the same endpoint.
+OpenWebUI is configured to request `workshop-llm`, so chat stays on your self-hosted model at zero API cost. AI agents request `workshop-llm-tools` because tool-calling requires a model with strong structured-output capability. Both go through the same gateway endpoint (`litellm-service:4000`).
 :::
 
 2. Deploy the LiteLLM ConfigMap:

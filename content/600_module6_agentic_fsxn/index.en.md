@@ -27,11 +27,11 @@ As organizations deploy autonomous AI agents that can read, analyze, and act on 
 flowchart TB
     subgraph GW_LAYER["LiteLLM AI Gateway"]
         direction LR
-        GW["Intelligent Routing\nenable_pre_call_checks: true"]
-        LLM["vLLM Mistral-7B\n(plain chat)"]
-        BR["Bedrock Haiku 4.5\n(tool-calling)"]
-        GW -->|no tools| LLM
-        GW -->|tools detected| BR
+        GW["Model Router"]
+        LLM["workshop-llm\nvLLM Mistral-7B\n(OpenWebUI chat)"]
+        BR["workshop-llm-tools\nBedrock Haiku 4.5\n(Agent tool-calling)"]
+        GW --> LLM
+        GW --> BR
     end
 
     subgraph EKS["EKS Cluster — Strands AI Agents"]
