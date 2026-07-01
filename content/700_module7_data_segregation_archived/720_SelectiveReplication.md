@@ -4,6 +4,10 @@ weight : 720
 # hidden : true
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ## Overview
 
 In this section you will establish **SnapMirror replication** between the on-prem simulator and your cloud FSx for ONTAP file system. The critical point: you will replicate **only** the Finance and Healthcare volumes — the Retail volume stays on-prem, demonstrating that you control exactly which data subsets move to the cloud.
@@ -12,6 +16,10 @@ This is how enterprises manage petabyte-scale data: instead of moving everything
 
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ##### Step 1: Establish Cluster Peering Between File Systems
 
 SnapMirror requires a trust relationship (cluster peering) between the source and destination ONTAP systems.
@@ -270,6 +278,10 @@ This selective approach saves ~93% in cross-region data transfer costs compared 
 
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ### Summary
 
 You have established SnapMirror replication between the on-prem simulator and your cloud FSx for ONTAP file system, selectively replicating only the data volumes required by your cloud-deployed models. In the next section, you will deploy two different AI models, each with access restricted to only its designated data volume.

@@ -4,6 +4,10 @@ weight : 710
 # hidden : true
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ## Overview
 
 In this section you will simulate an on-premises data center by creating isolated data volumes on a secondary FSx for NetApp ONTAP file system. In a real-world scenario, this would be your customer's on-premises NetApp ONTAP system holding petabytes of data across different business domains.
@@ -19,6 +23,10 @@ In production, the "on-prem" system would be a physical NetApp ONTAP cluster in 
 
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ##### Step 1: Set Environment Variables for the On-Prem Simulator
 
 The workshop CloudFormation stack has provisioned a secondary FSx for ONTAP file system to act as our on-premises simulator. Let's retrieve its details.
@@ -189,6 +197,10 @@ In a real-world scenario, these volumes would contain terabytes or petabytes of 
 
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ### Summary
 
 You have successfully simulated an on-premises data environment with three isolated business domain volumes. In the next section, you will use SnapMirror to selectively replicate only the Finance and Healthcare volumes to the cloud — the Retail data will intentionally remain "on-prem" to demonstrate selective data movement.

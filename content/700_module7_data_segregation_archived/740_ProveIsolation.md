@@ -4,6 +4,10 @@ weight : 740
 # hidden : true
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ## Overview
 
 Security claims are only meaningful when tested. In this section you will attempt to **break** the data isolation from multiple angles and observe each attempt being denied. This "break it to prove it" approach demonstrates defense-in-depth:
@@ -16,6 +20,10 @@ Each layer independently prevents unauthorized access, providing multiple safegu
 
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ##### Test 1: Attempt Cross-Namespace PVC Access (Kubernetes Layer)
 
 Try to create a pod in the `model-finance` namespace that references the healthcare PVC. Kubernetes will deny this.
@@ -244,6 +252,10 @@ yes
 
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ## Isolation Summary
 
 | Layer | Test | Result | Enforcement |
@@ -264,6 +276,10 @@ This layered approach is essential for enterprise data governance compliance (HI
 
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ##### Clean Up Test Resources
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
@@ -274,6 +290,10 @@ kubectl delete pod direct-nfs-attempt -n model-finance --ignore-not-found
 
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ### Summary
 
 You have proven that data isolation between models is enforced at **four independent layers**: Kubernetes namespace scoping, ONTAP storage export policies, Kubernetes NetworkPolicies, and RBAC. A breach of any single layer does not compromise the isolation — all four must be bypassed simultaneously to access another model's data.

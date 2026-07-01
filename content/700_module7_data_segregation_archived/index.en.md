@@ -4,6 +4,10 @@ weight : 700
 # hidden : true
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ## Module Overview
 
 In enterprise environments, customers often have **petabytes of data on-premises** and need to deploy **multiple AI models** in the cloud — each with access to only a **specific subset** of that data. This module demonstrates how to achieve secure, model-level data segregation by replicating data from an on-premises NetApp ONTAP system to AWS using Amazon FSx for NetApp ONTAP's native SnapMirror replication.
@@ -25,6 +29,10 @@ This pattern addresses a critical enterprise requirement: **data governance at t
 
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ## Architecture
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
@@ -59,6 +67,10 @@ CUSTOMER ON-PREMISES                             AWS CLOUD
 
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ::::expand{header="Click here to learn more about SnapMirror and cross-region data movement"}
 
 #### NetApp SnapMirror for On-Premises to Cloud Replication

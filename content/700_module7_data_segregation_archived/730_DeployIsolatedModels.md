@@ -4,6 +4,10 @@ weight : 730
 # hidden : true
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ## Overview
 
 In this section you will deploy **two different AI models** in separate Kubernetes namespaces, each with access to only its designated data volume. This demonstrates enterprise-grade data segregation where:
@@ -15,6 +19,10 @@ Neither model can access the other's data, enforced at both the Kubernetes layer
 
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ##### Step 1: Create Isolated Namespaces
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
@@ -450,6 +458,10 @@ Neither model has visibility into the other's data, and neither can see the reta
 
 ---
 
+
+:::alert{header="Work in Progress" type="warning"}
+This module is under active development and has not been validated yet. Content and instructions may change.
+:::
 ### Summary
 
 You have deployed two different AI models (Mistral-7B and Phi-2) in isolated Kubernetes namespaces, each with access restricted to only its designated data volume. In the next section, you will **prove** this isolation by attempting cross-model data access and observing it being denied.
