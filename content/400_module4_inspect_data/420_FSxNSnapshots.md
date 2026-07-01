@@ -179,19 +179,21 @@ To confirm that both automatic ONTAP snapshots and the Kubernetes VolumeSnapshot
 
 ::code[kubectl exec -it netshoot-fsxn -- ls -la /work-dir/.snapshot]{language=bash showLineNumbers=false showCopyAction=true}
 
-You should see both the automatic ONTAP snapshots (named `hourly.0`, `daily.0`, etc.) and the Kubernetes VolumeSnapshot (named `snapshot-xxxxxxxx-...`):
+You should see both the automatic ONTAP snapshots (named `hourly.<timestamp>`) and the Kubernetes VolumeSnapshot (named `snapshot-<uuid>`):
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=false}
 Defaulted container "netshoot" out of: netshoot, hf-cli, s5cmd
-total 16
-drwxrwxrwx    4 4294967294 4294967294      4096 Apr 30 07:28 .
-drwxrwxrwx    3 4294967294 4294967294      4096 Apr 30 07:16 ..
-drwxrwxrwx    3 4294967294 4294967294      4096 Apr 30 07:16 hourly.0
-drwxrwxrwx    3 4294967294 4294967294      4096 Apr 30 07:16 snapshot-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+total 24K
+drwxrwxrwx    6 4294967294 4294967294    4.0K Jul  1 07:49 .
+drwxrwxrwx    3 4294967294 4294967294    4.0K Jul  1 05:04 ..
+drwxrwxrwx    3 4294967294 4294967294    4.0K Jul  1 05:04 hourly.2026-07-01_0505
+drwxrwxrwx    3 4294967294 4294967294    4.0K Jul  1 05:04 hourly.2026-07-01_0605
+drwxrwxrwx    3 4294967294 4294967294    4.0K Jul  1 05:04 hourly.2026-07-01_0705
+drwxrwxrwx    3 4294967294 4294967294    4.0K Jul  1 05:04 snapshot-e76743b6-2a87-4c67-86ce-27a4e21eecf8
 :::
 
 :::alert{header="Note" type="info"}
-The `hourly.0` snapshot is created by the ONTAP `default` snapshot policy at 5 minutes past the hour. If you don't see it yet, the first scheduled snapshot hasn't fired. The `snapshot-xxxxxxxx-...` entry is the Kubernetes VolumeSnapshot you created in Step 4. Each snapshot directory contains a full read-only copy of the volume data at that point in time.
+The `hourly.<date>_<time>` snapshots are created by the ONTAP `default` snapshot policy at 5 minutes past each hour. If you don't see them yet, the first scheduled snapshot hasn't fired (wait until the next hour mark). The `snapshot-<uuid>` entry is the Kubernetes VolumeSnapshot you created in Step 4. Each snapshot directory contains a full read-only copy of the volume data at that point in time.
 :::
 
 4. Verify the model data is intact inside a snapshot:
