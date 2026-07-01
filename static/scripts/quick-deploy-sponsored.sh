@@ -283,6 +283,15 @@ echo "FSX_ONTAP_AZ (preferred/active): $FSX_ONTAP_AZ"
 
 envsubst '$FSX_ONTAP_AZ' < mistral-ontap.yaml | kubectl apply -f -
 
+# --- Step 4b: Deploy LiteLLM AI Gateway ---
+echo "Deploying LiteLLM AI Gateway..."
+kubectl apply -f "$EKS_GENAI_DIR/litellm-config.yaml"
+export AWS_REGION
+envsubst '$AWS_REGION' < "$EKS_GENAI_DIR/litellm-deployment.yaml" | kubectl apply -f -
+
+echo "Waiting for LiteLLM gateway to be ready..."
+kubectl rollout status deployment/litellm-gateway --timeout=120s
+
 # Deploy Open WebUI via Helm (no IP restriction — runs from VSCode IDE)
 helm repo add open-webui https://helm.openwebui.com/ --force-update
 helm repo update
