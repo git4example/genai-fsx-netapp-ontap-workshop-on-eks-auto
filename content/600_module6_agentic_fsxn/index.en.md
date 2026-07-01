@@ -24,31 +24,34 @@ As organizations deploy autonomous AI agents that can read, analyze, and act on 
 ## Architecture
 
 ```mermaid
-flowchart TD
-    subgraph EKS["EKS Cluster"]
-        GW["LiteLLM AI Gateway\nIntelligent Routing"]
-        LLM["Self-Hosted LLM\n(vLLM - Mistral-7B)\nChat requests"]
-        BR["Amazon Bedrock\n(Claude Haiku 4.5)\nTool-calling requests"]
-        GW -->|plain chat| LLM
+flowchart TB
+    subgraph GW_LAYER["LiteLLM AI Gateway"]
+        direction LR
+        GW["Intelligent Routing\nenable_pre_call_checks: true"]
+        LLM["vLLM Mistral-7B\n(plain chat)"]
+        BR["Bedrock Haiku 4.5\n(tool-calling)"]
+        GW -->|no tools| LLM
         GW -->|tools detected| BR
-
-        FA["Finance Agent\n(Strands SDK)\nUID: 1001"]
-        IA["IT Ops Agent\n(Strands SDK)\nUID: 1002"]
-        MA["Malicious Agent\n(Strands SDK)\nUID: 1099"]
-        FA -->|API calls| GW
-        IA -->|API calls| GW
-        MA -->|API calls| GW
     end
 
-    subgraph FSxN["FSx for NetApp ONTAP"]
-        FV["finance_agent_data\n\nOwner: UID 1001 | Perms: 0750"]
-        IV["itops_agent_data\n\nOwner: UID 1002 | Perms: 0750"]
-        BL["BLOCKED\n\nUID 1099 ≠ owner\nPermission Denied"]
+    subgraph EKS["EKS Cluster — Strands AI Agents"]
+        direction LR
+        FA["Finance Agent\nUID: 1001"]
+        IA["IT Ops Agent\nUID: 1002"]
+        MA["Malicious Agent\nUID: 1099"]
     end
 
-    FA -->|"READ"| FV
-    IA -->|"READ"| IV
-    MA -.-x|"DENIED"| BL
+    subgraph FSxN["FSx for NetApp ONTAP — Volume-Level Isolation"]
+        direction LR
+        FV["finance_agent_data\nOwner: UID 1001\nPerms: 0750"]
+        IV["itops_agent_data\nOwner: UID 1002\nPerms: 0750"]
+        BL["BLOCKED\nUID 1099 ≠ owner\nPermission Denied"]
+    end
+
+    FA & IA & MA -->|API calls| GW
+    FA -->|"READ ✓"| FV
+    IA -->|"READ ✓"| IV
+    MA -.-x|"DENIED ✗"| BL
 
     style FA fill:#c8e6c9,stroke:#2e7d32
     style IA fill:#bbdefb,stroke:#1565c0
