@@ -25,6 +25,8 @@ def list_files(directory: str = "") -> str:
     target = os.path.join(DATA_DIR, directory)
     try:
         entries = os.listdir(target)
+        if not entries:
+            return f"EMPTY: The directory /{directory or '.'} contains no files or subdirectories. You have no data available."
         return f"Contents of /{directory or '.'}:\n" + "\n".join(
             f"  {'[DIR] ' if os.path.isdir(os.path.join(target, e)) else '      '}{e}"
             for e in sorted(entries)
@@ -94,15 +96,21 @@ Use your tools to:
 - search_documents: Search for keywords across all documents
 
 Always use your tools to access data. If you get ACCESS DENIED errors, report them clearly — you are not authorized to access that data.
-Do NOT make up or hallucinate data. Only report what your tools return."""
+If the data directory is empty, report that clearly — you have no data available.
+Do NOT make up or hallucinate data. Only report what your tools return.
+Keep responses concise — report the tool results directly without explaining what you would do next."""
 )
 
 
 if __name__ == "__main__":
     import sys
+    import io
     if len(sys.argv) > 1:
         query = " ".join(sys.argv[1:])
+        old_stdout = sys.stdout
+        sys.stdout = io.StringIO()
         response = agent(query)
+        sys.stdout = old_stdout
         print(response)
     else:
         print(f"Agent ready: {AGENT_ROLE}")
