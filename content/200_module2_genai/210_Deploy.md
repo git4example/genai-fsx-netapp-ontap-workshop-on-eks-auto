@@ -307,6 +307,34 @@ The gateway exposes a single OpenAI-compatible endpoint (`workshop-llm`) and int
 
 This routing happens **automatically** — the gateway inspects the incoming request and decides where to send it. Applications don't need to be aware of which backend serves them.
 
+```mermaid
+flowchart TB
+    subgraph Consumers["Consumers (same endpoint)"]
+        WEB["OpenWebUI<br/>(plain chat)"]
+        AGT["Strands Agents<br/>(tool-calling)"]
+    end
+
+    subgraph GW["LiteLLM AI Gateway — model: workshop-llm"]
+        direction LR
+        ROUTER["Router<br/>enable_pre_call_checks: true"]
+    end
+
+    subgraph Backends["LLM Backends"]
+        direction LR
+        BA["Backend A<br/>vLLM (Mistral-7B)<br/>Self-hosted on Inferentia<br/>supports_tools: NO<br/>cost: $0 (infra only)"]
+        BB["Backend B<br/>Bedrock (Claude Haiku 4.5)<br/>Managed<br/>supports_tools: YES<br/>cost: ~$0.25/1M tokens"]
+    end
+
+    WEB -->|chat request| ROUTER
+    AGT -->|request with tools| ROUTER
+    ROUTER -->|"no tools → Backend A"| BA
+    ROUTER -->|"tools detected → Backend B"| BB
+
+    style BA fill:#e8f5e9,stroke:#2e7d32
+    style BB fill:#e3f2fd,stroke:#1565c0
+    style ROUTER fill:#fff3e0,stroke:#e65100
+```
+
 :::alert{header="Why an AI Gateway?" type="info"}
 In enterprise environments, you may self-host smaller models for cost-effective basic inference, while routing complex reasoning or tool-use to larger managed models. The AI Gateway pattern gives you:
 - **Single endpoint** for all consumers (WebUI, agents, APIs)
