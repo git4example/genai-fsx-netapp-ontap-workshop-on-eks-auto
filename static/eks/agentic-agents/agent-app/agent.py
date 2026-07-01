@@ -8,7 +8,7 @@ model = OpenAIModel(
         "base_url": os.environ.get("LLM_ENDPOINT", "http://litellm-service.default.svc.cluster.local:4000/v1"),
         "api_key": os.environ.get("LLM_API_KEY", "not-needed"),
     },
-    model_id=os.environ.get("LLM_MODEL_ID", "workshop-llm"),
+    model_id=os.environ.get("LLM_MODEL_ID", "workshop-llm-tools"),
 )
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")

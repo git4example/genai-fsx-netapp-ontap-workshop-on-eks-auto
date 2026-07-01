@@ -32,7 +32,7 @@ spec:
         - name: LLM_ENDPOINT
           value: "http://litellm-service.default.svc.cluster.local:4000/v1"
         - name: LLM_MODEL_ID
-          value: "workshop-llm"
+          value: "workshop-llm-tools"
         - name: LLM_API_KEY
           value: "not-needed"
         volumeMounts:

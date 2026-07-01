@@ -11,14 +11,7 @@ data:
           model: "openai/mistral-7b-neuron"
           api_base: "http://vllm-mistral7b-service.default.svc.cluster.local/v1"
           api_key: "not-needed"
-        model_info:
-          supports_function_calling: false
 
-      - model_name: "workshop-llm"
+      - model_name: "workshop-llm-tools"
         litellm_params:
           model: "bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0"
-        model_info:
-          supports_function_calling: true
-
-    router_settings:
-      enable_pre_call_checks: true
