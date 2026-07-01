@@ -147,7 +147,7 @@ cd /home/participant/environment/eks/agentic-agents
 cat finance-agent-pvc.yaml
 :::
 
-:::code[]{language=yaml showLineNumbers=true showCopyAction=false highlightLines=["6-8"]}
+```yaml {linenos=true hl_lines=["6-8"]}
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
@@ -163,7 +163,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
-:::
+```
 
 The key annotations:
 - `trident.netapp.io/importVolume` — The exact ONTAP volume name to import
