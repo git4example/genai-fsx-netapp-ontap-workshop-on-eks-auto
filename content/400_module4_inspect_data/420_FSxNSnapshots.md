@@ -198,10 +198,6 @@ The `hourly.0` snapshot is created by the ONTAP `default` snapshot policy at 5 m
 
 ::code[kubectl exec -it netshoot-fsxn -- sh -c 'ls /work-dir/.snapshot/snapshot-*/Mistral-7B-Instruct-v0.3/']{language=bash showLineNumbers=false showCopyAction=true}
 
-5. Clean up the utility pod when done:
-
-::code[kubectl delete pod netshoot-fsxn]{language=bash showLineNumbers=false showCopyAction=true}
-
 ##### Step 6: Create a PVC from the snapshot (clone)
 
 One of the most powerful features of VolumeSnapshots is the ability to create a new PVC from a snapshot. This creates a **space-efficient clone** of the data — ideal for experimentation, A/B testing, or creating isolated environments.
@@ -268,14 +264,9 @@ You should see `SnapshotPolicy: default`, confirming that automatic snapshots ar
 
 ##### Step 8: View automatic snapshots from within a pod
 
-Each ONTAP snapshot is accessible through a hidden `.snapshot` directory at the root of the volume. Redeploy the netshoot utility pod to inspect the snapshots:
+Each ONTAP snapshot is accessible through a hidden `.snapshot` directory at the root of the volume. Use the `netshoot-fsxn` pod (deployed in Step 5) to inspect:
 
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-cd /home/participant/environment/eks/FSxONTAP
-kubectl apply -f netshoot-fsxn.yaml
-kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=120s
-kubectl exec -it netshoot-fsxn -- ls /work-dir/.snapshot/
-:::
+::code[kubectl exec -it netshoot-fsxn -- ls /work-dir/.snapshot/]{language=bash showLineNumbers=false showCopyAction=true}
 
 :::alert{header="Important — Timing of automatic snapshots" type="warning"}
 The `default` ONTAP snapshot policy creates the first `hourly.0` snapshot at **5 minutes past the hour**. If you are running this module within the same hour that the volume was created, the automatic snapshot may not have fired yet. In that case, you will only see the on-demand Kubernetes VolumeSnapshot (created in Step 4) in the `.snapshot` directory.
@@ -336,6 +327,14 @@ aws fsx update-volume --volume-id $VOLUME_ID \
 :::alert{header="Note" type="info"}
 Modifying a Trident-managed volume's snapshot policy via the FSx API is safe and does not interfere with Trident's operation. However, the preferred approach is to configure the snapshot policy in the Trident backend configuration so that all new volumes are provisioned with the correct policy from the start.
 :::
+
+---
+
+##### Clean up
+
+Delete the utility pod now that you're done with the snapshot exercises:
+
+::code[kubectl delete pod netshoot-fsxn]{language=bash showLineNumbers=false showCopyAction=true}
 
 ---
 
