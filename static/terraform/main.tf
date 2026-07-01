@@ -286,10 +286,10 @@ module "eks_blueprints_addons" {
 # Grafana Admin credentials resources
 # Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
 #---------------------------------------------------------------
-data "aws_secretsmanager_secret_version" "admin_password_version" {
-  secret_id  = aws_secretsmanager_secret.grafana.id
-  depends_on = [aws_secretsmanager_secret_version.grafana]
-}
+# data "aws_secretsmanager_secret_version" "admin_password_version" {
+#   secret_id  = aws_secretsmanager_secret.grafana.id
+#   depends_on = [aws_secretsmanager_secret_version.grafana]
+# }
 
 resource "random_password" "grafana" {
   length           = 16
