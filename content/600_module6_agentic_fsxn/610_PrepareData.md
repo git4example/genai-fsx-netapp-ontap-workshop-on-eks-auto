@@ -147,15 +147,15 @@ cd /home/participant/environment/eks/agentic-agents
 cat finance-agent-pvc.yaml
 :::
 
-```yaml {linenos=true hl_lines=["6-8"]}
+:::code[]{language=yaml showLineNumbers=true showCopyAction=false}
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: finance-agent-data-pvc
   namespace: agent-finance
   annotations:
-    trident.netapp.io/importVolume: "finance_agent_data"
-    trident.netapp.io/importBackend: "fsx-ontap-nas"
+    trident.netapp.io/importVolume: "finance_agent_data"   # <<<< Import this ONTAP volume
+    trident.netapp.io/importBackend: "fsx-ontap-nas"       # <<<< From this Trident backend
 spec:
   accessModes:
     - ReadWriteMany
@@ -163,7 +163,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
-```
+:::
 
 The key annotations:
 - `trident.netapp.io/importVolume` — The exact ONTAP volume name to import
