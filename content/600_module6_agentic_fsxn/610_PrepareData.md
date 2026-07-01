@@ -147,7 +147,7 @@ cd /home/participant/environment/eks/agentic-agents
 cat finance-agent-pvc.yaml
 :::
 
-:::code[]{language=yaml showLineNumbers=true showCopyAction=false}
+:::code[]{language=yaml showLineNumbers=true showCopyAction=false highlightLines=["6-8"]}
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
