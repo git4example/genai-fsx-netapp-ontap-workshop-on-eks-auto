@@ -77,7 +77,7 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snaps
 
 4. Confirm the snapshot-controller pod is Running:
 
-::code[kubectl -n kube-system get pods -l app=snapshot-controller]{language=bash showLineNumbers=false showCopyAction=true}
+::code[kubectl -n kube-system get pods -l app.kubernetes.io/name=snapshot-controller]{language=bash showLineNumbers=false showCopyAction=true}
 
 You should see one pod with `1/1 Running`:
 
