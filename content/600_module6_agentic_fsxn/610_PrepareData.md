@@ -109,13 +109,13 @@ Expected output:
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
 -----------------------------------------
-|            DescribeVolumes            |
-+--------------------+------------------+
-|        Name        |     Status       |
-+--------------------+------------------+
-|  finance_agent_data|    AVAILABLE     |
-|  itops_agent_data  |    AVAILABLE     |
-+--------------------+------------------+
+|         DescribeVolumes         |
++---------------------+-----------+
+|        Name         |  Status   |
++---------------------+-----------+
+|  finance_agent_data |  CREATED  |
+|  itops_agent_data   |  CREATED  |
++---------------------+-----------+
 :::
 
 ##### Step 3: Create Namespaces and Import Volumes into Kubernetes via Trident
