@@ -262,11 +262,7 @@ VOLUME_ID=$(aws fsx describe-volumes --filters Name=file-system-id,Values=$FSX_I
 aws fsx describe-volumes --volume-ids $VOLUME_ID --query "Volumes[0].OntapConfiguration.{SnapshotPolicy:SnapshotPolicy,SnapshotReserve:SnapshotReserveSize}" --output table
 :::
 
-You should see `SnapshotPolicy: default`, confirming that automatic snapshots are active.
-
-:::alert{header="Automatic snapshots in the .snapshot directory" type="info"}
-You already saw the automatic snapshots in Step 5 — the `hourly.*` entries alongside your on-demand `snapshot-*` entry. The `default` ONTAP snapshot policy creates hourly snapshots at 5 minutes past the hour. If you ran Step 5 within the first hour of the volume's life, you may have only seen the on-demand snapshot. As more time passes, additional `hourly.*` entries accumulate automatically.
-:::
+You should see `SnapshotPolicy: default`, confirming that automatic snapshots are active. These are the same `hourly.*` snapshots you observed in the `.snapshot` directory in Step 5.
 
 ---
 
