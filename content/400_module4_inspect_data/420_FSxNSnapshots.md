@@ -262,16 +262,8 @@ aws fsx describe-volumes --volume-ids $VOLUME_ID --query "Volumes[0].OntapConfig
 
 You should see `SnapshotPolicy: default`, confirming that automatic snapshots are active.
 
-##### Step 8: View automatic snapshots from within a pod
-
-Each ONTAP snapshot is accessible through a hidden `.snapshot` directory at the root of the volume. Use the `netshoot-fsxn` pod (deployed in Step 5) to inspect:
-
-::code[kubectl exec -it netshoot-fsxn -- ls /work-dir/.snapshot/]{language=bash showLineNumbers=false showCopyAction=true}
-
-:::alert{header="Important — Timing of automatic snapshots" type="warning"}
-The `default` ONTAP snapshot policy creates the first `hourly.0` snapshot at **5 minutes past the hour**. If you are running this module within the same hour that the volume was created, the automatic snapshot may not have fired yet. In that case, you will only see the on-demand Kubernetes VolumeSnapshot (created in Step 4) in the `.snapshot` directory.
-
-This is expected behavior. The on-demand snapshot you created earlier is always visible immediately. The automatic `hourly.0` snapshot will appear after the next hour mark.
+:::alert{header="Automatic snapshots in the .snapshot directory" type="info"}
+You already saw the automatic snapshots in Step 5 — the `hourly.*` entries alongside your on-demand `snapshot-*` entry. The `default` ONTAP snapshot policy creates hourly snapshots at 5 minutes past the hour. If you ran Step 5 within the first hour of the volume's life, you may have only seen the on-demand snapshot. As more time passes, additional `hourly.*` entries accumulate automatically.
 :::
 
 ---
