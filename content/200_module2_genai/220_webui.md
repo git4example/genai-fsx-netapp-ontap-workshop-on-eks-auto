@@ -71,9 +71,13 @@ Make sure your URL is "**http:**//<-URL-ADDRESS->" and doesn't start with "**htt
 :::
 
 
-5. In the Open WebUI interface you will see a drop down in the top menu bar, used to select your model. Select the Mistral-7B model from the drop down, and start chatting with your newly deployed Generative AI chat application.
+5. In the Open WebUI interface you will see a drop down in the top menu bar, used to select your model. Select **workshop-llm** from the drop down, and start chatting with your newly deployed Generative AI chat application.
 
-If you don't see the Mistral-7B model, please refresh the WebUI page until you can see the model in the top drop-down selection menu. (Remember from the previous lab module, that the vLLM Pod and the model load into memory will take approx. 7 minutes)
+:::alert{header="Why 'workshop-llm'?" type="info"}
+The model name shown in OpenWebUI is the **virtual model name** defined in the LiteLLM AI Gateway config. Behind the scenes, your chat requests are routed to the self-hosted Mistral-7B model on Inferentia. The gateway abstracts the backend — consumers see a logical model name, not the physical deployment details. This is a common enterprise pattern for managing multiple LLM backends through a single gateway.
+:::
+
+If you don't see the model in the dropdown, please refresh the WebUI page. (Remember from the previous lab module, that the vLLM Pod and the model load into memory will take approx. 7 minutes)
 
 ![Open WebUI](/static/images/OpenWebUI.png)
 
