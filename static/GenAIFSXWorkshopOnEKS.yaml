@@ -1443,7 +1443,6 @@ Resources:
             VolumeSize: !Ref InstanceVolumeSize
             VolumeType: gp3
             DeleteOnTermination: true
-            Encrypted: true
       Monitoring: true
       SecurityGroupIds:
         - !Ref SecurityGroup
