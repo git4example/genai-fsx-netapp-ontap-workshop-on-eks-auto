@@ -529,9 +529,9 @@ resource "aws_fsx_ontap_file_system" "fsx_ontap" {
 }
 
 resource "aws_fsx_ontap_storage_virtual_machine" "fsx_ontap_svm" {
-  file_system_id             = aws_fsx_ontap_file_system.fsx_ontap.id
-  name                       = "${local.name}-svm"
-  svm_admin_password         = random_password.svm_password.result
+  file_system_id     = aws_fsx_ontap_file_system.fsx_ontap.id
+  name               = "${local.name}-svm"
+  svm_admin_password = random_password.svm_password.result
 
   tags = merge(local.tags, {
     Name = "${local.name}-svm"
@@ -579,6 +579,60 @@ resource "kubectl_manifest" "neuron-healthcheck-system-namespace" {
   ]
 }
 
+
+################################################################################
+# LiteLLM AI Gateway — IAM Role for Bedrock access via EKS Pod Identity
+################################################################################
+
+resource "aws_iam_role" "litellm_bedrock" {
+  name = "${local.name}-litellm-bedrock"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com"
+        }
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession"
+        ]
+      }
+    ]
+  })
+
+  tags = local.tags
+}
+
+resource "aws_iam_role_policy" "litellm_bedrock_invoke" {
+  name = "bedrock-invoke"
+  role = aws_iam_role.litellm_bedrock.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_eks_pod_identity_association" "litellm" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "default"
+  service_account = "litellm"
+  role_arn        = aws_iam_role.litellm_bedrock.arn
+
+  depends_on = [module.eks]
+}
 
 ################################################################################
 # Data source for FSx ONTAP subnet AZ lookup
@@ -635,4 +689,9 @@ output "fsx_ontap_az" {
 output "fsx_ontap_route_table_ids" {
   description = "Private route tables that FSx ONTAP injects floating-endpoint routes into. These match the EKS Auto Mode private subnet route tables, so worker pods and the FSx file system share the same routing path."
   value       = module.vpc.private_route_table_ids
+}
+
+output "litellm_role_arn" {
+  description = "IAM role ARN for LiteLLM Pod Identity (Bedrock access)"
+  value       = aws_iam_role.litellm_bedrock.arn
 }

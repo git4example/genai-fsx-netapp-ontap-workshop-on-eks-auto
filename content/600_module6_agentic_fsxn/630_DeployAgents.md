@@ -7,12 +7,18 @@ weight : 630
 
 In this section, you will deploy **three AI agents** built with the [AWS Strands Agents SDK](https://github.com/strands-agents/sdk-python). Each agent:
 
-- Uses the **same self-hosted Mistral-7B LLM** (via the vLLM OpenAI-compatible endpoint from Module 2 — Deploy Generative AI Chat application)
+- Uses the **LiteLLM AI Gateway** (`workshop-llm` model) — which routes tool-calling requests to Amazon Bedrock Claude Haiku 4.5 for reliable structured tool use
 - Has the **same tool capabilities** (list files, read files, search documents)
 - Runs with a specific **UID/GID** that determines which volume's files it can access
 - Mounts FSxN volumes via **Trident-managed PVCs**
 
 The difference: **ONTAP's UNIX permissions** determine which data each agent can actually read — based purely on UID.
+
+:::alert{header="AI Gateway Intelligent Routing" type="info"}
+In Module 2, you deployed the LiteLLM AI Gateway that routes requests based on capabilities. When these agents send requests with **tools** (function schemas), the gateway automatically routes them to **Bedrock Claude Haiku 4.5** — a model with strong tool-calling capability. The agents don't need to know which model serves them; the gateway handles this transparently.
+
+In production with larger self-hosted models (70B+), you could route everything locally. The gateway pattern remains valuable for cost optimization, failover, and routing complex agentic workloads to the most capable available model.
+:::
 
 ---
 
@@ -32,13 +38,13 @@ import glob
 from strands import Agent, tool
 from strands.models.openai import OpenAIModel
 
-# Connect to the self-hosted vLLM endpoint (Mistral-7B)
+# Connect to the LiteLLM AI Gateway — routes tool-calls to Bedrock automatically
 model = OpenAIModel(
     client_args={
-        "base_url": os.environ.get("LLM_ENDPOINT", "http://vllm-mistral7b-service.default.svc.cluster.local/v1"),
-        "api_key": "not-needed"
+        "base_url": os.environ.get("LLM_ENDPOINT", "http://litellm-service.default.svc.cluster.local:4000/v1"),
+        "api_key": os.environ.get("LLM_API_KEY", "sk-workshop-key"),
     },
-    model_id="mistral-7b-neuron"
+    model_id=os.environ.get("LLM_MODEL_ID", "workshop-llm"),
 )
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
@@ -114,7 +120,9 @@ RUN pip install --no-cache-dir strands-agents strands-agents-tools openai
 COPY agent.py .
 ENV DATA_DIR=/data
 ENV AGENT_ROLE="general assistant"
-ENV LLM_ENDPOINT="http://vllm-mistral7b-service.default.svc.cluster.local/v1"
+ENV LLM_ENDPOINT="http://litellm-service.default.svc.cluster.local:4000/v1"
+ENV LLM_MODEL_ID="workshop-llm"
+ENV LLM_API_KEY="sk-workshop-key"
 ENTRYPOINT ["python", "agent.py"]
 :::
 
@@ -159,7 +167,11 @@ spec:
         - name: DATA_DIR
           value: "/data"
         - name: LLM_ENDPOINT
-          value: "http://vllm-mistral7b-service.default.svc.cluster.local/v1"
+          value: "http://litellm-service.default.svc.cluster.local:4000/v1"
+        - name: LLM_MODEL_ID
+          value: "workshop-llm"
+        - name: LLM_API_KEY
+          value: "sk-workshop-key"
         volumeMounts:
         - name: finance-data
           mountPath: "/data"
@@ -223,7 +235,7 @@ malicious-agent-8b2c6f4a9-m3k7j   1/1     Running   0          38s
 :::
 
 :::alert{header="Key Differences Between Agents" type="info"}
-All three agents use the **same container image** and the **same LLM endpoint**. The only differences:
+All three agents use the **same container image** and the **same LiteLLM AI Gateway endpoint**. The only differences:
 
 | Agent | UID | Volume Mounted | Can Read? |
 |-------|-----|---------------|-----------|

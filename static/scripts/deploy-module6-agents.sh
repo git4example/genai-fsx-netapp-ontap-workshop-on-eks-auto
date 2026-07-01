@@ -52,6 +52,11 @@ if ! kubectl get svc vllm-mistral7b-service >/dev/null 2>&1; then
     exit 1
 fi
 
+if ! kubectl get svc litellm-service >/dev/null 2>&1; then
+    echo "ERROR: LiteLLM AI Gateway service not found. Complete Module 2 (Step 5) first."
+    exit 1
+fi
+
 echo ""
 echo "============================================================"
 echo "  Step 1: Retrieve FSxN Details"

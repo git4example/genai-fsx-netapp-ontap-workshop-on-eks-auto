@@ -7,7 +7,7 @@ weight : 220
 In this section you will deploy the Open WebUI (chatbot UI client), and run through example prompts and view Generative-AI output.
 
 ### How to consume an Inference endpoint from an Inference engine.
-A chatbot UI can interact with an Inference engine by accessing the Inference engine endpoint. The **"Open WebUI"** application is designed to consume the OpenAI-compatible endpoint provided by the vLLM Inference engine that is serving the Mistral-7B model. The Open WebUI application allows users to interact with the LLM model through a chat-based interface. To use the Open WebUI application, you need to  deploy the application container and define the inference endpoint, then connect to the Open WebUI URL and start chatting with the LLM model. The WebUI application will handle the communication with the vLLM that is serving the Mistral-7B LLM model.
+A chatbot UI can interact with an Inference engine by accessing the Inference engine endpoint. The **"Open WebUI"** application is designed to consume any OpenAI-compatible endpoint. In this workshop, Open WebUI connects to the **LiteLLM AI Gateway** deployed in the previous step, which intelligently routes chat requests to the self-hosted Mistral-7B model on Inferentia. The Open WebUI application allows users to interact with the LLM model through a chat-based interface. To use the Open WebUI application, you need to deploy the application container and configure it to point at the AI Gateway endpoint, then connect to the Open WebUI URL and start chatting with the LLM model.
 
 <br></br>
 

@@ -297,5 +297,99 @@ In the EKS console Compute tab, you should see the `inf2.xlarge` node listed und
 9. Click on the **Node name**, where it will show you the capacity allocation and Pod details relating to the inf2.xlarge compute node
 
 
+##### Step 5: Deploy the LiteLLM AI Gateway
+
+In production environments, it is best practice to front your LLM backends with an **AI Gateway** — a proxy layer that provides unified routing, observability, cost management, and intelligent model selection. In this workshop, we deploy [LiteLLM](https://github.com/BerriAI/litellm) as our AI Gateway.
+
+The gateway exposes a single OpenAI-compatible endpoint (`workshop-llm`) and intelligently routes requests:
+- **Plain chat** (no tools) → self-hosted Mistral-7B on Inferentia (fast, zero API cost)
+- **Tool-calling** (agentic workloads) → Amazon Bedrock Claude Haiku 4.5 (reliable structured output)
+
+This routing happens **automatically** — the gateway inspects the incoming request and decides where to send it. Applications don't need to be aware of which backend serves them.
+
+:::alert{header="Why an AI Gateway?" type="info"}
+In enterprise environments, you may self-host smaller models for cost-effective basic inference, while routing complex reasoning or tool-use to larger managed models. The AI Gateway pattern gives you:
+- **Single endpoint** for all consumers (WebUI, agents, APIs)
+- **Intelligent routing** based on request capabilities (tool-calling, context length, etc.)
+- **Fallback and retry** across multiple backends
+- **Cost tracking** and per-model usage visibility
+
+With larger self-hosted models (70B+), you could route everything locally. The gateway remains valuable for failover, cost optimization, and multi-model orchestration.
+:::
+
+1. Review the LiteLLM configuration:
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+cat /home/participant/environment/eks/genai/litellm-config.yaml
+:::
+
+:::code[]{language=yaml showLineNumbers=true showCopyAction=false}
+# litellm-config.yaml — AI Gateway routing configuration
+model_list:
+  - model_name: "workshop-llm"
+    litellm_params:
+      model: "openai/mistral-7b-neuron"
+      api_base: "http://vllm-mistral7b-service.default.svc.cluster.local/v1"
+      api_key: "not-needed"
+    model_info:
+      supports_function_calling: false      # ← Mistral-7B: chat only
+
+  - model_name: "workshop-llm"
+    litellm_params:
+      model: "bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0"
+    model_info:
+      supports_function_calling: true       # ← Haiku 4.5: tool-calling capable
+
+router_settings:
+  enable_pre_call_checks: true              # ← Inspect request → route to capable backend
+:::
+
+:::alert{header="How routing works" type="info"}
+When `enable_pre_call_checks` is enabled, LiteLLM inspects each incoming request:
+- If the request contains `tools` (function schemas) → only backends with `supports_function_calling: true` are eligible
+- If the request is plain chat → any backend can serve it (prefers the first one listed)
+
+This means OpenWebUI chat goes to your self-hosted Mistral-7B, while AI agents with tools automatically route to Bedrock — all through the same endpoint.
+:::
+
+2. Deploy the LiteLLM ConfigMap:
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+kubectl apply -f /home/participant/environment/eks/genai/litellm-config.yaml
+:::
+
+3. Deploy the LiteLLM Gateway (ServiceAccount, Deployment, and Service):
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+cd /home/participant/environment/eks/genai
+export AWS_REGION
+envsubst '$AWS_REGION' < litellm-deployment.yaml | kubectl apply -f -
+:::
+
+:::alert{header="Pod Identity for Bedrock Access" type="info"}
+The Terraform that provisioned your cluster also created an **EKS Pod Identity Association** linking the `litellm` ServiceAccount to an IAM role with `bedrock:InvokeModel` permissions. When the LiteLLM pod starts, EKS automatically injects temporary AWS credentials — no access keys or IRSA annotations needed.
+:::
+
+4. Wait for the LiteLLM gateway to be ready:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl rollout status deployment/litellm-gateway --timeout=120s
+:::
+
+5. Verify the gateway is healthy and can reach both backends:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl get pods -l app=litellm-gateway
+kubectl get svc litellm-service
+:::
+
+:::code{showCopyAction=false showLineNumbers=false language=bash}
+NAME                                READY   STATUS    RESTARTS   AGE
+litellm-gateway-7d4f8b9c7-x2k4m   1/1     Running   0          45s
+
+NAME              TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+litellm-service   ClusterIP   172.20.45.123   <none>        4000/TCP   45s
+:::
+
 ### Summary
-You have now deployed the vLLM Pod. Continue to the next lab section to deploy the WebUI Pod, so you can interact with the Mistral-7B model through the vLLM (model serving and inferencing).
+You have now deployed the vLLM inference engine and the LiteLLM AI Gateway. The gateway provides a single endpoint that routes chat to your self-hosted model and tool-calling to Bedrock. Continue to the next lab section to deploy the WebUI Pod, which will connect through the AI Gateway to interact with the Mistral-7B model.

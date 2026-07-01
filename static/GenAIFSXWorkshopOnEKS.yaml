@@ -1413,6 +1413,25 @@ Resources:
                   - ecr-public:GetRegistryCatalogData
                   - sts:GetServiceBearerToken
                 Resource: '*'
+              # ---------- Bedrock (LiteLLM AI Gateway → Claude Haiku for tool-calling) ----------
+              - Sid: BedrockInvoke
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                  - bedrock:ListFoundationModels
+                  - bedrock:GetFoundationModel
+                Resource: '*'
+              # ---------- EKS Pod Identity (LiteLLM ServiceAccount → Bedrock) ----------
+              - Sid: EKSPodIdentity
+                Effect: Allow
+                Action:
+                  - eks-auth:AssumeRoleForPodIdentity
+                  - eks:CreatePodIdentityAssociation
+                  - eks:DeletePodIdentityAssociation
+                  - eks:DescribePodIdentityAssociation
+                  - eks:ListPodIdentityAssociations
+                Resource: '*'
               # ---------- STS (IRSA, eksctl) ----------
               - Sid: STSAssume
                 Effect: Allow

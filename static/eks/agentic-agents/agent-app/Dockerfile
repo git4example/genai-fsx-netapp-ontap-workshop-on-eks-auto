@@ -8,6 +8,8 @@ COPY agent.py .
 
 ENV DATA_DIR=/data
 ENV AGENT_ROLE="general assistant"
-ENV LLM_ENDPOINT="http://vllm-mistral7b-service.default.svc.cluster.local/v1"
+ENV LLM_ENDPOINT="http://litellm-service.default.svc.cluster.local:4000/v1"
+ENV LLM_MODEL_ID="workshop-llm"
+ENV LLM_API_KEY="sk-workshop-key"
 
 ENTRYPOINT ["python", "agent.py"]

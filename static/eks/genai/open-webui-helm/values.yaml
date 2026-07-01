@@ -28,10 +28,11 @@ websocket:
 persistence:
   enabled: false
 
-# ---- vLLM backend ----
-# Connect to the vllm-mistral7b-service deployed from mistral-ontap.yaml
-openaiBaseApiUrls: 
-  - "http://vllm-mistral7b-service/v1"
+# ---- LiteLLM AI Gateway backend ----
+# Connect via LiteLLM proxy which routes chat to self-hosted vLLM
+# and tool-calling requests to Bedrock Claude Haiku 4.5
+openaiBaseApiUrls:
+  - "http://litellm-service:4000/v1"
 
 # ---- Runtime environment ----
 extraEnvVars:
@@ -39,6 +40,8 @@ extraEnvVars:
     value: "False"
   - name: ENABLE_EVALUATION_ARENA_MODELS
     value: "False"
+  - name: OPENAI_API_KEY
+    value: "sk-workshop-key"
 
 # ---- Resources ----
 resources:

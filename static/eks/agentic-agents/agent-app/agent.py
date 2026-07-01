@@ -5,10 +5,10 @@ from strands.models.openai import OpenAIModel
 
 model = OpenAIModel(
     client_args={
-        "base_url": os.environ.get("LLM_ENDPOINT", "http://vllm-mistral7b-service.default.svc.cluster.local/v1"),
-        "api_key": "not-needed",
+        "base_url": os.environ.get("LLM_ENDPOINT", "http://litellm-service.default.svc.cluster.local:4000/v1"),
+        "api_key": os.environ.get("LLM_API_KEY", "sk-workshop-key"),
     },
-    model_id="mistral-7b-neuron",
+    model_id=os.environ.get("LLM_MODEL_ID", "workshop-llm"),
 )
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")

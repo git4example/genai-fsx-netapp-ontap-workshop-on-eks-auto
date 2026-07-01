@@ -26,14 +26,18 @@ As organizations deploy autonomous AI agents that can read, analyze, and act on 
 ```mermaid
 flowchart TD
     subgraph EKS["EKS Cluster"]
-        LLM["Self-Hosted LLM\n(vLLM - Mistral-7B)\nOpenAI-compatible API"]
-        LLM -->|API calls| FA
-        LLM -->|API calls| IA
-        LLM -->|API calls| MA
+        GW["LiteLLM AI Gateway\nIntelligent Routing"]
+        LLM["Self-Hosted LLM\n(vLLM - Mistral-7B)\nChat requests"]
+        BR["Amazon Bedrock\n(Claude Haiku 4.5)\nTool-calling requests"]
+        GW -->|plain chat| LLM
+        GW -->|tools detected| BR
 
         FA["Finance Agent\n(Strands SDK)\nUID: 1001"]
         IA["IT Ops Agent\n(Strands SDK)\nUID: 1002"]
         MA["Malicious Agent\n(Strands SDK)\nUID: 1099"]
+        FA -->|API calls| GW
+        IA -->|API calls| GW
+        MA -->|API calls| GW
     end
 
     subgraph FSxN["FSx for NetApp ONTAP"]

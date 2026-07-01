@@ -1,0 +1,107 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: litellm
+  namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litellm-gateway
+  namespace: default
+  labels:
+    app: litellm-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: litellm-gateway
+  template:
+    metadata:
+      labels:
+        app: litellm-gateway
+    spec:
+      serviceAccountName: litellm
+      containers:
+        - name: litellm
+          image: ghcr.io/berriai/litellm:main-v1.72.0
+          command: ["litellm", "--config", "/app/config.yaml", "--port", "4000"]
+          ports:
+            - containerPort: 4000
+              protocol: TCP
+          env:
+            - name: AWS_REGION_NAME
+              value: "${AWS_REGION}"
+            - name: AWS_DEFAULT_REGION
+              value: "${AWS_REGION}"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health/liveliness
+              port: 4000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: 4000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: config-volume
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+      volumes:
+        - name: config-volume
+          configMap:
+            name: litellm-config
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                      - c5.2xlarge
+                      - c5d.2xlarge
+                      - c5n.2xlarge
+                      - c6i.2xlarge
+                      - c6id.2xlarge
+                      - c6in.2xlarge
+                      - c7i.2xlarge
+                      - m5.2xlarge
+                      - m5d.2xlarge
+                      - m5zn.2xlarge
+                      - m6i.2xlarge
+                      - m6id.2xlarge
+                      - m6idn.2xlarge
+                      - m6in.2xlarge
+                      - m7i.2xlarge
+                      - r5.2xlarge
+                      - r5b.2xlarge
+                      - r5d.2xlarge
+                      - r5dn.2xlarge
+                      - r5n.2xlarge
+                      - r6id.2xlarge
+                      - r6idn.2xlarge
+                      - r6in.2xlarge
+                      - r7i.2xlarge
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: litellm-service
+  namespace: default
+spec:
+  selector:
+    app: litellm-gateway
+  ports:
+    - protocol: TCP
+      port: 4000
+      targetPort: 4000
+  type: ClusterIP
