@@ -268,10 +268,12 @@ You should see `SnapshotPolicy: default`, confirming that automatic snapshots ar
 
 ##### Step 8: View automatic snapshots from within a pod
 
-Each ONTAP snapshot is accessible through a hidden `.snapshot` directory at the root of the volume. If you still have the `netshoot-fsxn` pod running from Step 5, you can use it. Otherwise, redeploy it.
+Each ONTAP snapshot is accessible through a hidden `.snapshot` directory at the root of the volume. Redeploy the netshoot utility pod to inspect the snapshots:
 
-:::code[]{language=bash showLineNumbers=true showCopyAction=false}
-# From within the netshoot-fsxn pod or any pod with the volume mounted:
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+cd /home/participant/environment/eks/FSxONTAP
+kubectl apply -f netshoot-fsxn.yaml
+kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=120s
 kubectl exec -it netshoot-fsxn -- ls /work-dir/.snapshot/
 :::
 
