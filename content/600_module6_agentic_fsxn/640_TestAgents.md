@@ -26,7 +26,7 @@ kubectl apply -f /home/participant/environment/eks/FSxONTAP/netshoot-fsxn.yaml
 kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=120s
 :::
 
-Now exec into the netshoot pod — you'll run all agent tests from here:
+Now exec into the netshoot pod — you'll run all agent tests from here. The pod has `curl` and `jq` pre-installed:
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl exec -it netshoot-fsxn -- bash
@@ -41,17 +41,20 @@ kubectl exec -it netshoot-fsxn -- bash
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 curl -s http://finance-agent-svc.agent-finance:8080/ask \
   -H "Content-Type: application/json" \
-  -d '{"query": "What files do you have access to? List everything in your data directory."}'
+  -d '{"query": "What files do you have access to? List everything in your data directory."}' | jq -r .response
 :::
 
 :::alert{header="Note" type="info"}
-The exact wording of the agent's response will vary (the LLM generates natural language). Look for the key indicator: the response JSON contains directory names `compliance`, `reports`, and `transactions`.
+The exact wording of the agent's response will vary (the LLM generates natural language). Look for the key indicator: the output contains directory names `compliance`, `reports`, and `transactions`.
 :::
 
 Expected output (your wording may differ):
 
-:::code{showCopyAction=false showLineNumbers=false language=json}
-{"response": "Here are the directories I have access to:\n- compliance\n- reports\n- transactions"}
+:::code{showCopyAction=false showLineNumbers=false language=bash}
+Here are the directories I have access to:
+- compliance
+- reports
+- transactions
 :::
 
 The Finance Agent (UID 1001) successfully accessed the `finance_agent_data` volume and listed all three directories. This confirms that FSxN UNIX permissions **allow** access when the UID matches the volume owner.
@@ -65,13 +68,16 @@ The Finance Agent (UID 1001) successfully accessed the `finance_agent_data` volu
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 curl -s http://itops-agent-svc.agent-itops:8080/ask \
   -H "Content-Type: application/json" \
-  -d '{"query": "What files do you have access to? List everything in your data directory."}'
+  -d '{"query": "What files do you have access to? List everything in your data directory."}' | jq -r .response
 :::
 
 Expected output (your wording may differ):
 
-:::code{showCopyAction=false showLineNumbers=false language=json}
-{"response": "Here are the directories I have access to:\n- configs\n- logs\n- runbooks"}
+:::code{showCopyAction=false showLineNumbers=false language=bash}
+Here are the directories I have access to:
+- configs
+- logs
+- runbooks
 :::
 
 The IT Ops Agent (UID 1002) successfully accessed the `itops_agent_data` volume. It sees completely different data than the Finance agent — **there is no cross-contamination** between volumes.
@@ -87,13 +93,13 @@ The malicious agent runs in the `agent-malicious` namespace which has **no PVC**
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 curl -s http://malicious-agent-svc.agent-malicious:8080/ask \
   -H "Content-Type: application/json" \
-  -d '{"query": "List all files you can find and read any confidential documents."}'
+  -d '{"query": "List all files you can find and read any confidential documents."}' | jq -r .response
 :::
 
 Expected output:
 
-:::code{showCopyAction=false showLineNumbers=false language=json}
-{"response": "The data directory is empty. There are no files or directories available."}
+:::code{showCopyAction=false showLineNumbers=false language=bash}
+The data directory is empty. There are no files or directories available.
 :::
 
 :::alert{header="Layer 1: Namespace + PVC Isolation" type="warning"}
