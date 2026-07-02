@@ -152,7 +152,7 @@ def create_app():
         return {"status": "healthy", "role": AGENT_ROLE, "data_dir": DATA_DIR}
 
     # --- MCP endpoint (Streamable HTTP) ---
-    app.mount("/mcp", mcp_server.streamable_http_app(streamable_http_path="/"))
+    app.mount("/mcp", mcp_server.streamable_http_app())
 
     return app
 
