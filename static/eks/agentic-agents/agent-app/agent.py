@@ -118,11 +118,25 @@ def invoke_agent(query: str) -> str:
 
 # --- Server Mode (FastAPI + MCP) ---
 def create_app():
+    from collections.abc import AsyncIterator
+    from contextlib import asynccontextmanager
     from fastapi import FastAPI
     from fastapi.responses import JSONResponse
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server import MCPServer
 
-    app = FastAPI(title=f"Agent: {AGENT_ROLE}")
+    mcp_server = MCPServer(AGENT_ROLE)
+
+    @mcp_server.tool()
+    def ask_agent(query: str) -> str:
+        """Ask this AI agent a question. The agent will use its tools to access data and provide an answer."""
+        return invoke_agent(query)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        async with mcp_server.session_manager.run():
+            yield
+
+    app = FastAPI(title=f"Agent: {AGENT_ROLE}", lifespan=lifespan)
 
     # --- REST endpoint for simple curl access ---
     @app.post("/ask")
@@ -137,15 +151,8 @@ def create_app():
     async def health():
         return {"status": "healthy", "role": AGENT_ROLE, "data_dir": DATA_DIR}
 
-    # --- MCP endpoint for OpenWebUI integration ---
-    mcp_server = FastMCP(AGENT_ROLE)
-
-    @mcp_server.tool()
-    def ask_agent(query: str) -> str:
-        """Ask this AI agent a question. The agent will use its tools to access data and provide an answer."""
-        return invoke_agent(query)
-
-    app.mount("/mcp", mcp_server.streamable_http_app())
+    # --- MCP endpoint (Streamable HTTP) ---
+    app.mount("/mcp", mcp_server.streamable_http_app(streamable_http_path="/"))
 
     return app
 
