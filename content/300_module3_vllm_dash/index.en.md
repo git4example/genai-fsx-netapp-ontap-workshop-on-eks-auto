@@ -18,17 +18,13 @@ This module guides you through implementing Neuron and LLM inference monitoring,
     - Review Prometheus and Grafana architecture
     - Configure Grafana Operator
     - Deploy Node Exporter for Neuron metrics collection
-<br>
-</br>
+
 
 2. Configuring Neuron Performance Monitoring
     - Configure neuron-monitor metrics collection
     - Create Grafana dashboards for Neuron performance visualization
     - Track NeuronCore utilization, Model inference latency, Memory consumption, Hardware performance metrics
 
-
-<br>
-</br>
 
 3. vLLM Model Monitoring
     - Implement vLLM-specific metrics collection
