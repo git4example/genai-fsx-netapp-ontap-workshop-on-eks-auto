@@ -5,3 +5,15 @@ preview_build
 .terraform.tfstate.lock.info
 terraform.tfstate
 terraform.tfstate.backup
+
+# Local working files — not workshop content
+*.docx
+~$*
+*.log
+commit_msg.txt
+research.md
+validate_cfn.py
+CLOUDTRAIL_IAM_POLICY_GENERATION.md
+VERSION_REFERENCE.md
+TESTING_FEEDBACK_TRACKER.md
+AgentCore_and_AI_Agent_on_Self_Hosted_LLM_demo-*.md
