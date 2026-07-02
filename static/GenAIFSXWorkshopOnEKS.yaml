@@ -212,88 +212,9 @@ Mappings:
       PrefixList: pl-82a045eb
 
 Resources:
-### CloudTrail for IAM Access Analyzer Policy Generation
-  PolicyGenCloudTrailBucket:
-    Type: AWS::S3::Bucket
-    DeletionPolicy: Delete
-    Properties:
-      BucketName: !Sub cloudtrail-policy-gen-${AWS::AccountId}
-      LifecycleConfiguration:
-        Rules:
-          - Id: AutoDelete
-            Status: Enabled
-            ExpirationInDays: 7
-
-  PolicyGenCloudTrailBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref PolicyGenCloudTrailBucket
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AWSCloudTrailAclCheck
-            Effect: Allow
-            Principal:
-              Service: cloudtrail.amazonaws.com
-            Action: s3:GetBucketAcl
-            Resource: !GetAtt PolicyGenCloudTrailBucket.Arn
-            Condition:
-              StringEquals:
-                aws:SourceArn: !Sub arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/workshop-policy-gen
-          - Sid: AWSCloudTrailWrite
-            Effect: Allow
-            Principal:
-              Service: cloudtrail.amazonaws.com
-            Action: s3:PutObject
-            Resource: !Sub ${PolicyGenCloudTrailBucket.Arn}/AWSLogs/${AWS::AccountId}/*
-            Condition:
-              StringEquals:
-                aws:SourceArn: !Sub arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/workshop-policy-gen
-
-  PolicyGenCloudTrail:
-    Type: AWS::CloudTrail::Trail
-    DependsOn: PolicyGenCloudTrailBucketPolicy
-    Properties:
-      TrailName: workshop-policy-gen
-      S3BucketName: !Ref PolicyGenCloudTrailBucket
-      IsLogging: true
-      IsMultiRegionTrail: true
-      IncludeGlobalServiceEvents: true
-      EnableLogFileValidation: true
-
-  AccessAnalyzerPolicyGenRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: AccessAnalyzerPolicyGen
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: access-analyzer.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: CloudTrailS3Access
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:ListBucket
-                Resource:
-                  - !GetAtt PolicyGenCloudTrailBucket.Arn
-                  - !Sub ${PolicyGenCloudTrailBucket.Arn}/*
-              - Effect: Allow
-                Action:
-                  - cloudtrail:GetTrail
-                Resource:
-                  - !Sub arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/workshop-policy-gen
-
 ### VSCode Resources
   SecretPlaintextLambdaRole:
     Type: AWS::IAM::Role
-    DependsOn: PolicyGenCloudTrail
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -1018,7 +939,6 @@ Resources:
       ReceiveMessageWaitTimeSeconds: 20
 
   VSCodeSecret:
-    DependsOn: PolicyGenCloudTrail
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -1045,7 +965,6 @@ Resources:
 
   VSCodeInstanceRole:
     Type: AWS::IAM::Role
-    DependsOn: PolicyGenCloudTrail
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -1365,8 +1284,6 @@ Resources:
                   - s3:ListMultipartUploadParts
                   - s3:ListBucketMultipartUploads
                 Resource:
-                  - !Sub arn:${AWS::Partition}:s3:::cloudtrail-policy-gen-*
-                  - !Sub arn:${AWS::Partition}:s3:::cloudtrail-policy-gen-*/*
                   - !Sub arn:${AWS::Partition}:s3:::*workshop*
                   - !Sub arn:${AWS::Partition}:s3:::*workshop*/*
                   - !Sub arn:${AWS::Partition}:s3:::eksworkshop*
@@ -1552,7 +1469,6 @@ Resources:
 
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
-    DependsOn: PolicyGenCloudTrail
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -1569,7 +1485,6 @@ Resources:
 
   FSxONTAPSecurityGroup:
     Type: AWS::EC2::SecurityGroup
-    DependsOn: PolicyGenCloudTrail
     Properties:
       GroupDescription: Security group for FSx for NetApp ONTAP - allows NFS access
       VpcId: !GetAtt VSCodeInstance.VpcId
@@ -1587,7 +1502,6 @@ Resources:
 
   VSCodeHealthCheckLambdaRole:
     Type: AWS::IAM::Role
-    DependsOn: PolicyGenCloudTrail
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
