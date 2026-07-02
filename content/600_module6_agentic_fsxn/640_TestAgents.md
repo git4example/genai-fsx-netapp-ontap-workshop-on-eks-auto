@@ -243,24 +243,18 @@ The `exit` command above exits the netshoot pod shell. You are now back on the V
 
 ---
 
-::::expand{header="Optional: Connect agents via MCP (Model Context Protocol)"}
+::::expand{header="Architecture Note: MCP (Model Context Protocol) Support"}
 
-The agents also expose an **MCP (Model Context Protocol)** endpoint at `/mcp` (Streamable HTTP transport). This allows any MCP-compatible client to interact with the agents without writing HTTP client code.
+In addition to the REST `/ask` endpoint used above, each agent also exposes an **MCP (Model Context Protocol)** endpoint at `/mcp` using the Streamable HTTP transport. This means the agents are compatible with the emerging open standard for AI tool interoperability.
 
-**MCP Server URLs:**
+Each agent's MCP server exposes a single tool (`ask_agent`) that accepts a natural language query, runs the full Strands reasoning loop internally (LLM → tool selection → FSxN data access → response synthesis), and returns the result. This preserves the agent's intelligence while making it accessible via the open MCP protocol.
 
-| Agent | MCP Endpoint |
-|-------|-------------|
-| Finance Agent | `http://finance-agent-svc.agent-finance:8080/mcp` |
-| IT Ops Agent | `http://itops-agent-svc.agent-itops:8080/mcp` |
-| Malicious Agent | `http://malicious-agent-svc.agent-malicious:8080/mcp` |
+**Compatible MCP clients** include Claude Desktop, VS Code (with MCP extension), Cursor, and any application supporting Streamable HTTP MCP transport.
 
-**Compatible MCP clients** include Claude Desktop, VS Code (with MCP extension), Cursor, and any tool supporting Streamable HTTP MCP transport. To connect, configure the client with the agent's MCP URL and set auth to "None" (agents are cluster-internal).
+:::alert{header="Outside the scope of this workshop" type="info"}
+To connect external MCP clients (e.g., Claude Desktop on your laptop) to these agents, you would need to expose the agent services outside the EKS cluster — via an Ingress, LoadBalancer, or port-forwarding. This is a standard Kubernetes networking exercise but is not covered in this workshop.
 
-Each agent exposes a single MCP tool (`ask_agent`) that accepts a natural language query, runs the full Strands reasoning loop internally, and returns the response — preserving the agent's intelligence while exposing it via the open MCP standard.
-
-:::alert{header="Note" type="info"}
-MCP access requires port-forwarding or an ingress to reach the agent services from outside the cluster. For in-cluster testing, the curl-based approach above is simpler and recommended.
+The key takeaway: your agents are **MCP-ready** out of the box. In a production environment, exposing them via an Application Load Balancer or API Gateway would allow any MCP-compatible client to interact with them — enabling a standardized, protocol-based interface for AI agent interoperability.
 :::
 
 ::::
