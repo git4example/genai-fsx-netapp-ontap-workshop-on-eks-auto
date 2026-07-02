@@ -154,8 +154,7 @@ def create_app():
     # --- MCP endpoint (Streamable HTTP) ---
     from mcp.server.transport_security import TransportSecuritySettings
     mcp_security = TransportSecuritySettings(
-        allowed_hosts=["*"],
-        allowed_origins=["*"],
+        enable_dns_rebinding_protection=False,
     )
     app.mount("/mcp", mcp_server.streamable_http_app(transport_security=mcp_security))
 
