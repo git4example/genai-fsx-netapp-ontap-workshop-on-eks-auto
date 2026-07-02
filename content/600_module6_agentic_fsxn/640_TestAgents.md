@@ -251,6 +251,28 @@ Each agent's MCP server exposes a single tool (`ask_agent`) that accepts a natur
 
 **Compatible MCP clients** include Claude Desktop, VS Code (with MCP extension), Cursor, and any application supporting Streamable HTTP MCP transport.
 
+You can verify the MCP endpoint is live by sending a raw MCP `initialize` handshake from the netshoot pod:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl exec -it netshoot-fsxn -- curl -s http://finance-agent-svc.agent-finance:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' | jq .
+:::
+
+Expected response — confirms the agent speaks MCP and exposes the `ask_agent` tool:
+
+:::code{showCopyAction=false showLineNumbers=false language=json}
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2025-06-18",
+    "capabilities": { "tools": {} },
+    "serverInfo": { "name": "Finance Team AI Assistant", "version": "..." }
+  }
+}
+:::
+
 :::alert{header="Outside the scope of this workshop" type="info"}
 To connect external MCP clients (e.g., Claude Desktop on your laptop) to these agents, you would need to expose the agent services outside the EKS cluster — via an Ingress, LoadBalancer, or port-forwarding. This is a standard Kubernetes networking exercise but is not covered in this workshop.
 
