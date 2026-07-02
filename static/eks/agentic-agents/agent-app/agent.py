@@ -122,9 +122,9 @@ def create_app():
     from contextlib import asynccontextmanager
     from fastapi import FastAPI
     from fastapi.responses import JSONResponse
-    from mcp.server import MCPServer
+    from mcp.server.fastmcp import FastMCP
 
-    mcp_server = MCPServer(AGENT_ROLE)
+    mcp_server = FastMCP(AGENT_ROLE)
 
     @mcp_server.tool()
     def ask_agent(query: str) -> str:
