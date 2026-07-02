@@ -243,26 +243,25 @@ The `exit` command above exits the netshoot pod shell. You are now back on the V
 
 ---
 
-::::expand{header="Optional: Connect agents to OpenWebUI via MCP (Model Context Protocol)"}
+::::expand{header="Optional: Connect agents via MCP (Model Context Protocol)"}
 
-The agents also expose an **MCP (Model Context Protocol)** endpoint at `/mcp`. This allows you to interact with agents directly from the OpenWebUI chat interface — no CLI needed.
+The agents also expose an **MCP (Model Context Protocol)** endpoint at `/mcp` (Streamable HTTP transport). This allows any MCP-compatible client to interact with the agents without writing HTTP client code.
 
-##### Register agent MCP servers in OpenWebUI:
+**MCP Server URLs:**
 
-1. Navigate to **Admin Settings → External Tools** (gear icon → External Tools)
-2. Click **+ Add Server** and add the following three servers:
+| Agent | MCP Endpoint |
+|-------|-------------|
+| Finance Agent | `http://finance-agent-svc.agent-finance:8080/mcp` |
+| IT Ops Agent | `http://itops-agent-svc.agent-itops:8080/mcp` |
+| Malicious Agent | `http://malicious-agent-svc.agent-malicious:8080/mcp` |
 
-| Type | Server URL | Auth |
-|------|-----------|------|
-| MCP (Streamable HTTP) | `http://finance-agent-svc.agent-finance:8080/mcp` | None |
-| MCP (Streamable HTTP) | `http://itops-agent-svc.agent-itops:8080/mcp` | None |
-| MCP (Streamable HTTP) | `http://malicious-agent-svc.agent-malicious:8080/mcp` | None |
+**Compatible MCP clients** include Claude Desktop, VS Code (with MCP extension), Cursor, and any tool supporting Streamable HTTP MCP transport. To connect, configure the client with the agent's MCP URL and set auth to "None" (agents are cluster-internal).
 
-3. Save and return to the chat interface
-4. In a new chat, click **+ → Integrations → Tools** and enable one of the agent tools
-5. Ask your question — the response flows through the agent's Strands reasoning loop and accesses FSxN data
+Each agent exposes a single MCP tool (`ask_agent`) that accepts a natural language query, runs the full Strands reasoning loop internally, and returns the response — preserving the agent's intelligence while exposing it via the open MCP standard.
 
-This demonstrates how AI agents can be exposed via the open **Model Context Protocol** standard, allowing any MCP-compatible client (Claude Desktop, VS Code, OpenWebUI) to interact with them.
+:::alert{header="Note" type="info"}
+MCP access requires port-forwarding or an ingress to reach the agent services from outside the cluster. For in-cluster testing, the curl-based approach above is simpler and recommended.
+:::
 
 ::::
 
