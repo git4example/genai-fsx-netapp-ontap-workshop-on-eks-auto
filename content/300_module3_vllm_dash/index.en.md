@@ -31,9 +31,3 @@ This module guides you through implementing Neuron and LLM inference monitoring,
     - Create custom performance dashboards
     - Track token generation and latency metrics
     - Monitor inference queue and processing times
-
-:::alert{header="Prerequisites" type="info"}
-Ensure you have completed Module 2 (Deploy GenAI) before starting this module. The vLLM inference pod must be running.
-:::
-
-::code[kubectl get pods -l app=vllm-mistral-inf2-server]{language=bash showLineNumbers=false showCopyAction=true}
