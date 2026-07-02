@@ -116,29 +116,13 @@ def invoke_agent(query: str) -> str:
     return str(response)
 
 
-# --- Server Mode (FastAPI + MCP) ---
+# --- Server Mode (FastAPI) ---
 def create_app():
-    from collections.abc import AsyncIterator
-    from contextlib import asynccontextmanager
     from fastapi import FastAPI
     from fastapi.responses import JSONResponse
-    from mcp.server.fastmcp import FastMCP
 
-    mcp_server = FastMCP(AGENT_ROLE)
+    app = FastAPI(title=f"Agent: {AGENT_ROLE}")
 
-    @mcp_server.tool()
-    def ask_agent(query: str) -> str:
-        """Ask this AI agent a question. The agent will use its tools to access data and provide an answer."""
-        return invoke_agent(query)
-
-    @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        async with mcp_server.session_manager.run():
-            yield
-
-    app = FastAPI(title=f"Agent: {AGENT_ROLE}", lifespan=lifespan)
-
-    # --- REST endpoint for simple curl access ---
     @app.post("/ask")
     async def ask(request: dict):
         query = request.get("query", "")
@@ -150,9 +134,6 @@ def create_app():
     @app.get("/health")
     async def health():
         return {"status": "healthy", "role": AGENT_ROLE, "data_dir": DATA_DIR}
-
-    # --- MCP endpoint (Streamable HTTP) ---
-    app.mount("/mcp", mcp_server.streamable_http_app())
 
     return app
 
