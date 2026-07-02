@@ -35,7 +35,15 @@ spec:
           value: "workshop-llm-tools"
         - name: LLM_API_KEY
           value: "not-needed"
-        command: ["sleep", "infinity"]
+        command: ["python", "agent.py", "--serve"]
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
         resources:
           requests:
             cpu: "250m"

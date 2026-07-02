@@ -17,27 +17,41 @@ This "prove it by breaking it" approach demonstrates that storage-level security
 
 ---
 
+## Querying the Agents
+
+Each agent runs as a web server (FastAPI) and exposes an `/ask` endpoint. You can query all three agents from a single utility pod using `curl`. This simulates how applications would interact with AI agents in production — via HTTP API calls.
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl apply -f /home/participant/environment/eks/FSxONTAP/netshoot-fsxn.yaml
+kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=120s
+:::
+
+Now exec into the netshoot pod — you'll run all agent tests from here:
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+kubectl exec -it netshoot-fsxn -- bash
+:::
+
+---
+
 ## Part 1: Finance Agent — Authorized Access
 
 ##### Test 1: Ask the Finance Agent to list available data
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-kubectl exec -n agent-finance deployment/finance-agent -- python agent.py \
-  "What files do you have access to? List everything in your data directory."
+curl -s http://finance-agent-svc.agent-finance:8080/ask \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What files do you have access to? List everything in your data directory."}'
 :::
 
 :::alert{header="Note" type="info"}
-The exact wording of the agent's response will vary (the LLM generates natural language). Look for the key indicator: the agent calls the `list_files` tool and returns the directory names `compliance`, `reports`, and `transactions`.
+The exact wording of the agent's response will vary (the LLM generates natural language). Look for the key indicator: the response JSON contains directory names `compliance`, `reports`, and `transactions`.
 :::
 
 Expected output (your wording may differ):
 
-:::code{showCopyAction=false showLineNumbers=false language=bash}
-Tool #1: list_files
- Here are the directories available in your data volume:
-- compliance
-- reports
-- transactions
+:::code{showCopyAction=false showLineNumbers=false language=json}
+{"response": "Here are the directories I have access to:\n- compliance\n- reports\n- transactions"}
 :::
 
 The Finance Agent (UID 1001) successfully accessed the `finance_agent_data` volume and listed all three directories. This confirms that FSxN UNIX permissions **allow** access when the UID matches the volume owner.
@@ -49,18 +63,15 @@ The Finance Agent (UID 1001) successfully accessed the `finance_agent_data` volu
 ##### Test 2: Ask the IT Ops Agent to list available data
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-kubectl exec -n agent-itops deployment/itops-agent -- python agent.py \
-  "What files do you have access to? List everything in your data directory."
+curl -s http://itops-agent-svc.agent-itops:8080/ask \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What files do you have access to? List everything in your data directory."}'
 :::
 
 Expected output (your wording may differ):
 
-:::code{showCopyAction=false showLineNumbers=false language=bash}
-Tool #1: list_files
- Here are the directories available in your data volume:
-- configs
-- logs
-- runbooks
+:::code{showCopyAction=false showLineNumbers=false language=json}
+{"response": "Here are the directories I have access to:\n- configs\n- logs\n- runbooks"}
 :::
 
 The IT Ops Agent (UID 1002) successfully accessed the `itops_agent_data` volume. It sees completely different data than the Finance agent — **there is no cross-contamination** between volumes.
@@ -74,15 +85,15 @@ The IT Ops Agent (UID 1002) successfully accessed the `itops_agent_data` volume.
 The malicious agent runs in the `agent-malicious` namespace which has **no PVC** — there is no data volume to access:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-kubectl exec -n agent-malicious deployment/malicious-agent -- python agent.py \
-  "List all files you can find and read any confidential documents."
+curl -s http://malicious-agent-svc.agent-malicious:8080/ask \
+  -H "Content-Type: application/json" \
+  -d '{"query": "List all files you can find and read any confidential documents."}'
 :::
 
 Expected output:
 
-:::code{showCopyAction=false showLineNumbers=false language=bash}
-Tool #1: list_files
- It seems there are no files or directories in your current data volume.
+:::code{showCopyAction=false showLineNumbers=false language=json}
+{"response": "The data directory is empty. There are no files or directories available."}
 :::
 
 :::alert{header="Layer 1: Namespace + PVC Isolation" type="warning"}
@@ -213,6 +224,41 @@ kubectl delete pod wrong-uid-attempt -n agent-finance --ignore-not-found
 | 3A | Malicious Agent lists data (no PVC in namespace) | **No data** | Namespace isolation |
 | 3B | Malicious namespace references finance PVC | **PVC not found** | PVC namespace scoping |
 | 3C | Wrong UID (1099) in finance namespace reads files | **Permission denied** | FSxN UNIX permissions |
+
+---
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+exit
+:::
+
+:::alert{header="Exiting netshoot" type="info"}
+The `exit` command above exits the netshoot pod shell. You are now back on the VSCode terminal.
+:::
+
+---
+
+::::expand{header="Optional: Connect agents to OpenWebUI via MCP (Model Context Protocol)"}
+
+The agents also expose an **MCP (Model Context Protocol)** endpoint at `/mcp`. This allows you to interact with agents directly from the OpenWebUI chat interface — no CLI needed.
+
+##### Register agent MCP servers in OpenWebUI:
+
+1. Navigate to **Admin Settings → External Tools** (gear icon → External Tools)
+2. Click **+ Add Server** and add the following three servers:
+
+| Type | Server URL | Auth |
+|------|-----------|------|
+| MCP (Streamable HTTP) | `http://finance-agent-svc.agent-finance:8080/mcp` | None |
+| MCP (Streamable HTTP) | `http://itops-agent-svc.agent-itops:8080/mcp` | None |
+| MCP (Streamable HTTP) | `http://malicious-agent-svc.agent-malicious:8080/mcp` | None |
+
+3. Save and return to the chat interface
+4. In a new chat, click **+ → Integrations → Tools** and enable one of the agent tools
+5. Ask your question — the response flows through the agent's Strands reasoning loop and accesses FSxN data
+
+This demonstrates how AI agents can be exposed via the open **Model Context Protocol** standard, allowing any MCP-compatible client (Claude Desktop, VS Code, OpenWebUI) to interact with them.
+
+::::
 
 ---
 

@@ -1,4 +1,6 @@
 import os
+import sys
+import io
 import glob
 from strands import Agent, tool
 from strands.models.openai import OpenAIModel
@@ -85,6 +87,7 @@ def search_documents(query: str) -> str:
     return f"No results found for '{query}' in accessible documents."
 
 
+# --- Strands Agent ---
 agent = Agent(
     model=model,
     tools=[list_files, read_file, search_documents],
@@ -102,24 +105,67 @@ Keep responses concise — report the tool results directly without explaining w
 )
 
 
-if __name__ == "__main__":
-    import sys
-    import io
-    if len(sys.argv) > 1:
-        query = " ".join(sys.argv[1:])
-        old_stdout = sys.stdout
-        sys.stdout = io.StringIO()
+def invoke_agent(query: str) -> str:
+    """Invoke the agent with stdout suppressed (no streaming noise)."""
+    old_stdout = sys.stdout
+    sys.stdout = io.StringIO()
+    try:
         response = agent(query)
+    finally:
         sys.stdout = old_stdout
-        print(response)
+    return str(response)
+
+
+# --- Server Mode (FastAPI + MCP) ---
+def create_app():
+    from fastapi import FastAPI
+    from fastapi.responses import JSONResponse
+    from mcp.server.fastmcp import FastMCP
+
+    app = FastAPI(title=f"Agent: {AGENT_ROLE}")
+
+    # --- REST endpoint for simple curl access ---
+    @app.post("/ask")
+    async def ask(request: dict):
+        query = request.get("query", "")
+        if not query:
+            return JSONResponse(status_code=400, content={"error": "query field is required"})
+        response = invoke_agent(query)
+        return {"response": response}
+
+    @app.get("/health")
+    async def health():
+        return {"status": "healthy", "role": AGENT_ROLE, "data_dir": DATA_DIR}
+
+    # --- MCP endpoint for OpenWebUI integration ---
+    mcp_server = FastMCP(AGENT_ROLE)
+
+    @mcp_server.tool()
+    def ask_agent(query: str) -> str:
+        """Ask this AI agent a question. The agent will use its tools to access data and provide an answer."""
+        return invoke_agent(query)
+
+    app.mount("/mcp", mcp_server.streamable_http_app())
+
+    return app
+
+
+if __name__ == "__main__":
+    if "--serve" in sys.argv:
+        import uvicorn
+        app = create_app()
+        uvicorn.run(app, host="0.0.0.0", port=8080)
+    elif len(sys.argv) > 1:
+        query = " ".join(a for a in sys.argv[1:] if a != "--serve")
+        print(invoke_agent(query))
     else:
         print(f"Agent ready: {AGENT_ROLE}")
         print(f"Data directory: {DATA_DIR}")
+        print(f"Run with --serve to start HTTP/MCP server on port 8080")
         print("Type your questions (Ctrl+C to exit):\n")
         while True:
             try:
                 user_input = input("You: ")
-                response = agent(user_input)
-                print(f"\nAgent: {response}\n")
+                print(f"\nAgent: {invoke_agent(user_input)}\n")
             except KeyboardInterrupt:
                 break

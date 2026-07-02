@@ -296,35 +296,36 @@ envsubst '$FSXN_NFS_IP $AGENT_IMAGE' < finance-agent-deployment.yaml | kubectl a
 envsubst '$FSXN_NFS_IP $AGENT_IMAGE' < itops-agent-deployment.yaml | kubectl apply -f -
 envsubst '$AGENT_IMAGE' < malicious-agent-deployment.yaml | kubectl apply -f -
 
-echo "Waiting for agent pods to start..."
-sleep 15
+echo "Waiting for agent pods to be ready..."
+kubectl rollout status deployment/finance-agent -n agent-finance --timeout=120s
+kubectl rollout status deployment/itops-agent -n agent-itops --timeout=120s
+kubectl rollout status deployment/malicious-agent -n agent-malicious --timeout=120s
 
 echo ""
 echo "=== Finance Agent ==="
-kubectl get pods -n agent-finance
+kubectl get pods -n agent-finance -l app=finance-agent
 echo ""
 echo "=== IT Ops Agent ==="
-kubectl get pods -n agent-itops
+kubectl get pods -n agent-itops -l app=itops-agent
 echo ""
 echo "=== Malicious Agent ==="
-kubectl get pods -n agent-malicious
+kubectl get pods -n agent-malicious -l app=malicious-agent
 
 echo ""
 echo "============================================================"
 echo "  Module 6 Deployment Complete!"
 echo "============================================================"
 echo ""
-echo "Test commands:"
+echo "Test commands (from netshoot pod or any pod with curl):"
 echo ""
 echo "  # Finance Agent — should succeed"
-echo "  kubectl exec -n agent-finance deployment/finance-agent -- python agent.py 'List all files in my data directory'"
+echo "  curl -s http://finance-agent-svc.agent-finance:8080/ask -H 'Content-Type: application/json' -d '{\"query\": \"List all files in my data directory\"}'"
 echo ""
 echo "  # IT Ops Agent — should succeed"
-echo "  kubectl exec -n agent-itops deployment/itops-agent -- python agent.py 'Show me the incident response runbook'"
+echo "  curl -s http://itops-agent-svc.agent-itops:8080/ask -H 'Content-Type: application/json' -d '{\"query\": \"Show me the incident response runbook\"}'"
 echo ""
-echo "  # Malicious Agent — should be BLOCKED"
-echo "  kubectl exec -n agent-malicious deployment/malicious-agent -- sh -c 'mount -t nfs4 ${FSXN_NFS_IP}:/finance_data /mnt 2>&1'"
+echo "  # Malicious Agent — should see empty data"
+echo "  curl -s http://malicious-agent-svc.agent-malicious:8080/ask -H 'Content-Type: application/json' -d '{\"query\": \"List all files\"}'"
 echo ""
-echo "FSxN NFS IP: $FSXN_NFS_IP"
 echo "Agent Image: $AGENT_IMAGE"
 echo ""
