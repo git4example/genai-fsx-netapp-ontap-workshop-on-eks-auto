@@ -243,13 +243,62 @@ The `exit` command above exits the netshoot pod shell. You are now back on the V
 
 ---
 
-::::expand{header="Architecture Note: MCP (Model Context Protocol) Support"}
+::::expand{header="MCP (Model Context Protocol) — Agent Interoperability Demo"}
 
-These agents can also be exposed via **MCP (Model Context Protocol)** — an open standard for connecting AI applications to external tools and data sources. MCP provides a standardized, protocol-based interface that allows any compatible client (Claude Desktop, VS Code, Cursor) to discover and invoke agent capabilities without custom integration code.
+These agents are also **MCP-enabled** — they expose an [MCP (Model Context Protocol)](https://modelcontextprotocol.io) endpoint at `/mcp/`. MCP is an open standard for connecting AI applications to external tools and data sources, supported by clients like Claude Desktop, VS Code, and Cursor.
 
-In this pattern, the agent registers its tools (file access, document search) as MCP primitives. An MCP client connects, discovers available tools via `tools/list`, and invokes them via `tools/call`. The agent's Strands reasoning loop handles the actual LLM interaction and FSxN data access internally — the MCP client simply sends questions and receives answers.
+Each agent registers a tool (`ask_agent`) via MCP that accepts a natural language query, runs the full Strands reasoning loop internally (LLM → tool selection → FSxN data access → response), and returns the result. Any MCP-compatible client can connect, discover, and invoke this tool.
 
-This is the same architectural pattern used by production AI platforms to enable agent interoperability across different client applications.
+##### Try the MCP protocol flow from the netshoot pod:
+
+1. **Initialize the MCP session** — establishes a connection and negotiates capabilities:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl exec -it netshoot-fsxn -- bash
+:::
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+SESSION=$(curl -sL -X POST http://finance-agent-svc.agent-finance:8080/mcp/ \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -D /dev/stderr \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' 2>&1 1>/dev/null | grep -i "mcp-session-id" | awk '{print $2}' | tr -d '\r\n')
+echo "Session: $SESSION"
+:::
+
+2. **Send the initialized notification** (required by MCP protocol before calling tools):
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+curl -sL -X POST http://finance-agent-svc.agent-finance:8080/mcp/ \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "mcp-session-id: $SESSION" \
+  -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+:::
+
+3. **Invoke the agent tool via MCP** — same query, same FSxN access, but over the MCP protocol:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+curl -sL -X POST http://finance-agent-svc.agent-finance:8080/mcp/ \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "mcp-session-id: $SESSION" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"ask_agent","arguments":{"query":"What files do you have access to?"}}}' | grep "^data:" | sed 's/^data: //' | jq -r '.result.content[0].text'
+:::
+
+You should see the same file listing as the REST `/ask` endpoint — proving the agent works identically through both interfaces.
+
+:::alert{header="Key Takeaway" type="info"}
+The same agent exposes **two interfaces** from a single container:
+- **REST `/ask`** — simple HTTP for microservice integration and testing
+- **MCP `/mcp/`** — standardized protocol for AI client interoperability (Claude Desktop, VS Code, Cursor)
+
+Both route through the same Strands reasoning loop and FSxN access controls. In production, exposing the MCP endpoint via an ALB or API Gateway allows any MCP client to interact with your agents without custom integration code.
+:::
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+exit
+:::
 
 ::::
 
