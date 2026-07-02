@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir strands-agents strands-agents-tools openai fastapi uvicorn "mcp>=1.28"
+RUN pip install --no-cache-dir strands-agents strands-agents-tools openai fastapi uvicorn fastmcp
 
 COPY agent.py .
 
