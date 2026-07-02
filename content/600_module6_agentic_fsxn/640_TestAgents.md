@@ -245,17 +245,11 @@ The `exit` command above exits the netshoot pod shell. You are now back on the V
 
 ::::expand{header="Architecture Note: MCP (Model Context Protocol) Support"}
 
-In addition to the REST `/ask` endpoint used above, each agent also exposes an **MCP (Model Context Protocol)** endpoint at `/mcp` using the Streamable HTTP transport. This means the agents are compatible with the emerging open standard for AI tool interoperability.
+These agents can also be exposed via **MCP (Model Context Protocol)** — an open standard for connecting AI applications to external tools and data sources. MCP provides a standardized, protocol-based interface that allows any compatible client (Claude Desktop, VS Code, Cursor) to discover and invoke agent capabilities without custom integration code.
 
-Each agent's MCP server exposes a single tool (`ask_agent`) that accepts a natural language query, runs the full Strands reasoning loop internally (LLM → tool selection → FSxN data access → response synthesis), and returns the result. This preserves the agent's intelligence while making it accessible via the open MCP protocol.
+In this pattern, the agent registers its tools (file access, document search) as MCP primitives. An MCP client connects, discovers available tools via `tools/list`, and invokes them via `tools/call`. The agent's Strands reasoning loop handles the actual LLM interaction and FSxN data access internally — the MCP client simply sends questions and receives answers.
 
-**Compatible MCP clients** include Claude Desktop, VS Code (with MCP extension), Cursor, and any application supporting Streamable HTTP MCP transport.
-
-:::alert{header="Production extensibility" type="info"}
-The agent code includes an MCP (Model Context Protocol) server mount at `/mcp` for future integration with MCP-compatible clients (Claude Desktop, VS Code, Cursor). In production, you would expose the agent services via an Application Load Balancer or API Gateway and connect any MCP client using the Streamable HTTP transport — enabling standardized, protocol-based AI agent interoperability.
-
-For this workshop, the REST `/ask` endpoint demonstrated above is the primary interface. The MCP endpoint is included in the agent code as a reference architecture for production deployments.
-:::
+This is the same architectural pattern used by production AI platforms to enable agent interoperability across different client applications.
 
 ::::
 
