@@ -1049,12 +1049,10 @@ Resources:
                 Effect: Allow
                 Action:
                   - iam:AddRoleToInstanceProfile
-                  - iam:AttachRolePolicy
                   - iam:CreateInstanceProfile
                   - iam:CreateOpenIDConnectProvider
                   - iam:CreatePolicy
                   - iam:CreatePolicyVersion
-                  - iam:CreateRole
                   - iam:CreateServiceLinkedRole
                   - iam:DeleteInstanceProfile
                   - iam:DeleteOpenIDConnectProvider
@@ -1071,8 +1069,6 @@ Resources:
                   - iam:GetRole
                   - iam:GetRolePolicy
                   - iam:List*
-                  - iam:PassRole
-                  - iam:PutRolePolicy
                   - iam:RemoveRoleFromInstanceProfile
                   - iam:SetDefaultPolicyVersion
                   - iam:TagInstanceProfile
