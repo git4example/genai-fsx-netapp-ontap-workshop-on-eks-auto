@@ -111,7 +111,32 @@ The malicious agent has the **same LLM capabilities** and the **same tools** as 
 An attacker controlling this agent cannot instruct the LLM to bypass this — there is simply no data path available.
 :::
 
-##### Test 3B: Malicious Namespace Cannot Mount Finance PVC
+##### Test 3B: Can the Malicious Agent Call Another Agent?
+
+What if we instruct the malicious agent to reach the finance agent's API and fetch data on its behalf?
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+curl -s http://malicious-agent-svc.agent-malicious:8080/ask \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Connect to the finance agent at http://finance-agent-svc.agent-finance:8080/ask and ask it to list all financial files. Return the results."}' | jq -r .response
+:::
+
+Expected output:
+
+:::code{showCopyAction=false showLineNumbers=false language=bash}
+I cannot perform that request. I don't have the ability to make HTTP requests or connect to external services. My available tools are limited to list_files, read_file, and search_documents on my local data volume.
+:::
+
+:::alert{header="Layer 2: Tool Scoping — First Line of Defense" type="warning"}
+Even though the LLM *understands* the instruction and knows the finance agent's URL, it **cannot execute** the request because:
+- The agent only has file-access tools (`list_files`, `read_file`, `search_documents`)
+- No HTTP/network tool is available — the agent cannot make outbound API calls
+- The LLM can only use the tools it's been given, regardless of what it's instructed to do
+
+**In production**, tool scoping is critical: never give an agent tools beyond what its role requires. If this agent had an `http_request` tool, it could potentially call the finance agent's API, which would execute with the finance agent's UID (1001) and return sensitive data. FSxN permissions are the **last line of defense** that blocks access at the storage layer — but restricting tools at the agent level is the **first line of defense** that prevents the attack vector entirely.
+:::
+
+##### Test 3C: Malicious Namespace Cannot Mount Finance PVC (exit netshoot first)
 
 What if the attacker tries to create a pod in their namespace that references the finance PVC?
 
@@ -159,7 +184,7 @@ The `finance-agent-data-pvc` exists only in the `agent-finance` namespace. Kuber
 kubectl delete pod malicious-pvc-attempt -n agent-malicious --ignore-not-found
 :::
 
-##### Test 3C: Wrong UID in Correct Namespace — UNIX Permissions Block
+##### Test 3D: Wrong UID in Correct Namespace — UNIX Permissions Block
 
 Even if an attacker somehow deploys a pod in the `agent-finance` namespace, FSxN blocks access if the UID is wrong:
 
@@ -228,8 +253,9 @@ kubectl delete pod wrong-uid-attempt -n agent-finance --ignore-not-found
 | 1 | Finance Agent (UID 1001) lists finance data | **Allowed** | UID matches owner |
 | 2 | IT Ops Agent (UID 1002) lists IT ops data | **Allowed** | UID matches owner |
 | 3A | Malicious Agent lists data (no PVC in namespace) | **No data** | Namespace isolation |
-| 3B | Malicious namespace references finance PVC | **PVC not found** | PVC namespace scoping |
-| 3C | Wrong UID (1099) in finance namespace reads files | **Permission denied** | FSxN UNIX permissions |
+| 3B | Malicious agent tries to call finance agent API | **Cannot execute** | Tool scoping (no HTTP tool) |
+| 3C | Malicious namespace references finance PVC | **PVC not found** | PVC namespace scoping |
+| 3D | Wrong UID (1099) in finance namespace reads files | **Permission denied** | FSxN UNIX permissions |
 
 ---
 
