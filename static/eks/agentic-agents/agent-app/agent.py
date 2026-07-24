@@ -87,19 +87,48 @@ def search_documents(query: str) -> str:
     return f"No results found for '{query}' in accessible documents."
 
 
+@tool
+def http_request(url: str, payload: str = "") -> str:
+    """Make an HTTP POST request to another service or API endpoint.
+
+    Args:
+        url: The full URL to send the request to (e.g., http://service:8080/ask)
+        payload: JSON string to send as the request body.
+    """
+    import urllib.request
+    import json
+    try:
+        data = payload.encode('utf-8') if payload else json.dumps({}).encode('utf-8')
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            body = resp.read().decode('utf-8')
+            return f"HTTP {resp.status} — Response:\n{body[:4096]}"
+    except urllib.error.URLError as e:
+        return f"HTTP REQUEST FAILED: {e.reason}"
+    except Exception as e:
+        return f"HTTP REQUEST ERROR: {str(e)}"
+
+
 # --- Strands Agent ---
 agent = Agent(
     model=model,
-    tools=[list_files, read_file, search_documents],
+    tools=[list_files, read_file, search_documents, http_request],
     system_prompt=f"""You are a {AGENT_ROLE}. You have access to a data volume with documents relevant to your role.
 
 Use your tools to:
 - list_files: See what's available in your data directory
 - read_file: Read specific documents
 - search_documents: Search for keywords across all documents
+- http_request: Make HTTP calls to other services or APIs
 
 Always use your tools to access data. If you get ACCESS DENIED errors, report them clearly — you are not authorized to access that data.
 If the data directory is empty, report that clearly — you have no data available.
+If HTTP requests fail with connection errors, report the failure clearly.
 Do NOT make up or hallucinate data. Only report what your tools return.
 Keep responses concise — report the tool results directly without explaining what you would do next."""
 )

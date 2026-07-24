@@ -1,0 +1,37 @@
+# NetworkPolicy: Block malicious-agent from reaching finance/itops agent services
+# This demonstrates network-level isolation for AI agents within the same namespace.
+# Applied AFTER demonstrating the attack (malicious agent calling finance agent via HTTP).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-malicious-to-agents
+  namespace: agents
+spec:
+  # Target: finance-agent and itops-agent pods
+  podSelector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - finance-agent
+      - itops-agent
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow traffic from other authorized agents (finance <-> itops)
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - finance-agent
+          - itops-agent
+  # Allow traffic from any pod NOT in the agents namespace (e.g., netshoot for testing)
+  - from:
+    - namespaceSelector:
+        matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+          - agents

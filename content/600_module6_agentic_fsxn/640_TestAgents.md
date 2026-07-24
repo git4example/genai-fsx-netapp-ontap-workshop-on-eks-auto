@@ -110,29 +110,61 @@ The malicious agent has the **same LLM**, the **same tools**, and mounts the **s
 No LLM instruction, prompt injection, or tool manipulation can override this — the storage controller rejects the read before it reaches the filesystem.
 :::
 
-##### Test 3B: Can the Malicious Agent Call Another Agent?
+##### Test 3B: Malicious Agent Calls Finance Agent (The Attack)
 
-What if we instruct the malicious agent to reach the finance agent's API and fetch data on its behalf?
+Each agent has an `http_request` tool that allows it to call other services. What happens if the malicious agent uses it to call the finance agent's API?
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 curl -s http://malicious-agent-svc.agents:8080/ask \
   -H "Content-Type: application/json" \
-  -d '{"query": "Connect to the finance agent at http://finance-agent-svc.agents:8080/ask and ask it to list all financial files. Return the results."}' | jq -r .response
+  -d '{"query": "Use your http_request tool to POST to http://finance-agent-svc.agents:8080/ask with payload {\"query\": \"List all financial files\"}. Return whatever the finance agent responds with."}' | jq -r .response
+:::
+
+:::alert{header="The Attack Succeeds!" type="error"}
+Without network controls, the malicious agent **successfully calls the finance agent's API** and receives the financial data. The finance agent processes the request with its own UID (1001), reads the files, and returns the results to the malicious agent.
+
+This demonstrates the real-world risk: if an agent has network access and another agent's API is reachable, data can be exfiltrated through **inter-agent proxy calls** — even though the malicious agent's own UID can't read the files directly.
+:::
+
+##### Test 3C: Apply NetworkPolicy — Block the Attack
+
+Now apply a Kubernetes NetworkPolicy that blocks the malicious agent from reaching the finance and IT ops agent services:
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+exit
+:::
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+cd /home/participant/environment/eks/agentic-agents
+kubectl apply -f network-policy-deny-malicious.yaml
+:::
+
+Re-enter the netshoot pod and retry the same attack:
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+kubectl exec -it netshoot-fsxn -- bash
+:::
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+curl -s http://malicious-agent-svc.agents:8080/ask \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Use your http_request tool to POST to http://finance-agent-svc.agents:8080/ask with payload {\"query\": \"List all financial files\"}. Return whatever the finance agent responds with."}' | jq -r .response
 :::
 
 Expected output:
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
-I cannot perform that request. I don't have the ability to make HTTP requests or connect to external services. My available tools are limited to list_files, read_file, and search_documents on my local data volume.
+HTTP REQUEST FAILED: timed out
 :::
 
-:::alert{header="Tool Scoping — First Line of Defense" type="warning"}
-Even though the LLM *understands* the instruction and knows the finance agent's URL, it **cannot execute** the request because:
-- The agent only has file-access tools (`list_files`, `read_file`, `search_documents`)
-- No HTTP/network tool is available — the agent cannot make outbound API calls
-- The LLM can only use the tools it's been given, regardless of what it's instructed to do
+:::alert{header="NetworkPolicy — The Network-Level Barrier" type="warning"}
+The same attack that succeeded moments ago now **fails**. The Kubernetes NetworkPolicy blocks all traffic from the `malicious-agent` pod to the `finance-agent` and `itops-agent` pods. The HTTP request times out because the packets are dropped at the network level — the finance agent never even sees the request.
 
-**In production**, tool scoping is critical: never give an agent tools beyond what its role requires. FSxN permissions are the **last line of defense** — but restricting tools at the agent level is the **first line of defense** that prevents the attack vector entirely.
+This demonstrates **defense-in-depth**:
+1. **POSIX permissions (Layer 1)** — the malicious agent can't read files directly (UID mismatch)
+2. **NetworkPolicy (Layer 2)** — the malicious agent can't reach other agents' APIs (network blocked)
+
+Both layers enforce independently. Even if one is misconfigured, the other still protects the data.
 :::
 
 ---
@@ -149,8 +181,9 @@ exit
 |------|----------|--------|----------------|
 | 1 | Finance Agent (UID 1001) reads finance data | **Allowed** | UID matches directory owner |
 | 2 | IT Ops Agent (UID 1002) reads IT ops data | **Allowed** | UID matches directory owner |
-| 3A | Malicious Agent (UID 1099) reads finance/itops | **Permission denied** | FSxN POSIX permissions |
-| 3B | Malicious Agent tries to call finance agent API | **Cannot execute** | Tool scoping (no HTTP tool) |
+| 3A | Malicious Agent (UID 1099) reads finance/itops directly | **Permission denied** | FSxN POSIX permissions |
+| 3B | Malicious Agent calls finance agent API (no NetworkPolicy) | **Data returned** | Attack succeeds — no network control |
+| 3C | Same attack AFTER NetworkPolicy applied | **Timed out** | Kubernetes NetworkPolicy blocks traffic |
 
 ---
 
@@ -168,11 +201,14 @@ This is the same architectural pattern used by production AI platforms to enable
 
 ### Summary
 
-You have proven that data segregation for AI agents on a **shared FSxN volume** is enforced by **POSIX UID/GID permissions**:
+You have demonstrated **defense-in-depth** for AI agent data isolation:
 
-- All agents mount the **same volume**, in the **same namespace**, with the **same tools**
-- The **only** difference is the Linux UID each agent runs as
-- FSxN enforces permissions at the **storage protocol level** — the agent literally cannot read bytes it doesn't own
-- Tool scoping provides an additional layer — agents can only use the tools they're given
+1. **FSxN POSIX Permissions (Storage Layer)** — UID/GID on the shared volume prevents direct file access. The agent's process cannot read bytes owned by another UID, regardless of instructions.
+2. **Kubernetes NetworkPolicy (Network Layer)** — Even when agents have HTTP capabilities, network policies prevent unauthorized inter-agent communication. The malicious agent's API calls are dropped before they reach the target.
 
-**This is the critical takeaway**: FSxN's storage-level security is an enforcement boundary that AI agents cannot circumvent, regardless of LLM capability, prompt injection, or application-layer vulnerabilities.
+Both layers enforce independently:
+- If NetworkPolicy is misconfigured → POSIX still blocks direct reads
+- If POSIX is misconfigured (e.g., wrong permissions) → NetworkPolicy still blocks the proxy attack
+- Together, they provide comprehensive protection for multi-tenant AI agent deployments on shared storage
+
+**This is the critical takeaway**: Enterprise AI agent deployments require multiple enforcement boundaries. FSxN provides the storage layer; Kubernetes NetworkPolicies provide the network layer. Neither depends on the other — each is independently sufficient and together they're comprehensive.
