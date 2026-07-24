@@ -1679,6 +1679,7 @@ Resources:
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${CreateFSxONTAPResources}
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${CreateVPCEKSClusterAndFSxONTAP}
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${CreateEKSClusterResource}
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${PreloadAgentDataDocument}
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${DestroyTerraformResources}
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${DummyDeleteInfraDocument}
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/AmazonCloudWatch-ManageAgent
@@ -2596,6 +2597,136 @@ Resources:
                   # ===== END VALIDATION =====
 
                   echo "FSx ONTAP infrastructure setup completed."
+
+  RunPreloadAgentData:
+    DependsOn: [RunCreateEKSClusterResource]
+    Type: Custom::RunSSMDocLambda
+    Properties:
+      ServiceToken: !GetAtt RunSSMDocLambda.Arn
+      ServiceTimeout: 900
+      InstanceId: !Ref VSCodeInstance
+      DocumentName: !Ref PreloadAgentDataDocument
+      DeleteDocumentName: ""
+      MonitoringSQSQueue: !GetAtt SSMCommandMonitorQueue.QueueUrl
+      LambdaArn: !GetAtt RunSSMDocLambda.Arn
+      CloudWatchLogGroupName: !Sub /aws/ssm/${PreloadAgentDataDocument}
+      VSCodePassword: !GetAtt SecretPlaintext.password
+      LinuxFlavor: !If [IsAL2023, 'al2023', 'ubuntu']
+
+  PreloadAgentDataDocument:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Command
+      Content:
+        schemaVersion: '2.2'
+        description: Install Trident CSI, create agent namespace, import shared volume, populate data and set UNIX permissions
+        parameters:
+          LinuxFlavor:
+            type: String
+            default: 'al2023'
+          VSCodePassword:
+            type: String
+            default: !Ref AWS::StackId
+        mainSteps:
+          - action: aws:runShellScript
+            name: PreloadAgentData
+            precondition:
+              StringEquals:
+                - '{{ LinuxFlavor }}'
+                - al2023
+            inputs:
+              timeoutSeconds: '600'
+              runCommand:
+                - !Sub |
+                  #!/bin/bash
+                  set -e
+                  set -o pipefail
+
+                  export HOME=/home/${VSCodeUser}
+                  export AWS_REGION=${AWS::Region}
+                  export KUBECONFIG=/home/${VSCodeUser}/.kube/config
+
+                  # Ensure kubeconfig is available
+                  aws eks update-kubeconfig --name eksworkshop --region $AWS_REGION --kubeconfig $KUBECONFIG
+
+                  cd /home/${VSCodeUser}/environment
+
+                  echo "=== Step 1: Install Trident CSI Driver ==="
+                  helm repo add netapp-trident https://netapp.github.io/trident-helm-chart --force-update
+                  helm repo update
+                  helm upgrade --install trident-operator netapp-trident/trident-operator \
+                    --namespace trident --create-namespace \
+                    --version 100.2502.1 \
+                    --wait --timeout 5m
+
+                  echo "Waiting for Trident pods..."
+                  kubectl wait --for=condition=Ready pods --all -n trident --timeout=300s
+
+                  echo "=== Step 2: Configure Trident Backend ==="
+                  # Get FSxN SVM details
+                  FSXN_FS_ID=$(cd /home/${VSCodeUser}/environment/terraform && terraform output -raw fsx_ontap_id)
+                  SVM_MGMT_LIF=$(cd /home/${VSCodeUser}/environment/terraform && terraform output -raw svm_management_lif)
+                  SVM_NAME=$(cd /home/${VSCodeUser}/environment/terraform && terraform output -raw svm_name)
+
+                  FSXN_SECRET_NAME=$(aws secretsmanager list-secrets --region $AWS_REGION \
+                    --query "SecretList[?starts_with(Name,'trident-fsx-ontap-svm-')].Name" --output text)
+                  SVM_PASS=$(aws secretsmanager get-secret-value \
+                    --secret-id "$FSXN_SECRET_NAME" \
+                    --query 'SecretString' --output text --region $AWS_REGION)
+
+                  # Create Trident backend secret
+                  kubectl create namespace trident 2>/dev/null || true
+                  kubectl -n trident create secret generic fsx-ontap-secret \
+                    --from-literal=username=vsadmin \
+                    --from-literal=password="$SVM_PASS" \
+                    --dry-run=client -o yaml | kubectl apply -f -
+
+                  # Apply TridentBackendConfig
+                  cat <<EOF | kubectl apply -f -
+                  apiVersion: trident.netapp.io/v1
+                  kind: TridentBackendConfig
+                  metadata:
+                    name: fsx-ontap-nas
+                    namespace: trident
+                  spec:
+                    version: 1
+                    storageDriverName: ontap-nas
+                    backendName: fsx-ontap-nas
+                    managementLIF: $SVM_MGMT_LIF
+                    svm: $SVM_NAME
+                    credentials:
+                      name: fsx-ontap-secret
+                    defaults:
+                      snapshotPolicy: "default"
+                      snapshotReserve: "10"
+                      snapshotDir: "true"
+                  EOF
+
+                  echo "Waiting for backend to be available..."
+                  sleep 15
+
+                  # Apply StorageClass
+                  kubectl apply -f /home/${VSCodeUser}/environment/eks/FSxONTAP/ontap-storage-class.yaml
+
+                  echo "=== Step 3: Create Agents Namespace and Import Volume ==="
+                  kubectl create namespace agents 2>/dev/null || true
+                  kubectl apply -f /home/${VSCodeUser}/environment/eks/agentic-agents/agent-shared-pvc.yaml
+
+                  echo "Waiting for PVC to bind..."
+                  sleep 30
+                  kubectl get pvc -n agents agent-shared-data
+
+                  echo "=== Step 4: Populate Agent Data and Set Permissions ==="
+                  kubectl apply -f /home/${VSCodeUser}/environment/eks/agentic-agents/populate-shared-data-job.yaml
+                  kubectl wait --for=condition=complete job/populate-agent-shared-data -n agents --timeout=300s
+                  kubectl logs job/populate-agent-shared-data -n agents
+
+                  echo "=== Agent data pre-loading complete ==="
+                  echo "Volume: agent_shared_data"
+                  echo "Namespace: agents"
+                  echo "PVC: agent-shared-data"
+                  echo "Finance data: /data/finance (UID 1001, mode 750)"
+                  echo "IT Ops data: /data/itops (UID 1002, mode 750)"
 
   RunDestroyTerraformResources:
     Type: Custom::RunSSMDocLambda
