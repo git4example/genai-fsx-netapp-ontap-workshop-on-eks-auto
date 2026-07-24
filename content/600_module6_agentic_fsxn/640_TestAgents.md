@@ -136,7 +136,15 @@ Even though the LLM *understands* the instruction and knows the finance agent's 
 **In production**, tool scoping is critical: never give an agent tools beyond what its role requires. If this agent had an `http_request` tool, it could potentially call the finance agent's API, which would execute with the finance agent's UID (1001) and return sensitive data. FSxN permissions are the **last line of defense** that blocks access at the storage layer — but restricting tools at the agent level is the **first line of defense** that prevents the attack vector entirely.
 :::
 
-##### Test 3C: Malicious Namespace Cannot Mount Finance PVC (exit netshoot first)
+##### Test 3C: Malicious Namespace Cannot Mount Finance PVC
+
+:::alert{header="Exit netshoot first" type="warning"}
+The following tests use `kubectl` commands that must be run from the **VSCode IDE terminal**, not from inside the netshoot pod. Type `exit` to leave the netshoot pod shell before continuing.
+:::
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+exit
+:::
 
 What if the attacker tries to create a pod in their namespace that references the finance PVC?
 
