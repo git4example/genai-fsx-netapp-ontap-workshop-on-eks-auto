@@ -1,7 +1,11 @@
 ---
-title : "Multi-AZ Resiliency and Live Failover"
-weight : 500
+title : "(Optional) Multi-AZ Resiliency and Live Failover"
+weight : 850
 ---
+
+:::alert{header="Optional Module" type="info"}
+This module is optional. You can skip it and proceed directly to the next module if time is limited.
+:::
 
 ## Module Overview
 

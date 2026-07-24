@@ -1,6 +1,7 @@
 ---
 title : "FSx for ONTAP Volume Snapshots"
 weight : 420
+hidden : true
 ---
 
 ## Overview

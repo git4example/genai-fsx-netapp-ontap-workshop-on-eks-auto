@@ -1,6 +1,6 @@
 ---
 title : "Agentic AI with FSxN Native Access Control"
-weight : 600
+weight : 400
 ---
 
 ## Module Overview
