@@ -505,7 +505,7 @@ resource "aws_fsx_ontap_file_system" "fsx_ontap" {
   storage_capacity    = 1024
   subnet_ids          = [module.vpc.private_subnets[0], module.vpc.private_subnets[1]]
   deployment_type     = "MULTI_AZ_1"
-  throughput_capacity = 256
+  throughput_capacity = 512
   security_group_ids  = [aws_security_group.fsx_ontap_sg.id]
   preferred_subnet_id = module.vpc.private_subnets[0]
 
