@@ -5,18 +5,18 @@ weight : 400
 
 ## Module Overview
 
-In enterprise environments, **multiple AI agents** may operate against a shared storage layer — each requiring access to **only its designated data domain**. This module demonstrates how Amazon FSx for NetApp ONTAP's **native security features** (export policies, UNIX permissions, and volume-level isolation) enforce strict data boundaries for AI agents, preventing unauthorized access even when agents share the same cluster and LLM backend.
+In enterprise environments, **multiple AI agents** may operate against a shared storage layer — each requiring access to **only its designated data domain**. This module demonstrates how Amazon FSx for NetApp ONTAP's **native POSIX permissions** (UID/GID ownership + file mode) enforce strict data boundaries for AI agents — even when all agents share the same volume, same namespace, and same LLM backend.
 
-You will build **three AI agents** using [AWS Strands Agents SDK](https://github.com/strands-agents/sdk-python) (open source), each with a distinct role:
+You will deploy **three AI agents** using [AWS Strands Agents SDK](https://github.com/strands-agents/sdk-python) (open source), each with a distinct role:
 
-| Agent | Role | Data Access | Outcome |
-|-------|------|-------------|---------|
-| **Finance Agent** | Financial analyst | `/finance_data` volume only | Answers questions about financial reports |
-| **IT Operations Agent** | IT Ops assistant | `/it_ops_data` volume only | Answers questions about runbooks and logs |
-| **Malicious Agent** | Simulated attacker | Attempts both volumes | **Blocked** by FSxN native permissions |
+| Agent | Role | UID | Can Access |
+|-------|------|-----|-----------|
+| **Finance Agent** | Financial analyst | 1001 | `/data/finance` only |
+| **IT Operations Agent** | IT Ops assistant | 1002 | `/data/itops` only |
+| **Malicious Agent** | Simulated attacker | 1099 | **Neither** — permission denied |
 
 :::alert{header="Why This Matters" type="info"}
-As organizations deploy autonomous AI agents that can read, analyze, and act on data, **storage-level access control** becomes critical. Unlike application-layer auth that agents could potentially bypass, FSxN enforces permissions at the **storage protocol level** — the agent literally cannot read bytes it's not authorized to access, regardless of what the LLM instructs it to do.
+As organizations deploy autonomous AI agents that can read, analyze, and act on data, **storage-level access control** becomes critical. Unlike application-layer auth that agents could potentially bypass, FSxN enforces permissions at the **NFS protocol level** — the agent literally cannot read bytes it's not authorized to access, regardless of what the LLM instructs it to do.
 :::
 
 ---
@@ -34,40 +34,33 @@ flowchart TB
         GW --> BR
     end
 
-    subgraph EKS["EKS Cluster — Strands AI Agents"]
+    subgraph EKS["EKS Cluster — namespace: agents"]
         direction LR
-        FA["Finance Agent\nUID: 1001"]
-        IA["IT Ops Agent\nUID: 1002"]
-        MA["Malicious Agent\nUID: 1099"]
+        FA["Finance Agent\nUID: 1001\nDATA_DIR: /data/finance"]
+        IA["IT Ops Agent\nUID: 1002\nDATA_DIR: /data/itops"]
+        MA["Malicious Agent\nUID: 1099\nDATA_DIR: /data"]
     end
 
-    subgraph FSxN["FSx for NetApp ONTAP — Volume-Level Isolation"]
+    subgraph FSxN["FSx for NetApp ONTAP — Single Shared Volume"]
         direction LR
-        FV["finance_agent_data\nOwner: UID 1001\nPerms: 0750"]
-        IV["itops_agent_data\nOwner: UID 1002\nPerms: 0750"]
-        BL["BLOCKED\nUID 1099 ≠ owner\nPermission Denied"]
+        FD["/data/finance\nOwner: 1001:1001\nMode: 0750"]
+        ID["/data/itops\nOwner: 1002:1002\nMode: 0750"]
     end
 
     FA & IA & MA -->|API calls| GW
-    FA -->|"READ ✓"| FV
-    IA -->|"READ ✓"| IV
-    MA -.-x|"DENIED ✗"| BL
+    FA -->|"READ ✓"| FD
+    IA -->|"READ ✓"| ID
+    MA -.-x|"DENIED ✗"| FD
+    MA -.-x|"DENIED ✗"| ID
 
     style FA fill:#c8e6c9,stroke:#2e7d32
     style IA fill:#bbdefb,stroke:#1565c0
     style MA fill:#ffcdd2,stroke:#c62828
-    style FV fill:#c8e6c9,stroke:#2e7d32
-    style IV fill:#bbdefb,stroke:#1565c0
-    style BL fill:#ffcdd2,stroke:#c62828
+    style FD fill:#c8e6c9,stroke:#2e7d32
+    style ID fill:#bbdefb,stroke:#1565c0
 ```
 
-**FSxN Security Layers Demonstrated:**
-
-| Layer | Mechanism | What It Blocks |
-|-------|-----------|---------------|
-| **UNIX Permissions** | UID/GID ownership + file mode (0750) | Wrong UID cannot read files — primary per-agent enforcement |
-| **Export Policy** | IP/CIDR-based NFS access rules | Only EKS cluster nodes can mount — network guardrail |
-| **Volume Isolation** | Separate ONTAP volumes per domain | Each agent only sees its own PVC mount |
+**Key Design Point**: All agents mount the **same PVC** (`agent-shared-data`). There is no volume-level isolation, no namespace separation, and no Kubernetes RBAC involved. The **only** access control mechanism is POSIX UID/GID permissions set on the FSxN volume subdirectories.
 
 ---
 
@@ -87,13 +80,9 @@ In this module, each agent has file-access tools (`list_files`, `read_file`, `se
 ::::
 
 :::alert{header="Prerequisites" type="info"}
-This module assumes you have completed the following modules:
-- **Module 1** — Configure storage for model hosting using Amazon FSx for NetApp ONTAP
-- **Module 2** — Deploy Generative AI Chat application
+This module assumes you have completed:
+- **Module 1** — Configure storage (Trident CSI driver installed)
+- **Module 2** — Deploy Generative AI Chat application (vLLM + LiteLLM Gateway running)
 
-You should have:
-- A working EKS cluster with Trident CSI driver installed
-- The vLLM Mistral-7B inference endpoint running (`vllm-mistral7b-service`)
-- The primary FSx for NetApp ONTAP file system available
+The agent data volume and permissions were **pre-configured during workshop provisioning**.
 :::
-
