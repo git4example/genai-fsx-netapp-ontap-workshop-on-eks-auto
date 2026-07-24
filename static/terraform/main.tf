@@ -563,6 +563,27 @@ resource "aws_fsx_ontap_volume" "fsx_ontap_volume" {
 }
 
 
+resource "aws_fsx_ontap_volume" "agent_shared_data" {
+  name                       = "agent_shared_data"
+  junction_path              = "/agent_data"
+  size_in_megabytes          = 10240 # 10 GiB
+  storage_virtual_machine_id = aws_fsx_ontap_storage_virtual_machine.fsx_ontap_svm.id
+  storage_efficiency_enabled = true
+  volume_style               = "FLEXVOL"
+
+  tiering_policy {
+    name = "AUTO"
+  }
+
+  tags = merge(local.tags, {
+    Name = "${local.name}-agent-shared-data"
+  })
+
+  depends_on = [
+    aws_fsx_ontap_storage_virtual_machine.fsx_ontap_svm
+  ]
+}
+
 ################################################################################
 # Kubernetes Manifests
 ################################################################################
@@ -687,8 +708,13 @@ output "svm_nfs_lif" {
 }
 
 output "ontap_volume_junction_path" {
-  description = "ONTAP volume junction path"
+  description = "ONTAP model volume junction path"
   value       = aws_fsx_ontap_volume.fsx_ontap_volume.junction_path
+}
+
+output "agent_shared_data_junction_path" {
+  description = "ONTAP agent shared data volume junction path"
+  value       = aws_fsx_ontap_volume.agent_shared_data.junction_path
 }
 
 output "fsx_ontap_az" {
