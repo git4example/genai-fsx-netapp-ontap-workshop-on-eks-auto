@@ -1,0 +1,15 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: agent-shared-data
+  namespace: agents
+  annotations:
+    trident.netapp.io/importVolume: "agent_shared_data"
+    trident.netapp.io/importBackend: "fsx-ontap-nas"
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ontap-nas-sc
+  resources:
+    requests:
+      storage: 10Gi

@@ -1,0 +1,215 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: populate-agent-shared-data
+  namespace: agents
+spec:
+  template:
+    spec:
+      securityContext:
+        runAsUser: 0
+      containers:
+      - name: data-populator
+        image: public.ecr.aws/amazonlinux/amazonlinux:2023
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "=== Creating directory structure ==="
+          mkdir -p /data/finance/{reports,transactions,compliance}
+          mkdir -p /data/itops/{configs,logs,runbooks}
+
+          echo "=== Populating Finance Data ==="
+
+          cat > /data/finance/reports/q1_2024_earnings.txt << 'EOF'
+          Q1 2024 Earnings Report — ACME Corporation
+          ==========================================
+          Period: January 1 - March 31, 2024
+
+          FINANCIAL HIGHLIGHTS:
+          - Total Revenue: $142.3M (up 12% YoY)
+          - Operating Income: $33.3M
+          - Operating Margin: 23.4%
+          - Net Income: $28.1M
+          - EPS: $2.34 (diluted)
+
+          SEGMENT PERFORMANCE:
+          - Cloud Services: $67.8M (+34% YoY)
+          - Enterprise Software: $52.1M (+3% YoY)
+          - Legacy Products: $22.4M (-8% YoY)
+
+          Approved by: CFO, March 28, 2024
+          EOF
+
+          cat > /data/finance/reports/q2_2024_earnings.txt << 'EOF'
+          Q2 2024 Earnings Report — ACME Corporation
+          ==========================================
+          Period: April 1 - June 30, 2024
+
+          FINANCIAL HIGHLIGHTS:
+          - Total Revenue: $156.7M (up 15% YoY)
+          - Operating Income: $38.2M
+          - Operating Margin: 24.4%
+          - Net Income: $31.5M
+          - EPS: $2.63 (diluted)
+
+          Approved by: CFO, June 28, 2024
+          EOF
+
+          cat > /data/finance/reports/annual_budget_2024.txt << 'EOF'
+          Annual Budget Plan 2024 — ACME Corporation
+          ===========================================
+          Total Budget: $580M
+          - R&D: $104M (18%)
+          - Sales & Marketing: $145M (25%)
+          - Operations: $203M (35%)
+          - G&A: $128M (22%)
+
+          Capital Expenditure: $48M
+          - Data Center: $28M
+          - Office: $12M
+          - Equipment: $8M
+          EOF
+
+          cat > /data/finance/compliance/expense_policy.txt << 'EOF'
+          Corporate Expense Policy v3.2
+          =============================
+          - Travel: Pre-approval required for >$500
+          - Software: CTO approval for >$10K annual
+          - Hardware: IT approval required
+          - Entertainment: VP approval, $150/person max
+          EOF
+
+          cat > /data/finance/compliance/sox_audit_notes.txt << 'EOF'
+          SOX Compliance Audit Notes — Q2 2024
+          =====================================
+          Status: COMPLIANT
+          - Revenue recognition: Passed
+          - Internal controls: Passed
+          - Financial reporting: Passed
+          Next audit: Q4 2024
+          EOF
+
+          cat > /data/finance/transactions/vendor_payments_jan.csv << 'EOF'
+          date,vendor,amount,category,approved_by
+          2024-01-05,AWS,45000,Cloud Infrastructure,CTO
+          2024-01-12,Datadog,8500,Monitoring,VP Engineering
+          2024-01-15,Salesforce,32000,CRM,VP Sales
+          2024-01-22,WeWork,15000,Office Space,COO
+          2024-01-28,GitHub,4200,Developer Tools,CTO
+          EOF
+
+          cat > /data/finance/transactions/vendor_payments_feb.csv << 'EOF'
+          date,vendor,amount,category,approved_by
+          2024-02-03,AWS,47500,Cloud Infrastructure,CTO
+          2024-02-10,Snowflake,22000,Data Platform,VP Engineering
+          2024-02-14,Zoom,3800,Communications,IT Director
+          2024-02-21,NetApp,28000,Storage,VP Infrastructure
+          2024-02-28,PagerDuty,5600,Oncall,VP Engineering
+          EOF
+
+          echo "=== Populating IT Ops Data ==="
+
+          cat > /data/itops/runbooks/incident_response.txt << 'EOF'
+          Incident Response Runbook v2.1
+          ==============================
+          P1 (Critical): All hands, 15-min response SLA
+            1. Page oncall via PagerDuty
+            2. Open bridge call
+            3. Identify blast radius
+            4. Communicate to stakeholders (30 min)
+            5. Resolve or escalate within 1 hour
+
+          P2 (High): Team response, 1-hour SLA
+            1. Acknowledge in ticketing system
+            2. Assign owner
+            3. Investigate root cause
+            4. Fix or workaround within 4 hours
+          EOF
+
+          cat > /data/itops/runbooks/deployment_checklist.txt << 'EOF'
+          Deployment Checklist
+          ====================
+          Pre-deploy:
+          [ ] Feature flags configured
+          [ ] Rollback plan documented
+          [ ] Monitoring alerts configured
+          [ ] Load test passed (>P95 baseline)
+
+          Deploy:
+          [ ] Deploy to staging
+          [ ] Smoke test staging
+          [ ] Deploy to production (canary 5%)
+          [ ] Monitor error rates 15 min
+          [ ] Promote to 100%
+
+          Post-deploy:
+          [ ] Verify metrics nominal
+          [ ] Close deployment ticket
+          [ ] Update changelog
+          EOF
+
+          cat > /data/itops/configs/k8s_cluster_config.txt << 'EOF'
+          EKS Cluster Configuration
+          =========================
+          Cluster: eksworkshop
+          Version: 1.35
+          Region: us-west-2
+          Node Groups:
+            - general-purpose (m6i.xlarge, 2-10 nodes)
+            - inferentia (inf2.xlarge, 0-2 nodes)
+          Add-ons: CoreDNS, kube-proxy, VPC-CNI, EBS-CSI
+          Auth: EKS Access Entries (API mode)
+          EOF
+
+          cat > /data/itops/configs/monitoring_endpoints.txt << 'EOF'
+          Monitoring Endpoints
+          ====================
+          Prometheus: http://kube-prometheus-stack-prometheus:9090
+          Grafana: http://kube-prometheus-stack-grafana:80
+          AlertManager: http://kube-prometheus-stack-alertmanager:9093
+          Neuron Monitor: http://neuron-monitor:8000/metrics
+          vLLM Metrics: http://vllm-mistral7b-service:80/metrics
+          EOF
+
+          cat > /data/itops/logs/deployment_log_2024_06.txt << 'EOF'
+          2024-06-01 09:15 [INFO] Deploy v2.3.1 started (canary 5%)
+          2024-06-01 09:30 [INFO] Canary healthy, promoting to 25%
+          2024-06-01 09:45 [INFO] Promoting to 100%
+          2024-06-01 10:00 [INFO] Deploy v2.3.1 complete
+          2024-06-15 14:22 [WARN] Deploy v2.4.0 rollback triggered
+          2024-06-15 14:22 [ERROR] OOM in inference pod (memory limit hit)
+          2024-06-15 14:25 [INFO] Rollback to v2.3.1 complete
+          2024-06-20 11:00 [INFO] Deploy v2.4.1 started (fix: increased memory limit)
+          2024-06-20 11:15 [INFO] Deploy v2.4.1 complete
+          EOF
+
+          echo "=== Setting UNIX Permissions ==="
+          chown -R 1001:1001 /data/finance
+          chmod -R 750 /data/finance
+          chown -R 1002:1002 /data/itops
+          chmod -R 750 /data/itops
+          echo "  /data/finance → owner: 1001:1001, mode: 750"
+          echo "  /data/itops   → owner: 1002:1002, mode: 750"
+
+          echo ""
+          echo "=== Verification ==="
+          echo "Finance files:"
+          find /data/finance -type f | sort
+          echo ""
+          echo "IT Ops files:"
+          find /data/itops -type f | sort
+          echo ""
+          echo "Permissions:"
+          ls -la /data/
+          echo ""
+          echo "=== Data population and permissions complete ==="
+        volumeMounts:
+        - name: shared-data
+          mountPath: /data
+      volumes:
+      - name: shared-data
+        persistentVolumeClaim:
+          claimName: agent-shared-data
+      restartPolicy: Never
+  backoffLimit: 2
