@@ -144,8 +144,11 @@ Review the PVC definition with import annotations:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/agentic-agents
-cat finance-agent-pvc.yaml
 :::
+
+::::expand{header="Click to review finance-agent-pvc.yaml"}
+
+::code[cat finance-agent-pvc.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
 :::code[]{language=yaml showLineNumbers=true showCopyAction=false}
 kind: PersistentVolumeClaim
@@ -164,6 +167,8 @@ spec:
     requests:
       storage: 10Gi
 :::
+
+::::
 
 The key annotations:
 - `trident.netapp.io/importVolume` — The exact ONTAP volume name to import

@@ -25,7 +25,9 @@ In this section you will:
 
 The StorageClass defines how Trident provisions new ONTAP volumes. Let's review the StorageClass manifest:
 
-1. Run the below command to view the StorageClass manifest (`ontap-storage-class.yaml`):
+1. Review the StorageClass manifest:
+
+::::expand{header="Click to view ontap-storage-class.yaml"}
 
 ::code[cat ontap-storage-class.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
@@ -45,6 +47,8 @@ allowVolumeExpansion: true
 mountOptions:
   - nfsvers=4.1
 :::
+
+::::
 
 Key points about this StorageClass:
 - **provisioner**: `csi.trident.netapp.io` — tells Kubernetes to use the Trident CSI driver
@@ -76,7 +80,9 @@ ontap-nas-sc   csi.trident.netapp.io      Retain          Immediate           tr
 
 Now create a PersistentVolumeClaim (PVC) that references the StorageClass. When you apply this PVC, Trident will automatically provision an ONTAP volume and create the corresponding PV — no manual PV creation is needed.
 
-1. Let's review the PVC manifest (`ontap-pvc.yaml`):
+1. Review the PVC manifest:
+
+::::expand{header="Click to view ontap-pvc.yaml"}
 
 ::code[cat ontap-pvc.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
@@ -94,6 +100,8 @@ spec:
     requests:
       storage: 100Gi
 :::
+
+::::
 
 Key points about this PVC:
 - **name**: `ontap-model-claim` — this is the name that the vLLM deployment and model loading Job will reference

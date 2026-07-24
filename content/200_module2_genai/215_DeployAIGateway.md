@@ -55,6 +55,8 @@ With larger self-hosted models (70B+), you could route everything locally. The g
 
 ##### Step 1: Review the LiteLLM configuration
 
+::::expand{header="Click to review litellm-config.yaml"}
+
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 cat /home/participant/environment/eks/genai/litellm-config.yaml
 :::
@@ -72,6 +74,8 @@ model_list:
     litellm_params:
       model: "bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0"
 :::
+
+::::
 
 :::alert{header="How routing works" type="info"}
 Each model name maps to a specific backend:

@@ -28,12 +28,15 @@ In production with larger self-hosted models (70B+), you could route everything 
 
 ##### Step 1: Review the Agent Application Code
 
-Each agent is a Python application using Strands Agents SDK. Let's review the code:
+Each agent is a Python application using Strands Agents SDK. Navigate to the agent directory:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/agentic-agents
-cat agent-app/agent.py
 :::
+
+::::expand{header="Click to review agent.py — the Strands AI Agent code"}
+
+::code[cat agent-app/agent.py]{language=bash showLineNumbers=false showCopyAction=true}
 
 :::code[]{language=python showLineNumbers=true showCopyAction=false}
 # agent.py — Strands AI Agent with FSxN file-access tools
@@ -109,13 +112,15 @@ def search_documents(query: str) -> str:
     return f"No results found for '{query}' in accessible documents."
 :::
 
+::::
+
 ##### Step 2: Review the Agent Container Image
 
 The agent is packaged as a container. Review the Dockerfile to understand what's included:
 
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-cat agent-app/Dockerfile
-:::
+::::expand{header="Click to review Dockerfile"}
+
+::code[cat agent-app/Dockerfile]{language=bash showLineNumbers=false showCopyAction=true}
 
 :::code[]{language=dockerfile showLineNumbers=true showCopyAction=false}
 FROM python:3.11-slim
@@ -130,6 +135,8 @@ ENV LLM_API_KEY="not-needed"
 ENTRYPOINT ["python", "agent.py"]
 :::
 
+::::
+
 For this workshop, we provide a **pre-built container image** so you don't need to build or push anything:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
@@ -141,9 +148,9 @@ echo "Using pre-built agent image: $AGENT_IMAGE"
 
 The Finance Agent runs as **UID 1001**, matching the ownership on the `finance_agent_data` volume. It mounts the finance PVC and can read all finance documents.
 
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-cat finance-agent-deployment.yaml
-:::
+::::expand{header="Click to review finance-agent-deployment.yaml"}
+
+::code[cat finance-agent-deployment.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
 :::code[]{language=yaml showLineNumbers=true showCopyAction=false}
 apiVersion: apps/v1
@@ -186,6 +193,8 @@ spec:
         persistentVolumeClaim:
           claimName: finance-agent-data-pvc
 :::
+
+::::
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 envsubst '$AGENT_IMAGE' < finance-agent-deployment.yaml | kubectl apply -f -

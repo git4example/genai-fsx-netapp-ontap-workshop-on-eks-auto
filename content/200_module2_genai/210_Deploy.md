@@ -197,7 +197,9 @@ Although your FSx for ONTAP file system is deployed in **Multi-AZ** mode (access
 :::
 
 
-4. Run the below command to inspect the vLLM's mistral-ontap.yaml deployment file.
+4. Optionally inspect the vLLM deployment manifest to understand its configuration:
+
+::::expand{header="Click to view mistral-ontap.yaml — vLLM deployment manifest"}
 
 ::code[cat mistral-ontap.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
@@ -270,6 +272,7 @@ spec:
           claimName: ontap-model-claim                         # <<<<< FSx for ONTAP PVC
 :::
 
+::::
 
 5. You can monitor the vLLM pod creation by running the following command periodically, until you see it transitioning to `Running`, and when its at the 7 minute mark (and the vLLM is online and the model has been loaded into memory)
 
