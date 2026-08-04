@@ -19,7 +19,7 @@ For more information about networking requirements for FSx for ONTAP, please ref
 
 ##### Step 1: Create an IAM policy that allows the Trident CSI driver to make AWS API calls on your behalf
 
-1. Copy and run the below command to create the trident-csi-driver.json file.
+1. Copy and run the below command in your **VSCode IDE** to create the trident-csi-driver.json file.
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cat << EOF > trident-csi-driver.json

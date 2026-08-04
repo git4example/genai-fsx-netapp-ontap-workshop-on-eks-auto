@@ -81,11 +81,6 @@ If you don't see the model in the dropdown, please refresh the WebUI page. (Reme
 
 ![Open WebUI](/static/images/OpenWebUI.png)
 
-You can also see when vLLM Pod and the Mistral model has been loaded into the vLLM memory by running below command into your terminal session, and seeing the "*Application startup complete*" in the output.
-
-::code[kubectl logs <your-vLLM-pod-name> -f]{language=bash showLineNumbers=false showCopyAction=true}
-
-
 
 6. You have now successfully deployed a Generative AI Chatbot as a containerized application running on Amazon EKS, with the cached Mistral-7B model hosted on Amazon FSx for NetApp ONTAP, and the compute powered by AWS Inferentia Accelerators.
 

@@ -1,15 +1,16 @@
 ---
-title: "Build GenAI & ML for Performance and Scale, using Amazon EKS, Amazon FSx for NetApp ONTAP and AWS Inferentia"
+title: "Flexible AI on AWS + FSx NetApp : Build a Self-hosted Generative-AI application"
 weight: 0
 ---
+In this workshop you will get hands-on and learn how to build your own self-hosted Generative-AI  application for performance, scale, and observability using an AWS AI stack of;
 
-In this workshop you will build a Generative AI based interactive Chat application, using vLLM (Inference engine for model serving), an open-source Large Language Model (LLM), along with the following AWS services stack:
+* **AWS Inferentia** - Accelerated Compute to power your Generative-AI application.
+* **Amazon Elastic Kubernetes Service (EKS)** - Orchestration layer used to host Generative-AI & Agentic-AI applications.
+* **Amazon FSx for NetApp ONTAP** - High-performance shared storage used to host LLM models and unstructured data.
 
-* Amazon Elastic Kubernetes Service (EKS) - Orchestration layer
-* Amazon FSx for NetApp ONTAP - High-performance shared storage for AI model data
-* AWS Inferentia - Accelerated compute layer
-* NetApp Astra Trident - CSI driver for dynamic storage provisioning on Kubernetes
+In this workshop you will perform the following:
 
-You will get hands on with configuring and deploying components across Amazon EKS, Amazon FSx for NetApp ONTAP and AWS Inferentia to build your own Generative AI Chat application. You will learn how to load model data onto FSx for NetApp ONTAP using a onetime Kubernetes Job, serve inference with vLLM on Inferentia, and manage your data with ONTAP features like volume snapshots.
-
- ![fsxn-architecture](/static/images/fsxn-architecture.png)
+- Build A Generative AI application
+- Deploy Observability dashboards
+- Build An Agentic AI workflow
+- Run through example scenarios
