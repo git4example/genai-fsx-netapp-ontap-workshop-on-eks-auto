@@ -23,7 +23,7 @@
 #   - Pre-compiled model directory on FSx for ONTAP at /work-dir/Mistral-7B-Instruct-v0.3
 #     containing both model weights (safetensors) and compiled artifacts
 #     (model.pt + neuron_config.json from SDK 2.26.1)
-#   - FSx for ONTAP PVC named "ontap-model-claim" dynamically provisioned via Trident
+#   - FSx for ONTAP PVC named "ontap-model-claim" (imports the pre-provisioned "model" volume via Trident)
 #   - Replace us-east-1a below with your FSx ONTAP availability zone
 #
 # STARTUP TIMING (from production logs):

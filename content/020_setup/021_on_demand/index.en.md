@@ -80,7 +80,7 @@ The below workshop automated deployment script handles setup tasks including:
 - Deployment validation and access information
 
 :::alert{header="Model staging" type="info"}
-The Mistral-7B model is **not** staged to S3 by this script. It is pulled directly from HuggingFace (`Hello2pariksit/Mistral-7B-Instruct-v0.3-neuron`) into the FSx for NetApp ONTAP volume by a Kubernetes Job during the first workshop module. This is a one-time download (~30 GB, ~3 minutes) that persists across pod restarts.
+The Mistral-7B model is **not** staged to S3 by this script. It is pulled directly from HuggingFace (`Hello2pariksit/Mistral-7B-Instruct-v0.3-neuron`) into the FSx for NetApp ONTAP volume by a Kubernetes Job that runs automatically **during workshop provisioning** (so participants don't wait for it). This is a one-time download (~30 GB, ~3 minutes) that persists across pod restarts.
 :::
 
 1. Run the below commands to start the automated workshop environment deployment script:

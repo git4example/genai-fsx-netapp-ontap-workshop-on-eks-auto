@@ -108,36 +108,17 @@ nodeclass.eks.amazonaws.com/inferentia   eksworkshop-eks-auto-202501030632263297
 
 
 
-##### Step 3: Load the Mistral-7B Model onto the FSx for ONTAP Volume
+##### Step 3: Verify the Mistral-7B Model is Present on the FSx for ONTAP Volume
 
-:::alert{header="Important — Why is this step needed?" type="info"}
-FSx for NetApp ONTAP is a fully-featured enterprise file system that supports NFS, SMB, and iSCSI, with features like snapshots, clones, SnapMirror replication, data compression, and deduplication. In this workshop we use it as a high-performance shared volume for model data — the same volume can be mounted `ReadWriteMany` across pods, enabling both the model loading Job and the vLLM inference pod to share a single copy of the model.
-
-Because the model data lives on a persistent volume (rather than being baked into the container image or streamed on demand), we stage it onto the ONTAP-backed PVC once using a Kubernetes Job that downloads a **pre-compiled** Mistral-7B-Instruct-v0.3 model (with Neuron compiled artifacts) from HuggingFace directly onto the PVC. Using pre-compiled artifacts means vLLM can skip the Neuron compilation step and start serving immediately.
-
-This is a **one-time operation**. Once the model data is on the FSx for ONTAP volume, it persists across pod restarts and redeployments. If the vLLM pod is deleted and recreated, it will load the model directly from the volume without needing to download it again. This is one of the key benefits of using persistent storage like FSx for ONTAP for inference workloads — the model is loaded once and reused by any pod that mounts the same volume.
+:::alert{header="The model is already pre-loaded" type="success"}
+To save you a multi-gigabyte download, the **pre-compiled Mistral-7B-Instruct-v0.3 model (with Neuron compiled artifacts) was already loaded onto an FSx for NetApp ONTAP volume during workshop provisioning**. The volume named `model` was imported into Kubernetes as the `ontap-model-claim` PVC (see the "How the model volume is wired" callout in Module 1). You do **not** need to download anything here — you'll simply confirm the model is present and then deploy vLLM against it.
 :::
 
-1. Apply the Model Loading Job manifest. This Job will download the pre-compiled Mistral-7B-Instruct-v0.3 model (including Neuron compiled artifacts) from HuggingFace and store it on the `ontap-model-claim` PVC that you created in Module 1.
-
-:::code[]{language=bash showLineNumbers=false showCopyAction=true}
-cd /home/participant/environment/eks/FSxONTAP
-kubectl apply -f model-loading-job.yaml
+:::alert{header="Why store the model on FSx for ONTAP?" type="info"}
+FSx for NetApp ONTAP is a fully-featured enterprise file system (NFS, SMB, iSCSI) with snapshots, clones, SnapMirror replication, compression, and deduplication. Here it serves as a high-performance shared volume for model data — the same volume can be mounted `ReadWriteMany` across pods. Because the model lives on persistent storage rather than being baked into the container image, it persists across pod restarts and can be reused by any pod that mounts the volume. Using pre-compiled Neuron artifacts also lets vLLM skip the compilation step and start serving quickly.
 :::
 
-2. The pre-compiled Mistral-7B model is approximately 29 GB, and the download typically completes in **5 minutes**. Please wait until the download completes before going
-
-**[Optional]** - You can view the progress of the model download by opening a **second VSCode IDE terminal session**  and running the below command to monitor the progress.
-
-:::code[]{language=bash showLineNumbers=false showCopyAction=true}
-kubectl logs -f job/model-download
-:::
-
-:::alert{header="Note" type="info"}
-Please wait until the download completes before moving to the next sections.
-:::
-
-3. Verify that the model data has been successfully downloaded to the persistent volume. Run a quick check to confirm the model files are present:
+Verify that the model data is present on the persistent volume:
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl run model-check --rm -it --restart=Never \
@@ -149,4 +130,4 @@ kubectl run model-check --rm -it --restart=Never \
 You should see the model weight files (e.g., `model-00001-of-00003.safetensors`), tokenizer files, and configuration files listed in the output. This confirms the model is ready for the vLLM inference pod.
 
 ### Summary
-You have configured EKS Nodepool for AWS Inferentia AI Accelators, and loaded the Mistral-7B model onto an FSx for NetApp volume.
+You have configured the EKS NodePool for AWS Inferentia accelerators and confirmed the pre-loaded Mistral-7B model is present on the FSx for NetApp ONTAP volume — ready for the vLLM deployment in the next section.

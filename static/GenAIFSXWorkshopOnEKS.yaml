@@ -2603,7 +2603,7 @@ Resources:
     Type: Custom::RunSSMDocLambda
     Properties:
       ServiceToken: !GetAtt RunSSMDocLambda.Arn
-      ServiceTimeout: 900
+      ServiceTimeout: 1800
       InstanceId: !Ref VSCodeInstance
       DocumentName: !Ref PreloadAgentDataDocument
       DeleteDocumentName: ""
@@ -2619,7 +2619,7 @@ Resources:
       DocumentType: Command
       Content:
         schemaVersion: '2.2'
-        description: Install Trident CSI, create agent namespace, import shared volume, populate data and set UNIX permissions
+        description: Install Trident CSI, import volumes, populate agent data with UNIX permissions, and pre-load the Mistral-7B model
         parameters:
           LinuxFlavor:
             type: String
@@ -2635,7 +2635,7 @@ Resources:
                 - '{{ LinuxFlavor }}'
                 - al2023
             inputs:
-              timeoutSeconds: '600'
+              timeoutSeconds: '1500'
               runCommand:
                 - !Sub |
                   #!/bin/bash
@@ -2727,6 +2727,27 @@ Resources:
                   echo "PVC: agent-shared-data"
                   echo "Finance data: /data/finance (UID 1001, mode 750)"
                   echo "IT Ops data: /data/itops (UID 1002, mode 750)"
+
+                  echo "=== Step 5: Import Model Volume and Pre-load Mistral-7B ==="
+                  # Bind the pre-provisioned "model" volume (junction /model) via the
+                  # import PVC, then download the pre-compiled Mistral-7B model onto it
+                  # so participants do not wait 4-6 minutes during Module 2.
+                  kubectl apply -f /home/${VSCodeUser}/environment/eks/FSxONTAP/ontap-pvc.yaml
+
+                  echo "Waiting for model PVC to bind..."
+                  sleep 30
+                  kubectl get pvc ontap-model-claim
+
+                  echo "Starting model download job (public HuggingFace repo, no token required)..."
+                  kubectl apply -f /home/${VSCodeUser}/environment/eks/FSxONTAP/model-loading-job.yaml
+                  kubectl wait --for=condition=complete job/model-download --timeout=900s
+                  kubectl logs job/model-download | tail -20
+
+                  echo "=== Model pre-loading complete ==="
+                  echo "Model: Mistral-7B-Instruct-v0.3 (pre-compiled Neuron artifacts)"
+                  echo "Volume: model (junction /model)"
+                  echo "PVC: ontap-model-claim"
+                  echo "Path on volume: /Mistral-7B-Instruct-v0.3"
 
   RunDestroyTerraformResources:
     Type: Custom::RunSSMDocLambda

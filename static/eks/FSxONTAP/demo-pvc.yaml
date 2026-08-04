@@ -1,0 +1,16 @@
+# demo-pvc.yaml — a small throwaway PVC used only to demonstrate Trident
+# dynamic provisioning in Module 1. Unlike the model volume (which is a
+# pre-provisioned volume imported via ontap-pvc.yaml), this PVC has no import
+# annotation, so Trident dynamically provisions a brand-new ONTAP volume for it.
+# It can be safely deleted after the demonstration.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: demo-claim
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ontap-nas-sc
+  resources:
+    requests:
+      storage: 1Gi

@@ -1,7 +1,14 @@
+# ontap-pvc.yaml — imports the pre-provisioned "model" volume (junction /model)
+# created by Terraform. Trident's importVolume annotation binds this PVC to that
+# existing ONTAP volume rather than dynamically provisioning a new one, so the
+# Mistral-7B model can be pre-loaded onto it during workshop provisioning.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: ontap-model-claim
+  annotations:
+    trident.netapp.io/importVolume: "model"
+    trident.netapp.io/importBackend: "fsx-ontap-nas"
 spec:
   accessModes:
     - ReadWriteMany
