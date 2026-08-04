@@ -1,6 +1,6 @@
 ---
 title : "(Optional) Inspect vLLM & Neuron tools"
-weight : 800
+weight : 500
 ---
 
 :::alert{header="Optional Module" type="info"}

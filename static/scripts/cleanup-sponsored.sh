@@ -191,11 +191,11 @@ fi
 echo "Deleting FSx ONTAP secret..."
 kubectl delete -f fsx-ontap-secret.yaml --ignore-not-found 2>/dev/null || true
 
-# Delete VolumeSnapshotClass (if created in Module 4)
+# Delete VolumeSnapshotClass (if created in Module 5)
 echo "Deleting VolumeSnapshotClass..."
 kubectl delete -f volume-snapshot-class.yaml --ignore-not-found 2>/dev/null || true
 
-# Delete any VolumeSnapshots created in Module 4
+# Delete any VolumeSnapshots created in Module 5
 echo "Deleting VolumeSnapshots..."
 kubectl delete volumesnapshot --all --ignore-not-found 2>/dev/null || true
 

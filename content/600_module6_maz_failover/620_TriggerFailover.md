@@ -1,6 +1,6 @@
 ---
 title : "Trigger Live Failover"
-weight : 520
+weight : 620
 ---
 
 ## Overview

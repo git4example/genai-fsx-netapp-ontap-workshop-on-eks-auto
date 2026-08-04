@@ -156,7 +156,7 @@ echo "Waiting for Trident pods to be ready..."
 sleep 30
 kubectl get pods -n trident
 
-# --- Step 5b: Install Kubernetes VolumeSnapshot CRDs (required for Module 4) ---
+# --- Step 5b: Install Kubernetes VolumeSnapshot CRDs (required for Module 5) ---
 echo "Installing VolumeSnapshot CRDs (external-snapshotter v8.2.0)..."
 kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
 kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml

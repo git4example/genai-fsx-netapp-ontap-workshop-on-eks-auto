@@ -1,6 +1,6 @@
 ---
 title : "Deploy Strands AI Agents"
-weight : 630
+weight : 430
 ---
 
 ## Overview

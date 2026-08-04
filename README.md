@@ -52,9 +52,19 @@ Learn how to build your own self-hosted Generative-AI  application for performan
 │   │   ├── 320_vLLMandNeuronMonitoring.md
 │   │   ├── 330_ConfiguratingNeuronMonitoring.md
 │   │   └── index.en.md
-│   ├── 400_module4_inspect_data
-│   │   ├── 410_InspectModelandNeuron.md
-│   │   ├── 420_FSxNSnapshots.md
+│   ├── 400_module4_agentic_fsxn
+│   │   ├── 410_PrepareData.md
+│   │   ├── 430_DeployAgents.md
+│   │   ├── 440_TestAgents.md
+│   │   ├── 450_Summary.md
+│   │   └── index.en.md
+│   ├── 500_module5_inspect_data        # (Optional)
+│   │   ├── 510_InspectModelandNeuron.md
+│   │   ├── 520_FSxNSnapshots.md
+│   │   └── index.en.md
+│   ├── 600_module6_maz_failover        # (Optional)
+│   │   ├── 610_ObserveMAZState.md
+│   │   ├── 620_TriggerFailover.md
 │   │   └── index.en.md
 │   └── index.en.md
 └── static

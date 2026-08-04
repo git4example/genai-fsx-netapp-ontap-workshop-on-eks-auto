@@ -1,6 +1,6 @@
 ---
 title : "Security Summary & Enterprise Patterns"
-weight : 650
+weight : 450
 ---
 
 ## What You Demonstrated
