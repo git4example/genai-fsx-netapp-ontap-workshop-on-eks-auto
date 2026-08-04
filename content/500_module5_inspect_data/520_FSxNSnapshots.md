@@ -95,10 +95,15 @@ If a `VolumeSnapshot` you create later in this module stays with empty `READYTOU
 
 The `VolumeSnapshotClass` tells Kubernetes which CSI driver to use for snapshots. This is analogous to a `StorageClass` for volumes.
 
-1. Navigate to the working directory and review the manifest:
+1. Navigate to the working directory:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/FSxONTAP
+:::
+
+::::expand{header="Optional: click to view the volume-snapshot-class.yaml manifest"}
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
 cat volume-snapshot-class.yaml
 :::
 
@@ -112,6 +117,8 @@ metadata:
 driver: csi.trident.netapp.io
 deletionPolicy: Retain
 :::
+
+::::
 
 Key points:
 - **driver**: `csi.trident.netapp.io` — uses the Trident CSI driver to create ONTAP snapshots

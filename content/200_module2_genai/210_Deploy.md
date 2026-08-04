@@ -71,9 +71,13 @@ cd /home/participant/environment/eks/genai
 export NODE_ROLE
 :::
 
-2. Lets take a look at the EKS Auto NodePool definition for the inferentia NodePool before we apply it. This configuration will create a new nodepool for AWS Inferentia (using "INF2" type for instance-family), where the AWS INF2 compute nodes will power Generative AI application (vLLM pod).
+2. This configuration will create a new nodepool for AWS Inferentia (using "INF2" type for instance-family), where the AWS INF2 compute nodes will power the Generative AI application (vLLM pod).
+
+::::expand{header="Optional: click to view the inferentia_nodepool.yaml definition"}
 
 ::code[cat inferentia_nodepool.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+
+::::
 
 :::alert{header="What to observe in the NodePool definition" type="info"}
 When reviewing the output, pay attention to these key fields:
