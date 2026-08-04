@@ -301,4 +301,10 @@ In the EKS console Compute tab, you should see the `inf2.xlarge` node listed und
 
 
 ### Summary
-You have deployed the vLLM inference engine with the Mistral-7B model on AWS Inferentia. Continue to the next section to deploy the AI Gateway, which will sit in front of vLLM and provide model routing capabilities.
+You have deployed the vLLM inference engine with the Mistral-7B model on AWS Inferentia.
+
+:::alert{header="Don't wait — deploy the AI Gateway in parallel" type="success"}
+The vLLM pod takes ~7 minutes to reach `Running` and load the model. **You do not need to wait for it.** Continue straight to the next section and deploy the LiteLLM AI Gateway now — it starts independently of vLLM and only needs the vLLM *Service* to exist (which it already does). Both will be ready by the time you open the chat UI.
+:::
+
+Continue to the next section to deploy the AI Gateway, which will sit in front of vLLM and provide model routing capabilities.

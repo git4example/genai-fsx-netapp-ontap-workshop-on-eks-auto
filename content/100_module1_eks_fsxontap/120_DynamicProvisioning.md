@@ -147,6 +147,22 @@ backend-ontap-nas  fsx-ontap-nas  6ca7c511-649b-4be4-a1eb-c8cdc5496ea9   Bound  
 
 The **STATUS** should show `Success` and the **PHASE** should show `Bound`, confirming that Trident is connected to your FSx for ONTAP file system and is ready to serve storage requests.
 
+::::expand{header="Optional: View the dynamically provisioned volume in the FSx console"}
+
+If you'd like to see the volume Trident just created from the storage administrator's perspective, you can view it in the FSx console.
+
+:::alert{header="Console display lag" type="info"}
+The FSx for ONTAP volume is created **almost instantly** the moment the PVC binds (which you just confirmed above). However, the new volume can take **30–45 minutes** to appear in the **AWS FSx console** due to console-side metadata refresh. This is a display lag only — the volume is already live and usable. **You do not need to wait for it; continue with the workshop.**
+:::
+
+1. Navigate to the [Amazon FSx console](https://console.aws.amazon.com/fsx/) and confirm you are in the correct **AWS region** (i.e. us-west-2).
+2. Click on the **File system ID** of your FSx for ONTAP file system, then open the **Volumes** tab.
+3. Once it appears (after the refresh lag above), you will see a **new volume** named `trident_pvc_...` alongside the root volume — created automatically when you applied the PVC. Click it to view its properties: junction path, 100 GiB size, snapshot policy, and `Auto` tiering.
+
+All of these properties were configured by Trident based on the StorageClass — no manual ONTAP administration was needed. In production, you can define multiple StorageClasses (e.g., `None` tiering for latency-sensitive inference, `All` tiering for archived data) to match different workload requirements.
+
+::::
+
 ## Summary
 
 In this section you have created a StorageClass (`ontap-nas-sc`) that configures Trident to provision thin-provisioned NFS volumes on your FSx for ONTAP backend, and a PersistentVolumeClaim (`ontap-model-claim`) that dynamically provisioned a 100 GiB volume. Trident automatically created the PersistentVolume and the underlying ONTAP volume — no manual PV creation was required. This PVC will be used by the model loading Job and the vLLM deployment in the next module to store and access the Mistral-7B model data.

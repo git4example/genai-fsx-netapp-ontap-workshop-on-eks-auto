@@ -1,11 +1,11 @@
+# Finance Agent — UID 1001, reads /data/finance on the shared FSxN volume
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: finance-agent
-  namespace: agent-finance
+  namespace: agents
   labels:
     app: finance-agent
-    team: finance
 spec:
   replicas: 1
   selector:
@@ -15,7 +15,6 @@ spec:
     metadata:
       labels:
         app: finance-agent
-        team: finance
     spec:
       securityContext:
         runAsUser: 1001
@@ -28,17 +27,13 @@ spec:
         - name: AGENT_ROLE
           value: "Finance Team AI Assistant — you help analysts with financial reports, transactions, budgets, and compliance documents"
         - name: DATA_DIR
-          value: "/data"
+          value: "/data/finance"
         - name: LLM_ENDPOINT
           value: "http://litellm-service.default.svc.cluster.local:4000/v1"
         - name: LLM_MODEL_ID
           value: "workshop-llm-tools"
         - name: LLM_API_KEY
           value: "not-needed"
-        volumeMounts:
-        - name: finance-data
-          mountPath: "/data"
-          readOnly: true
         command: ["python", "agent.py", "--serve"]
         ports:
         - containerPort: 8080
@@ -55,16 +50,20 @@ spec:
           limits:
             cpu: "1"
             memory: 1Gi
+        volumeMounts:
+        - name: shared-data
+          mountPath: "/data"
+          readOnly: true
       volumes:
-      - name: finance-data
+      - name: shared-data
         persistentVolumeClaim:
-          claimName: finance-agent-data-pvc
+          claimName: agent-shared-data
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: finance-agent-svc
-  namespace: agent-finance
+  namespace: agents
 spec:
   selector:
     app: finance-agent

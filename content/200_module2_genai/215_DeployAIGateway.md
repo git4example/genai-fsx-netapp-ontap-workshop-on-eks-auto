@@ -13,6 +13,10 @@ The gateway exposes two named model endpoints through a single service:
 
 Consumers select the appropriate model for their workload. OpenWebUI requests `workshop-llm` for everyday chat; AI agents request `workshop-llm-tools` for reliable tool execution.
 
+:::alert{header="Deploy this now — no need to wait for vLLM" type="success"}
+The vLLM pod from the previous section is still warming up (~7 minutes), but **you do not need to wait for it**. The LiteLLM gateway starts independently — its readiness check only validates the gateway itself, and it resolves the vLLM backend address lazily, per request. Deploy the gateway now (and OpenWebUI in the next section) **in parallel** while vLLM finishes loading the model in the background. By the time you open the chat UI, vLLM will be ready to serve.
+:::
+
 ```mermaid
 flowchart TB
     subgraph Consumers["Consumers"]

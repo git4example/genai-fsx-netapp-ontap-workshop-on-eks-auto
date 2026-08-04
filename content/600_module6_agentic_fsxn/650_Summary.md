@@ -9,21 +9,21 @@ In this module, you built a real-world scenario where **multiple AI agents** wit
 
 ```mermaid
 flowchart TD
-    subgraph Agents["AI Agents (same LLM, same tools)"]
+    subgraph Agents["AI Agents (same LLM, same tools, same shared volume)"]
         FA["Finance Agent\nUID: 1001"]
         IA["IT Ops Agent\nUID: 1002"]
         MA["Malicious Agent\nUID: 1099"]
     end
 
-    subgraph Security["FSxN Security Enforcement"]
-        L1["UNIX Permissions\n(UID/GID + mode 750)"]
-        L2["Export Policy\n(EKS subnet only)"]
+    subgraph Security["Defense in Depth"]
+        L1["Layer 1: POSIX Permissions\n(UID/GID + mode 750)\nStorage-level — FSxN"]
+        L2["Layer 2: NetworkPolicy\n(block inter-agent traffic)\nNetwork-level — Kubernetes"]
     end
 
-    subgraph FSxN["FSx for NetApp ONTAP"]
-        FV["finance_agent_data\nOwner: UID 1001\nREAD ALLOWED"]
-        IV["itops_agent_data\nOwner: UID 1002\nREAD ALLOWED"]
-        BL["Both Volumes\nUID 1099 ≠ owner\nPERMISSION DENIED"]
+    subgraph FSxN["FSx for NetApp ONTAP — Single Shared Volume"]
+        FV["/data/finance\nOwner: UID 1001\nREAD ALLOWED"]
+        IV["/data/itops\nOwner: UID 1002\nREAD ALLOWED"]
+        BL["Both subdirectories\nUID 1099 ≠ owner\nPERMISSION DENIED"]
     end
 
     FA -->|"UID 1001 = owner"| FV
@@ -161,15 +161,12 @@ flowchart LR
 If you want to remove the resources created in this module:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Delete agent namespaces (this deletes all resources within them)
-kubectl delete namespace agent-finance agent-itops agent-malicious
+# Delete the agents namespace (this removes all three agents, their services,
+# the shared PVC, the data-population job, and any NetworkPolicy within it)
+kubectl delete namespace agents
 
-# Delete jobs in default namespace (if any remain)
-kubectl delete job populate-finance-data populate-itops-data --ignore-not-found
-
-# Optionally delete the FSxN volumes
-# aws fsx delete-volume --volume-id <finance-vol-id> --region $AWS_REGION
-# aws fsx delete-volume --volume-id <itops-vol-id> --region $AWS_REGION
+# Optionally delete the shared FSxN agent-data volume
+# aws fsx delete-volume --volume-id <agent-shared-data-vol-id> --region $AWS_REGION
 :::
 
 ---

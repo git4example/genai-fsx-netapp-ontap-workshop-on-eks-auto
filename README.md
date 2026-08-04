@@ -83,7 +83,7 @@ In this workshop the **Mistral-7B-Instruct** model is downloaded from Hugging Fa
 │   │   ├── 210_Deploy.md
 │   │   ├── 220_webui.md
 │   │   └── index.en.md
-│   ├── 300_module3_vllm_dash
+│   ├── 300_module3_observability
 │   │   ├── 310_settingObservabilityStack.md
 │   │   ├── 320_vLLMandNeuronMonitoring.md
 │   │   ├── 330_ConfiguratingNeuronMonitoring.md

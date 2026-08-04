@@ -1,11 +1,12 @@
+# Malicious Agent — UID 1099, mounts the shared volume root (/data) but is
+# denied by POSIX permissions on the finance/itops subdirectories
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: malicious-agent
-  namespace: agent-malicious
+  namespace: agents
   labels:
     app: malicious-agent
-    team: external
 spec:
   replicas: 1
   selector:
@@ -15,7 +16,6 @@ spec:
     metadata:
       labels:
         app: malicious-agent
-        team: external
     spec:
       securityContext:
         runAsUser: 1099
@@ -51,12 +51,20 @@ spec:
           limits:
             cpu: "500m"
             memory: 512Mi
+        volumeMounts:
+        - name: shared-data
+          mountPath: "/data"
+          readOnly: true
+      volumes:
+      - name: shared-data
+        persistentVolumeClaim:
+          claimName: agent-shared-data
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: malicious-agent-svc
-  namespace: agent-malicious
+  namespace: agents
 spec:
   selector:
     app: malicious-agent

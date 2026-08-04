@@ -76,12 +76,18 @@ All agents deploy into the **same namespace** (`agents`) and mount the **same PV
 | IT Ops Agent | 1002 | `/data/itops` | Access runbooks and logs |
 | Malicious Agent | 1099 | `/data` | Attempt to access everything |
 
-Deploy all three agents:
+Each agent has its **own manifest file** (`finance-agent-deployment.yaml`, `itops-agent-deployment.yaml`, `malicious-agent-deployment.yaml`) so you can deploy, inspect, or delete them individually. Deploy all three:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/agentic-agents
 export AGENT_IMAGE="public.ecr.aws/parikshit/fsxn-strands-agent:latest"
-envsubst '$AGENT_IMAGE' < agents-deployment.yaml | kubectl apply -f -
+for manifest in finance-agent-deployment.yaml itops-agent-deployment.yaml malicious-agent-deployment.yaml; do
+  envsubst '$AGENT_IMAGE' < "$manifest" | kubectl apply -f -
+done
+:::
+
+:::alert{header="Tip" type="info"}
+Because each agent is a separate manifest, you can redeploy a single agent (e.g., after changing its role or UID) without touching the others — for example: `envsubst '$AGENT_IMAGE' < finance-agent-deployment.yaml | kubectl apply -f -`
 :::
 
 ##### Step 3: Verify All Agents Are Running

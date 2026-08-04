@@ -1,11 +1,11 @@
+# IT Operations Agent — UID 1002, reads /data/itops on the shared FSxN volume
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: itops-agent
-  namespace: agent-itops
+  namespace: agents
   labels:
     app: itops-agent
-    team: itops
 spec:
   replicas: 1
   selector:
@@ -15,7 +15,6 @@ spec:
     metadata:
       labels:
         app: itops-agent
-        team: itops
     spec:
       securityContext:
         runAsUser: 1002
@@ -28,17 +27,13 @@ spec:
         - name: AGENT_ROLE
           value: "IT Operations AI Assistant — you help engineers with runbooks, incident response, deployment logs, and infrastructure configuration"
         - name: DATA_DIR
-          value: "/data"
+          value: "/data/itops"
         - name: LLM_ENDPOINT
           value: "http://litellm-service.default.svc.cluster.local:4000/v1"
         - name: LLM_MODEL_ID
           value: "workshop-llm-tools"
         - name: LLM_API_KEY
           value: "not-needed"
-        volumeMounts:
-        - name: itops-data
-          mountPath: "/data"
-          readOnly: true
         command: ["python", "agent.py", "--serve"]
         ports:
         - containerPort: 8080
@@ -55,16 +50,20 @@ spec:
           limits:
             cpu: "1"
             memory: 1Gi
+        volumeMounts:
+        - name: shared-data
+          mountPath: "/data"
+          readOnly: true
       volumes:
-      - name: itops-data
+      - name: shared-data
         persistentVolumeClaim:
-          claimName: itops-agent-data-pvc
+          claimName: agent-shared-data
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: itops-agent-svc
-  namespace: agent-itops
+  namespace: agents
 spec:
   selector:
     app: itops-agent
