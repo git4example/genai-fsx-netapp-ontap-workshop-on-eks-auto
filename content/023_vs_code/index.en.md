@@ -4,29 +4,38 @@ chapter: false
 weight: 23
 ---
 
-## Connect to the Open-Source VSCode IDE for access to the AWS lab environment.
+## Connect to the Open-Source VSCode IDE for access to the AWS lab environment
 Ref : [code-server](https://github.com/coder/code-server)
 
-You will be using the Open-Source VSCode IDE terminal to copy and paste commands that are provided in this workshop. Let's get started and connect to your VScode IDE instance by running the follow actions.
+Throughout this workshop you will run commands from a browser-based **VSCode IDE** (code-server) that has already been provisioned for you, pre-loaded with all the workshop files, the AWS CLI, `kubectl`, `eksctl`, Terraform, and Helm. You do not install anything locally — you simply open the IDE in your browser and use its built-in terminal to copy-paste the commands provided in each module.
 
-::alert[Note: Please use a Google chrome browser for this workshop, Firefox users may experience some issues with copy-paste commands.]{header="Important" type="warning"}
+:::alert{header="Use Google Chrome" type="warning"}
+Please use **Google Chrome** for this workshop. Firefox users may experience issues with copy-paste into the IDE terminal.
+:::
 
-1. Navigate to the CloudFrmation console using this [link](https://console.aws.amazon.com/cloudformation), then select the `genaifsxworkshoponeks` stack
-2. In the Stack window, select the **Outputs** tab as shown in the image below
-3. Copy the temporary **Password** that has been generated for this workshop as shown, and click then on the **URL** shown to launch the VSCode-Server interface
-4. In the VSCode IDE that pops up, enter the password you previously copied, and click **Submit**
+Follow these steps to open your IDE:
+
+1. Open the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation) and select the **`genaifsxworkshoponeks`** stack.
+2. Select the **Outputs** tab (see image below).
+3. Copy the temporary **Password** value, then click the **URL** value to launch the VSCode IDE in a new browser tab.
 
 ![CFN-Output](/static/images/cfn-output.png)
 
-5. Select your VSCode UI theam
+4. In the VSCode login page that opens, paste the **Password** you copied and click **Submit**.
 
-![Select Theme](/static/images/get-started-with-vs-code.png)
+5. When prompted, select a **VSCode UI theme** (either option is fine).
+
+![Get started with VS Code](/static/images/get-started-with-vs-code.png)
 
 ![Select Theme](/static/images/select-theme.png)
 
-6. Click on the **TERMINAL** TAB, and maximize your terminal window.
+6. Open a terminal: from the top menu choose **Terminal → New Terminal** (or click the **TERMINAL** tab if one is already open), then maximize the terminal panel so you have room to work.
 
 ![maximize](/static/images/maximize.png)
+
+:::alert{header="This terminal is your workspace for the whole workshop" type="info"}
+Every command in the following modules is run from this VSCode terminal. The workshop files live under `/home/participant/environment/` — you can browse them in the IDE's file explorer on the left, and open any YAML or script to inspect it as you go.
+:::
 
 
 ## Update the kube-config file for Amazon EKS cluster:
@@ -35,7 +44,7 @@ Before you can start running all the Kubernetes commands included in this worksh
 ::code[export CLUSTER_NAME=eksworkshop]{language=bash showLineNumbers=false showCopyAction=true}
 
 :::alert{header="Note" type="info"}
-When you first time copy-paste a command on VSCode IDE, your browser may ask you to allow permission to see informaiton on clipboard. Please select **"Allow"**.
+The first time you copy-paste a command in the VSCode IDE, your browser may ask permission to read the clipboard. Please select **"Allow"**.
 
 ![allow-clipboard](/static/images/allow-clipboard.png)
 :::

@@ -15,6 +15,15 @@ Learn how to build your own self-hosted Generative-AI  application for performan
 * **Workload hosting & Orchestration:** *Amazon Elastic Kubernetes Service (EKS)* - Host your Generative-AI & Agentic-AI applications.
 * **Data layer:** *Amazon FSx for NetApp ONTAP* - High-performance shared storage used to host LLM models and unstructured data.
 
+:::alert{header="Why this matters — business outcomes" type="info"}
+Beyond the hands-on mechanics, this workshop demonstrates outcomes that matter when taking self-hosted AI to production:
+
+- **Control your AI costs** — self-host open-source models on AWS Inferentia for high-volume inference, and reserve premium managed models (via the AI Gateway) only for the workloads that need them.
+- **Keep your data on your terms** — models and enterprise data sit on your own FSx for NetApp ONTAP storage inside your VPC, not a third-party API, with the storage-layer controls (POSIX permissions, snapshots, Multi-AZ) your organization already trusts.
+- **Enforce data boundaries for autonomous agents** — as AI agents act on data, FSx for ONTAP enforces *who can read what* at the storage layer — below the application, where a prompt or a misbehaving agent cannot override it.
+- **Run resiliently** — a Multi-AZ storage foundation keeps your AI workloads serving through an Availability Zone failure with zero data loss.
+:::
+
 ---
 
 ##### In this workshop you will deploy the following:
