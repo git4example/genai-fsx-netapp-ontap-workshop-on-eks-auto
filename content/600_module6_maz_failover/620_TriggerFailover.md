@@ -34,79 +34,49 @@ chmod +x failover-test.sh
 ./failover-test.sh
 :::
 
-The script opens a `kubectl port-forward` tunnel to the vLLM service and probes `/v1/models` every 5 seconds, logging the status code **and per-call latency** in milliseconds. Keep this running.
+The script opens a `kubectl port-forward` tunnel to the vLLM service and probes `/v1/models` every 5 seconds, logging the status code **and per-call latency** in milliseconds. Keep this running — you'll watch it stay at `HTTP 200` throughout the failover.
 
-:::alert{header="What to watch for" type="info"}
-With a properly-configured Multi-AZ FSx ONTAP setup, you will see **continuous HTTP 200** through both the takeover and the failback. The interesting signal is the **latency column**: during each route table update you may see one or two probes spike to a few hundred milliseconds. Two latency bumps over the operation are expected — one for takeover, one for failback. A sustained run of non-200 codes would indicate something is genuinely broken (route table mis-registration, security group, etc.) rather than expected transient behavior.
+##### Step 2: Locate the ENIs and the route table entry
 
-Why /v1/models stays 200: vLLM holds the model registry in memory and the model weights are mmap'd at startup, so this endpoint does not touch NFS on every request. That is exactly the resilience we want to demonstrate.
-:::
+The FSx floating endpoint range (typically `198.19.255.0/24`, allocated outside the VPC CIDR for Multi-AZ floating LIFs) is routed to the **Preferred subnet's ENI** today. During the operation this pointer flips to the **Standby ENI**, then back — that flip is the failover you'll watch.
 
-##### Step 2: Note the Preferred and Standby ENIs
-
-Identify which ENI currently belongs to the preferred subnet and which belongs to the standby subnet. The route table entries for the FSx floating endpoint range will point at one of these, and the pointer will flip during the failover.
-
-1. Navigate to the [Amazon FSx console](https://console.aws.amazon.com/fsx/). Make sure you are in the workshop's region.
-2. From the left pane select **File systems**, then click your file system ID.
-3. Click the **Network & Security** tab.
-4. Note the **Network interface** value shown for the **Preferred subnet** and the one shown for the **Standby subnet**. Record both ENI IDs in a notepad — during the failover you will see the route table swap from the preferred ENI to the standby ENI, then back.
-
-![Network & Security tab](/static/images/network_security.png)
-
-##### Step 3: Confirm the route table currently points at the Preferred ENI
-
-1. On the same **Network & Security** tab, click the **Route table** link associated with your FSx file system.
-2. In the route table's **Routes** tab, look for the entry with destination in the floating endpoint range — typically `198.19.255.0/24` (this range is allocated outside the VPC CIDR for FSx ONTAP Multi-AZ floating LIFs).
-
-:::alert{header="Important" type="info"}
-Notice that traffic to the `198.19.255.x` floating endpoint range is currently routed through the **ENI associated with the Preferred subnet** that you noted in Step 2. After failover, this entry will point at the **Standby subnet ENI**. After failback (when the operation completes), it will point back at the Preferred subnet ENI again.
-:::
+1. In the [Amazon FSx console](https://console.aws.amazon.com/fsx/) (workshop region), open your file system → **Network & Security** tab.
+2. Note the **Network interface** ID for the **Preferred subnet** and for the **Standby subnet** (jot both down).
+3. Click the **Route table** link on that tab. In the **Routes** tab, find the `198.19.255.0/24` entry — it currently targets the **Preferred ENI**.
 
 ![Route table before failover](/static/images/routes.png)
 
-##### Step 4: Trigger the failover by updating Throughput Capacity
+##### Step 3: Trigger the failover by updating Throughput Capacity
 
-1. Back in the FSx file system page, click the **Summary** tab.
-2. Find the **Throughput capacity** field. Click the **Update** button next to it.
-
-![Throughput capacity in Summary](/static/images/throughput_capacity.png)
-
-3. In the dialog, pick a value **different from the current one**. For example, if your file system is currently 128 MB/s, choose **256 MB/s**. If it is currently 256 MB/s, choose 128 or 512. Any change triggers the same internal takeover/failback sequence; the absolute value does not matter for this exercise.
-4. Click **Update**.
+1. On the file system **Summary** tab, find **Throughput capacity** and click **Update**.
+2. Pick any value **different from the current one** (e.g. 128 → 256 MB/s). The absolute value doesn't matter — any change forces the internal takeover/failback. Click **Update**.
 
 ![Update Throughput Capacity dialog](/static/images/update_throughput_capacity.png)
 
-The file system enters an `Updating` state and the operation begins.
+The file system enters `Updating` and the operation begins.
 
-##### Step 5: Watch the route table flip during failover
+##### Step 4: Watch the route table flip (takeover, then failback)
 
-1. Refresh the route table view from Step 3 every 30-60 seconds.
-2. Within a few minutes, the route entry for `198.19.255.0/24` (or whatever the floating endpoint range shows) will change from pointing at the **Preferred ENI** to pointing at the **Standby ENI**. The active node has just failed over.
+Refresh the route table view every 30-60 seconds. You'll see **two flips** over the next several minutes:
+
+1. **Takeover** — the `198.19.255.0/24` entry changes from the **Preferred ENI** to the **Standby ENI**.
+2. **Failback** — once FSx finishes upgrading the preferred node, the entry flips **back** to the **Preferred ENI**. The **Updates** tab then shows `Completed` and the **Summary** page shows the new throughput value.
 
 ![Route table during failover (now pointing at standby ENI)](/static/images/routes_2.png)
 
-3. You can monitor the overall operation status from the FSx console's **Updates** tab on the file system details page.
+Meanwhile, watch the prober in your **second terminal**: it should stay at continuous `HTTP 200`, with just **one small latency bump per flip** (two total), then baseline.
 
-![Updates tab](/static/images/update_tab.png)
+::::expand{header="Why two flips, and what the edge cases look like"}
 
-4. Switch to your **second terminal** and watch the prober. During the route flip you should see one of two patterns:
-   - **Best case (typical):** continuous `HTTP 200` with one or two entries showing elevated latency (a few hundred ms to a few seconds) at the moment of the flip, then back to baseline.
-   - **Edge case:** one or two `HTTP 000` entries if the port-forward tunnel itself was racing against the failover. The script auto-restarts the tunnel and recovers.
+Throughput capacity changes on Multi-AZ ONTAP perform **two** route-table updates — takeover (preferred → standby) and failback (standby → preferred) — so you see the system recover end-to-end with no manual intervention. This is a richer demo than a single one-way failover.
 
-##### Step 6: Watch the failback complete
+In the prober you may occasionally see one or two `HTTP 000` entries (rather than elevated-latency 200s) if the `kubectl port-forward` tunnel itself raced the failover — the script auto-restarts the tunnel and recovers. A *sustained* run of non-200s (more than a couple of minutes) would indicate a real problem — see Troubleshooting below.
 
-The throughput capacity update is **not** done after the first route flip. FSx still needs to upgrade the preferred node, and once that is done it fails back so the preferred node is active again.
+**Why `/v1/models` stays 200:** vLLM holds the model registry in memory and mmaps the weights at startup, so this endpoint doesn't touch NFS on every request — exactly the resilience we want to show.
 
-1. Continue refreshing the route table. Within another few minutes, the entry will flip **back** to pointing at the **Preferred ENI**. That is the failback.
-2. The **Updates** tab in the FSx console will show the operation status as `Completed`.
-3. The file system **Summary** page will show the new throughput capacity value.
-4. In the prober terminal you should see a second small latency bump corresponding to the failback, then steady 200s at baseline latency.
+::::
 
-:::alert{header="Two flips, not one" type="info"}
-Throughput capacity changes on Multi-AZ ONTAP perform two route-table updates: takeover (preferred → standby) and failback (standby → preferred). Each shows up as a brief latency bump in the prober. This is actually a richer demo than a single one-way failover because you see the system recover end-to-end without any manual intervention.
-:::
-
-##### Step 7: Verify zero data loss and end-to-end inference
+##### Step 5: Verify zero data loss and end-to-end inference
 
 1. Confirm the model files are still present on the volume:
 
@@ -126,11 +96,11 @@ kubectl exec $VLLM_POD -- curl -s http://localhost:8000/v1/chat/completions \
   | python3 -m json.tool
 :::
 
-You should receive a valid response. The meaningful proof of failover correctness is the route table flip you observed in Steps 5-6 plus the prober continuity from `failover-test.sh`; this final inference call simply confirms the model is still functional end-to-end after the operation.
+You should receive a valid response. The meaningful proof of failover correctness is the **route table flip you observed in Step 4** plus the prober continuity from `failover-test.sh`; this final inference call simply confirms the model is still functional end-to-end after the operation.
 
 3. Stop the prober in your second terminal with `Ctrl+C`.
 
-##### Troubleshooting
+::::expand{header="Troubleshooting: sustained non-200 responses"}
 
 If you see sustained non-200 responses for more than a couple of minutes during either flip:
 
@@ -142,6 +112,8 @@ aws fsx describe-file-systems \
   --query 'FileSystems[0].OntapConfiguration.RouteTableIds'
 :::
 - Confirm the security group on the FSx ENIs allows TCP 2049 from the EKS node security group.
+
+::::
 
 ---
 

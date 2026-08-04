@@ -65,68 +65,42 @@ echo "Standby AZ (takes over on failover):           $STANDBY_AZ"
 The **preferred subnet** is where the active file server runs *when both nodes are healthy*. It is a **configuration preference**, not a live indicator of which side is currently serving traffic. To determine the currently-active side after a takeover, you need to inspect the file system's endpoint ENIs — we will do that in Step 3.
 :::
 
-##### Step 3: Determine which side is currently active
+##### Step 3: Confirm vLLM is healthy and serving inference
 
-The FSx ONTAP floating endpoints (management LIF, intercluster LIF, NFS data LIF) live on ENIs. The ENI that currently owns those IPs lives in the actively-serving subnet. We can use that to discover which AZ is active right now.
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-# Pull the ENIs that the file system currently uses for its endpoints
-ACTIVE_ENI=$(aws fsx describe-file-systems \
-  --file-system-ids $FSX_ID --region $AWS_REGION \
-  --query "FileSystems[0].NetworkInterfaceIds[0]" \
-  --output text)
-
-ACTIVE_SUBNET=$(aws ec2 describe-network-interfaces \
-  --network-interface-ids $ACTIVE_ENI --region $AWS_REGION \
-  --query "NetworkInterfaces[0].SubnetId" \
-  --output text)
-
-ACTIVE_AZ=$(aws ec2 describe-subnets --subnet-ids $ACTIVE_SUBNET \
-  --region $AWS_REGION --query "Subnets[0].AvailabilityZone" --output text)
-
-echo "Currently-active file server is in AZ: $ACTIVE_AZ (subnet: $ACTIVE_SUBNET)"
-:::
-
-Right now, with no failover yet triggered, this should match `$PREFERRED_AZ` from Step 2. After the failover in the next page, we will run the same command and observe that it has moved.
-
-##### Step 4: Confirm vLLM is healthy and serving inference
-
-1. Check the vLLM pod status:
-
-::code[kubectl get pod -l app=vllm-mistral-inf2-server]{language=bash showLineNumbers=false showCopyAction=true}
-
-The pod should show `Running` with `1/1` containers ready.
-
-2. Send a test inference request from inside the pod to confirm the model is responding:
+1. Check the vLLM pod status and confirm the model is responding:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 VLLM_POD=$(kubectl get pod -l app=vllm-mistral-inf2-server -o jsonpath='{.items[0].metadata.name}')
+kubectl get pod $VLLM_POD
 kubectl exec $VLLM_POD -- curl -s http://localhost:8000/v1/models | python3 -m json.tool
 :::
 
-You should see the `mistral-7b-neuron` model listed, confirming the inference engine is active.
+The pod should show `Running` (`1/1` ready) and you should see the `mistral-7b-neuron` model listed — confirming the inference engine is active. This is the workload that must **keep serving** through the failover you trigger next.
 
-3. Note which AZ the vLLM pod's node is in:
+:::alert{header="AZ placement doesn't matter" type="info"}
+The vLLM pod's node and the active FSx file server may be in the **same** or **different** AZs — both work. With Multi-AZ FSx for ONTAP, NFS traffic is routed to the active file server regardless of which AZ the client runs in. During failover the floating endpoint IPs are re-homed to the new active node via VPC route table updates — no DNS change, no client reconfiguration.
+:::
+
+::::expand{header="Optional: determine which AZ is actively serving right now (CLI)"}
+
+The FSx ONTAP floating endpoints (management LIF, intercluster LIF, NFS data LIF) live on ENIs. The ENI that currently owns those IPs sits in the actively-serving subnet, so you can use it to identify the active AZ:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-VLLM_NODE=$(kubectl get pod -l app=vllm-mistral-inf2-server -o jsonpath='{.items[0].spec.nodeName}')
-POD_AZ=$(kubectl get node $VLLM_NODE -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}')
-echo "vLLM pod node AZ: $POD_AZ"
-echo "Active FSx AZ:    $ACTIVE_AZ"
+ACTIVE_ENI=$(aws fsx describe-file-systems \
+  --file-system-ids $FSX_ID --region $AWS_REGION \
+  --query "FileSystems[0].NetworkInterfaceIds[0]" --output text)
+ACTIVE_SUBNET=$(aws ec2 describe-network-interfaces \
+  --network-interface-ids $ACTIVE_ENI --region $AWS_REGION \
+  --query "NetworkInterfaces[0].SubnetId" --output text)
+ACTIVE_AZ=$(aws ec2 describe-subnets --subnet-ids $ACTIVE_SUBNET \
+  --region $AWS_REGION --query "Subnets[0].AvailabilityZone" --output text)
+echo "Currently-active file server is in AZ: $ACTIVE_AZ"
 :::
 
-:::alert{header="Key observation" type="info"}
-The vLLM pod's node and the active FSx file server may be in the **same** AZ or **different** AZs — both work. With Multi-AZ FSx for ONTAP, NFS traffic is routed to the active file server regardless of which AZ the client is in. During failover, the floating endpoint IPs are re-homed to the new active node via VPC route table updates (no DNS change, no client reconfiguration).
-:::
+With no failover yet triggered, this matches `$PREFERRED_AZ` from Step 2. In the next section you'll watch the active side flip — most visibly via the VPC route table.
 
-##### Step 5: View the file system in the FSx console
-
-1. Navigate to the [Amazon FSx console](https://console.aws.amazon.com/fsx/) and click on your file system.
-
-2. On the file system details page, note the **Preferred subnet** and **Standby subnet** fields.
-
-3. Click on the **Network & security** tab to see both file server ENIs. Each has its own subnet/AZ. The endpoint IPs (management/intercluster/NFS) currently route to the active side.
+::::
 
 ## Summary
 
-You have confirmed that your FSx for ONTAP file system is in Multi-AZ mode, identified which AZ is currently active, and verified that the vLLM pod is healthy and serving inference. In the next section, you will trigger a planned failover and observe how the storage layer flips to the standby AZ while the vLLM pod keeps serving.
+You have confirmed your FSx for ONTAP file system is Multi-AZ, identified the preferred and standby AZs, and verified the vLLM pod is serving inference. In the next section, you will trigger a planned failover and watch the storage layer flip to the standby AZ while the vLLM pod keeps serving.

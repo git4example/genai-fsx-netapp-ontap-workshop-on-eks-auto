@@ -5,7 +5,7 @@ weight : 215
 
 ## Overview
 
-In production environments, it is best practice deploy an **AI Gateway** in front of the LLMs that you want to use. The AI Gateway acts as a proxy layer that provides intelligent AI request routing, observability, cost management, and intelligent model selection. In this workshop, we will deploy [LiteLLM](https://github.com/BerriAI/litellm) as our AI Gateway. Deploying an AI Gateway in front of your LLMs also provides future state flexibility, as it abstracts the models used on the backend, allowing you to change the backend LLMs when required for your model consumers.
+In production environments, it is best practice to deploy an **AI Gateway** in front of the LLMs that you want to use. The AI Gateway acts as a proxy layer that provides intelligent AI request routing, observability, cost management, and intelligent model selection. In this workshop, we will deploy [LiteLLM](https://github.com/BerriAI/litellm) as our AI Gateway. Deploying an AI Gateway in front of your LLMs also provides future state flexibility, as it abstracts the models used on the backend, allowing you to change the backend LLMs when required for your model consumers.
 
 
 ::::expand{header="Why an AI Gateway? [Click to see more]"}
@@ -16,16 +16,16 @@ In enterprise environments, you may self-host smaller LLM models for cost-effect
 - **Fallback and retry** across multiple backends
 - **Cost tracking** and per-model usage visibility
 
-With larger self-hosted models (70B+), you could route everything locally. The AI Gateway would still remains valuable from a failover, capability burst, cost optimization, and multi-model orchestration perspective.
+With larger self-hosted models (70B+), you could route everything locally. The AI Gateway would still remain valuable from a failover, capability burst, cost optimization, and multi-model orchestration perspective.
 ::::
 
 
 The AI Gateway exposes two named model endpoints through a single service:
-- **`workshop-llm`** → self-hosted Mistral-7B model on you self-hosted AWS AI Stack (for Chatbot)
+- **`workshop-llm`** → self-hosted Mistral-7B model on your self-hosted AWS AI Stack (for Chatbot)
 - **`workshop-llm-tools`** → Fully managed Amazon Bedrock Claude Haiku 4.5 model (tool-calling, reliable structured output)
 
 To demonstrate AI Gateway and its capability, to serve different models, from different providers, to different consumers, whilst abstracting the actual backend model, in this workshop we have configured the following:
-- The Open WebUI based Chatbot interface is configured to requests the `workshop-llm` model (self-hosted Mistral-7B model), for chatbot related Q&A prompts;
+- The Open WebUI based Chatbot interface is configured to request the `workshop-llm` model (self-hosted Mistral-7B model), for chatbot related Q&A prompts;
 - The AI-Agents we will deploy later in this workshop, will be configured to request the `workshop-llm-tools` model (served via fully managed Amazon Bedrock LLM models) for tool execution.  
 
 :::alert{header="Deploy this now — no need to wait for vLLM" type="success"}
