@@ -5,13 +5,28 @@ weight : 215
 
 ## Overview
 
-In production environments, it is best practice to front your LLM backends with an **AI Gateway** — a proxy layer that provides unified routing, observability, cost management, and intelligent model selection. In this workshop, we deploy [LiteLLM](https://github.com/BerriAI/litellm) as our AI Gateway.
+In production environments, it is best practice deploy an **AI Gateway** in front of the LLMs that you want to use. The AI Gateway acts as a proxy layer that provides intelligent AI request routing, observability, cost management, and intelligent model selection. In this workshop, we will deploy [LiteLLM](https://github.com/BerriAI/litellm) as our AI Gateway. Deploying an AI Gateway in front of your LLMs also provides future state flexibility, as it abstracts the models used on the backend, allowing you to change the backend LLMs when required for your model consumers.
 
-The gateway exposes two named model endpoints through a single service:
-- **`workshop-llm`** → self-hosted Mistral-7B on Inferentia (chat, zero API cost)
-- **`workshop-llm-tools`** → Amazon Bedrock Claude Haiku 4.5 (tool-calling, reliable structured output)
 
-Consumers select the appropriate model for their workload. OpenWebUI requests `workshop-llm` for everyday chat; AI agents request `workshop-llm-tools` for reliable tool execution.
+::::expand{header="Why an AI Gateway? [Click to see more]"}
+
+In enterprise environments, you may self-host smaller LLM models for cost-effective inference where most of your requests are served. Then route less frequent but complex or deep reasoning requests to larger, more capable models. The AI Gateway pattern provides this intelligent routing capability:
+- **Single service endpoint** for all consumers — one DNS name, multiple model backends
+- **Model-per-workload routing** — consumers pick the right model for the job
+- **Fallback and retry** across multiple backends
+- **Cost tracking** and per-model usage visibility
+
+With larger self-hosted models (70B+), you could route everything locally. The AI Gateway would still remains valuable from a failover, capability burst, cost optimization, and multi-model orchestration perspective.
+::::
+
+
+The AI Gateway exposes two named model endpoints through a single service:
+- **`workshop-llm`** → self-hosted Mistral-7B model on you self-hosted AWS AI Stack (for Chatbot)
+- **`workshop-llm-tools`** → Fully managed Amazon Bedrock Claude Haiku 4.5 model (tool-calling, reliable structured output)
+
+To demonstrate AI Gateway and its capability, to serve different models, from different providers, to different consumers, whilst abstracting the actual backend model, in this workshop we have configured the following:
+- The Open WebUI based Chatbot interface is configured to requests the `workshop-llm` model (self-hosted Mistral-7B model), for chatbot related Q&A prompts;
+- The AI-Agents we will deploy later in this workshop, will be configured to request the `workshop-llm-tools` model (served via fully managed Amazon Bedrock LLM models) for tool execution.  
 
 ```mermaid
 flowchart TB
@@ -41,21 +56,19 @@ flowchart TB
     style ROUTER fill:#fff3e0,stroke:#e65100
 ```
 
-:::alert{header="Why an AI Gateway?" type="info"}
-In enterprise environments, you typically self-host smaller models for cost-effective basic inference and route complex agentic workloads to larger, more capable models. The AI Gateway pattern gives you:
-- **Single service endpoint** for all consumers — one DNS name, multiple model backends
-- **Model-per-workload routing** — consumers pick the right model for the job
-- **Fallback and retry** across multiple backends
-- **Cost tracking** and per-model usage visibility
-
-With larger self-hosted models (70B+), you could route everything locally. The gateway remains valuable for failover, cost optimization, and multi-model orchestration.
-:::
-
 ---
 
-##### Step 1: Review the LiteLLM configuration
+##### Step 1: Deploy the LiteLLM ConfigMap
 
-::::expand{header="Click to review litellm-config.yaml"}
+
+
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+kubectl apply -f /home/participant/environment/eks/genai/litellm-config.yaml
+:::
+
+
+::::expand{header="Click here to view LiteLLM ConfigMap YAML"}
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 cat /home/participant/environment/eks/genai/litellm-config.yaml
@@ -77,21 +90,7 @@ model_list:
 
 ::::
 
-:::alert{header="How routing works" type="info"}
-Each model name maps to a specific backend:
-- Requests for `workshop-llm` → routed to the self-hosted vLLM (Mistral-7B on Inferentia)
-- Requests for `workshop-llm-tools` → routed to Amazon Bedrock (Claude Haiku 4.5)
-
-OpenWebUI is configured to request `workshop-llm`, so chat stays on your self-hosted model at zero API cost. AI agents request `workshop-llm-tools` because tool-calling requires a model with strong structured-output capability. Both go through the same gateway endpoint (`litellm-service:4000`).
-:::
-
-##### Step 2: Deploy the LiteLLM ConfigMap
-
-:::code[]{language=bash showLineNumbers=false showCopyAction=true}
-kubectl apply -f /home/participant/environment/eks/genai/litellm-config.yaml
-:::
-
-##### Step 3: Deploy the LiteLLM Gateway
+##### Step 2: Deploy the LiteLLM Gateway
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/genai
@@ -100,10 +99,10 @@ envsubst '$AWS_REGION' < litellm-deployment.yaml | kubectl apply -f -
 :::
 
 :::alert{header="Pod Identity for Bedrock Access" type="info"}
-The Terraform that provisioned your cluster also created an **EKS Pod Identity Association** linking the `litellm` ServiceAccount to an IAM role with `bedrock:InvokeModel` permissions. When the LiteLLM pod starts, EKS automatically injects temporary AWS credentials — no access keys or IRSA annotations needed.
+The Terraform script that provisioned this EKS cluster also created an **EKS Pod Identity Association** linking the `litellm` ServiceAccount to an IAM role with `bedrock:InvokeModel` permissions. When the LiteLLM pod starts, EKS automatically injects temporary AWS credentials — no access keys or IRSA annotations needed.
 :::
 
-##### Step 4: Verify the gateway is ready
+##### Step 3: Verify the gateway is ready
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 kubectl rollout status deployment/litellm-gateway --timeout=120s

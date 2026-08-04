@@ -9,27 +9,51 @@ Errors or corrections? Contact ppariksh@amazon.com, akbariw@amazon.com
 
 -------------------------------------------------------------
 ## Workshop Objective
+Learn how to build your own self-hosted Generative-AI  application for performance, scale, and observability using an AWS AI stack that is comprised of;
 
-This workshop demonstrates how to deploy a Generative AI inference platform on AWS by serving the open-source Mistral-7B-Instruct Large Language Model through the vLLM framework on Amazon EKS, using AWS Inferentia2 accelerators for cost-efficient high-performance compute and Amazon FSx for NetApp ONTAP (with NetApp Astra Trident CSI driver) for persistent shared storage that only requires a one-time model download. Participants benefit from a production-ready architecture that combines EKS's automatic scaling and orchestration, vLLM's state-of-the-art serving throughput with PagedAttention and continuous batching, Inferentia2's lowest-cost inference in EC2, and FSx for ONTAP's enterprise storage features like snapshots and data tiering — all accessible through a simple Open WebUI chat interface, giving teams a complete, scalable, and cost-optimized GenAI solution without managing infrastructure complexity.
+* **Compute layer:** *AWS Trainium/Inferentia* - Accelerated Compute to power your Generative-AI application.
+* **Workload hosting & Orchestration:** *Amazon Elastic Kubernetes Service (EKS)* - Host your Generative-AI & Agentic-AI applications.
+* **Data layer:** *Amazon FSx for NetApp ONTAP* - High-performance shared storage used to host LLM models and unstructured data.
 
-#### What you will do
+---
 
-1. Deploy a Generative AI chatbot application:
-   - Serve the Mistral-7B model using vLLM and Open WebUI Pods on Amazon EKS
-   - Store and access the model on an Amazon FSx for NetApp ONTAP file system (Persistent Volume)
-   - Leverage AWS Inferentia2 Accelerators as your compute to power inference
-   - Deploy a Grafana dashboard to view inference workload metrics
-2. Let EKS Auto Mode scale the number of EKS managed nodes based on Pod requests, enabling operational efficiency at-scale
-3. Configure Amazon FSx for NetApp ONTAP with the NetApp Astra Trident CSI driver as your performant and scalable data layer to host your model and training data
+##### In this workshop you will deploy the following:
+
+- **A Generative AI chatbot:** Using an Open WebUI interface, and a vLLM (model serving engine) to serve the Mistral-7B open-source Large Language Model (LLM).
+
+- **Observability dashboards:** View *inference performance* and *token consumption*.
+
+- **An Agentic AI workflow:** Deploy AI Agents that integrate with your FSx for NetApp data.
+
+- **Run through example scenarios:** Chatbot capabilities, inspect inference & token metrics, Agentic-AI permissions boundaries.
+
+---
+
+##### Overview of flow of workshop:
+
+**1. Configure storage for model hosting -** Configure FSx for NetApp based Persistent Volume on Amazon EKS cluster, to store the Mistral-7B model.
+
+**2. Deploy Generative AI chatbot application on Amazon EKS -**
+   - Configure AWS Inferentia2 nodepool in Amazon EKS
+   - Deploy vLLM Pod to serve the Mistral-7B model
+   - Deploy Open WebUI Pod as chatbot interface
 
 
+**3. Deploy observability dashboards-** Deploy Grafana dashboards
 
+**4. Run through example inference scenarios -** Inspect setup & view capabilities of self-hosted Chatbot.
+
+**5. Deploy AI Agents & perform tests -** Deploy AI Agents (AWS Strands Agents) and test permissions & security boundaries enforced by Amazon EKS & Amazon FSx for NetApp for Agentic AI workflows.
+
+---
 
 ****Target Audience****: DevOps engineers, Machine Learning Scientists/Engineers, Container & Storage engineers, Cloud Architects
 
 ****Prerequisites****: Recommended to have an fundamental understanding of AWS containers, and AWS Cloud
 
 ****Duration****: Approximately take 2 hours.
+
+---
 
 ![fsxn-architecture](/static/images/fsxn-architecture.png)
 
