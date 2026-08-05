@@ -1,3 +1,16 @@
+# ontap-storage-class.yaml
+#
+# FSx for NetApp ONTAP's NFS endpoint is reachable from every Availability Zone,
+# so Trident advertises no zone topology (topologyKeys: null). With
+# volumeBindingMode: Immediate the CSI external-provisioner needs an explicit
+# zone list to satisfy its accessibility requirement — without allowedTopologies
+# it fails with "error generating accessibility requirements: no available
+# topology found". We keep Immediate (WaitForFirstConsumer would leave no-pod
+# import PVCs Pending forever) and list the region's AZs below.
+#
+# NOTE: the values below are for us-west-2 (the workshop's default region). If
+# you deploy in a different region, replace them with that region's AZs. The
+# automated provisioning path generates this list dynamically per region.
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -9,5 +22,14 @@ parameters:
   provisioningType: "thin"
   snapshots: "true"
 allowVolumeExpansion: true
+volumeBindingMode: Immediate
+allowedTopologies:
+  - matchLabelExpressions:
+      - key: topology.kubernetes.io/zone
+        values:
+          - us-west-2a
+          - us-west-2b
+          - us-west-2c
+          - us-west-2d
 mountOptions:
   - nfsvers=4.1

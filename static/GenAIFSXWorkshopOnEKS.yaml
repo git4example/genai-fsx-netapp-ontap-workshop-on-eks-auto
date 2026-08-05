@@ -2763,8 +2763,43 @@ Resources:
                     exit 1
                   fi
 
-                  # Apply StorageClass
-                  kubectl apply -f /home/${VSCodeUser}/environment/eks/FSxONTAP/ontap-storage-class.yaml
+                  # Apply StorageClass with allowedTopologies covering all region AZs.
+                  # Trident registers topologyKeys=null for an FSxN Multi-AZ backend (correct:
+                  # the NFS floating endpoint is reachable from every AZ). With
+                  # volumeBindingMode: Immediate and no allowedTopologies, the CSI
+                  # external-provisioner's "scan CSINodes for topology keys" path finds none
+                  # and fails with "error generating accessibility requirements: no available
+                  # topology found". We keep Immediate (WaitForFirstConsumer would leave the
+                  # no-pod import PVCs Pending forever) and supply the region's zones so the
+                  # provisioner has resolvable topology. Zones are enumerated dynamically so
+                  # this works in any region. The manifest is built in a temp file with
+                  # printf to keep YAML indentation independent of this script's indentation.
+                  echo "Building StorageClass with region AZ topology..."
+                  SC_FILE=/tmp/ontap-nas-sc.yaml
+                  printf '%s\n' \
+                    'apiVersion: storage.k8s.io/v1' \
+                    'kind: StorageClass' \
+                    'metadata:' \
+                    '  name: ontap-nas-sc' \
+                    'provisioner: csi.trident.netapp.io' \
+                    'reclaimPolicy: Retain' \
+                    'parameters:' \
+                    '  backendType: "ontap-nas"' \
+                    '  provisioningType: "thin"' \
+                    '  snapshots: "true"' \
+                    'allowVolumeExpansion: true' \
+                    'volumeBindingMode: Immediate' \
+                    'allowedTopologies:' \
+                    '  - matchLabelExpressions:' \
+                    '      - key: topology.kubernetes.io/zone' \
+                    '        values:' > "$SC_FILE"
+                  for z in $(aws ec2 describe-availability-zones --region $AWS_REGION \
+                    --query "AvailabilityZones[?State=='available'].ZoneName" --output text); do
+                    printf '          - %s\n' "$z" >> "$SC_FILE"
+                  done
+                  printf '%s\n' 'mountOptions:' '  - nfsvers=4.1' >> "$SC_FILE"
+                  echo "--- generated StorageClass ---"; cat "$SC_FILE"
+                  kubectl apply -f "$SC_FILE"
 
                   echo "=== Step 3: Create Agents Namespace and Import Volume ==="
                   kubectl create namespace agents 2>/dev/null || true

@@ -48,6 +48,15 @@ parameters:
   provisioningType: "thin"
   snapshots: "true"
 allowVolumeExpansion: true
+volumeBindingMode: Immediate
+allowedTopologies:
+  - matchLabelExpressions:
+      - key: topology.kubernetes.io/zone
+        values:
+          - us-west-2a
+          - us-west-2b
+          - us-west-2c
+          - us-west-2d
 mountOptions:
   - nfsvers=4.1
 :::
@@ -62,6 +71,7 @@ Key points about this StorageClass:
 - **snapshots**: `true` — enables snapshot support for volumes created by this class
 - **allowVolumeExpansion**: `true` — allows you to resize volumes after creation
 - **nfsvers=4.1** — uses NFS version 4.1 for improved performance and security
+- **volumeBindingMode + allowedTopologies** — FSx for ONTAP's NFS endpoint is reachable from every Availability Zone, so Trident advertises no zone topology. With `Immediate` binding the CSI provisioner needs an explicit zone list to satisfy its accessibility requirement; without it, PVCs fail with *"no available topology found"*. The zones are populated for your region in the next step.
 
 2. Apply the StorageClass manifest:
 
