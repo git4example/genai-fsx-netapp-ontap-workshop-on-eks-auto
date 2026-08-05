@@ -1,14 +1,14 @@
 ---
-title : "Deploy vLLM & Neuron monitoring dashboards"
+title : "Deploy Observability dashboards"
 weight : 320
 ---
 
 ### Overview
 
-It is important to have a mechanism that provides observability into Inference workloads, across metrics such as "prompt" & "generated" tokens, inference performance & queue metrics, and also Accelerated Compute performance details. In this section you will setup & deploy Grafana based dashboards that will provide observability into inference workload, vLLM & Neuron performance metrics.
+In this section you will setup & deploy Grafana based dashboards that will provide observability into inference workload, vLLM & Neuron (AWS Inferentina) performance metrics.
 
 
-#### vLLM Monitoring Setup
+#### vLLM Inference engine Monitoring Setup
 
 Run the below commands to deploy a Service Monitor configuration so that prometheus can scrape metrics from the vLLM service endpoint.
 
@@ -33,7 +33,7 @@ kubectl apply -f neuron-monitor.yaml
 kubectl apply -f neuron-servicemonitor.yaml
 :::
 
-#### Deploy the vLLM + Neuron Monitoring Dashboard
+#### Deploy a combined vLLM Inference + Neuron Monitoring Dashboard
 
 3. Now that we have our vLLM and Neuron metrics collectors setup, run the below command to deploy our custom "**vLLM + Neuron monitoring**" Grafana based dashboard. This custom dashboard combines specific Inference metrics along with Neuron metrics into a single dashboard view.
 

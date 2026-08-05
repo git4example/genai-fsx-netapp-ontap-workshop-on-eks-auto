@@ -23,7 +23,7 @@ Take a moment to explore the  [Amazon EKS cluster deployed in the workshop via t
 
 # Additional reading
 <br></br>
-
+::::expand{header="Click to learn more about EKS Auto Mode"}
 #### EKS Auto Mode
 
 Amazon EKS Auto Mode offers the capability to fully automate compute, storage, and networking management for Kubernetes clusters. Amazon EKS Auto Mode makes getting started with Kubernetes, easier and faster, by offloading EKS cluster operations to AWS, allowing for improved performance and security of your applications, and optimized compute costs.
@@ -42,3 +42,5 @@ By using EKS Auto Mode, you no longer need to manage components such as:
 - Karpenter
 - AWS EBS CSI Driver
 - EKS Pod Identity Agent
+
+::::

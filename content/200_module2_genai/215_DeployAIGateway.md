@@ -5,7 +5,7 @@ weight : 215
 
 ## Overview
 
-In production environments, it is best practice to deploy an **AI Gateway** in front of the LLMs that you want to use. The AI Gateway acts as a proxy layer that provides intelligent AI request routing, observability, cost management, and intelligent model selection. In this workshop, we will deploy [LiteLLM](https://github.com/BerriAI/litellm) as our AI Gateway. Deploying an AI Gateway in front of your LLMs also provides future state flexibility, as it abstracts the models used on the backend, allowing you to change the backend LLMs when required for your model consumers.
+In production environments, it is best practice to deploy an **AI Gateway** in front of the LLMs that you want to use. The AI Gateway acts as a proxy layer that provides intelligent AI request routing, observability, cost management,  intelligent model selection across different backend models, and  future flexibility. In this workshop, we will deploy [LiteLLM](https://github.com/BerriAI/litellm) as the AI Gateway. 
 
 
 ::::expand{header="Why an AI Gateway? [Click to see more]"}
@@ -59,8 +59,9 @@ flowchart TB
     style BB fill:#e3f2fd,stroke:#1565c0
     style ROUTER fill:#fff3e0,stroke:#e65100
 ```
-
 ---
+### Deploy the AI Gateway (LiteLLM)
+
 
 ##### Step 1: Deploy the LiteLLM ConfigMap
 

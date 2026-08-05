@@ -4,11 +4,9 @@ weight : 211
 ---
 
 ## Overview
-In this module you will deploy the vLLM inference engine as a container pod on the Amazon EKS cluster.
+In this module you will deploy the vLLM inference engine as a container pod on the Amazon EKS cluster. This vLLM pod will serve the Mistral-7B model to your Chatbot interface (Open WebUI). Once the vLLM Pod is online, it will load a pre-compiled Mistral-7B model from the FSx for NetApp volume. Because the model includes pre-compiled Neuron artifacts, vLLM skips the compilation step and starts serving in approximately 3-5 minutes (compared to 15+ minutes without pre-compiled artifacts).
 
-##### Step 1: Deploy the vLLM application Pod
-
-You will now deploy the vLLM pod, which will provide model serving capability through its inference endpoint. Once the vLLM Pod is online, it will load the pre-compiled Mistral-7B model from the FSx for NetApp ONTAP volume. Because the model includes pre-compiled Neuron artifacts, vLLM skips the compilation step and starts serving in approximately 3 - 5 minutes (compared to 15+ minutes without pre-compiled artifacts).
+#### Deploy the vLLM application Pod
 
 1. Run the below commands to update the mistral-ontap.yaml with your AWS environment variables.
 
@@ -34,19 +32,17 @@ Although your FSx for ONTAP file system is deployed in **Multi-AZ** mode (access
 3. Now run the below command, and you will see the Inferentia node count increase to 1, as we have deployed a pod that requires the accelerated compute node. Note that the increase to a value of 1 can take 30 seconds to update.
 ::code[kubectl get nodepool,nodeclass inferentia]{language=bash showLineNumbers=false showCopyAction=true}
 
-:::alert{header="Note" type="info"}
-**The vLLM pod deployment will take approx. 7 minutes. You can continue to the next steps, and don't need to wait for this step to complete**.  
+:::alert{header="The vLLM pod deployment will take approx. 7 minutes. Don't wait for it, continue to the next steps and then the next module to deploy the AI Gateway in parallel" type="warning"}
 :::
 
-
-4. Optionally inspect the vLLM deployment manifest to understand its configuration:
+4. Optional - you can inspect the vLLM deployment manifest to understand its configuration:
 
 ::::expand{header="Click to view mistral-ontap.yaml — vLLM deployment manifest"}
 
 ::code[cat mistral-ontap.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
 :::alert{header="Note" type="info"}
-You will notice a single pod deployment request, with a request for 2 AWS Inferentia NeuronCores, persistent storage using the PVC you created previously (`ontap-model-claim`), and also some model parameters. The model (including pre-compiled Neuron artifacts) was loaded onto this PVC by the Model Loading Job in Step 3. The `NEURON_COMPILED_ARTIFACTS` environment variable tells vLLM where to find the pre-compiled model, allowing it to skip the compilation step.
+You will notice a single pod deployment request, with a request for 2 AWS Inferentia NeuronCores, persistent storage using the `ontap-model-claim` PVC, and also some model parameters. The model (including pre-compiled Neuron artifacts) was pre-loaded onto this PVC during workshop provisioning. The `NEURON_COMPILED_ARTIFACTS` environment variable tells vLLM where to find the pre-compiled model, allowing it to skip the compilation step.
 :::
 
 
@@ -116,13 +112,13 @@ spec:
 
 ::::
 
-5. You can monitor the vLLM pod creation by running the below command periodically, until you see it transitioning to `Running` (usually when its at the 7 minute mark, this is where the vLLM is online and the model has been loaded into memory)
+5. You can monitor the vLLM pod creation by running the below command periodically, until you see it transitioning to `Running` (usually at 7 minute mark, when model has been loaded into memory)
 
 ::code[kubectl get pod]{language=bash showLineNumbers=false showCopyAction=true}
 
 ![vllm_pod](/static/images/vllm_pod_1.png)
 
-You can also see when vLLM Pod and the Mistral model has been loaded into the vLLM memory by running below command, and being able to see "*Application startup complete*" in the output.
+You can also see when vLLM Pod has loaded the Mistral model into memory by running below command, and seeing "*Application startup complete*" in the output.
 
 ::code[kubectl logs <your-vLLM-pod-name> -f]{language=bash showLineNumbers=false showCopyAction=true}
 
@@ -133,20 +129,9 @@ You can also see when vLLM Pod and the Mistral model has been loaded into the vL
 
 8. Click on the   **Compute** tab, you will see there is now a new AWS Inferentia **inf2.xlarge** compute node
 
-![inf2_node](/static/images/inf2_node.png)
-
-:::alert{header="What to look for" type="info"}
-In the EKS console Compute tab, you should see the `inf2.xlarge` node listed under the **inferentia** NodePool. The node status should show **Ready**. This confirms that EKS Auto Mode provisioned the Inferentia accelerated compute node in response to the vLLM pod's resource request for `aws.amazon.com/neuroncore: 2`.
-:::
-
 9. Click on the **Node name**, where it will show you the capacity allocation and Pod details relating to the inf2.xlarge compute node
 
+![inf2_node](/static/images/inf2_node.png)
 
 ### Summary
-You have deployed the vLLM inference engine with the Mistral-7B model on AWS Inferentia.
-
-:::alert{header="Don't wait — deploy the AI Gateway in parallel" type="success"}
-The vLLM pod takes ~7 minutes to reach `Running` and load the model. **You do not need to wait for it.** Continue straight to the next section and deploy the LiteLLM AI Gateway now — it starts independently of vLLM and only needs the vLLM *Service* to exist (which it already does). Both will be ready by the time you open the chat UI.
-:::
-
-Continue to the next section to deploy the AI Gateway, which will sit in front of vLLM and provide model routing capabilities.
+You have deployed the vLLM inference engine with the Mistral-7B model on AWS Inferentia. Continue to the next section to deploy the AI Gateway (LiteLLM), which will sit in front of vLLM and provide model routing capabilities. The AI Gateway now starts independently of vLLM, and only needs the vLLM Service to exist (which it already does). Both will be ready by the time you open the Open WebUI Chat interface

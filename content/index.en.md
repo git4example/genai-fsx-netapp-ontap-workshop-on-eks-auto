@@ -1,5 +1,5 @@
 ---
-title: "Flexible AI on AWS + FSx NetApp : Build a Self-hosted Generative-AI application"
+title: "Flexible AI + FSxN: Self-hosted Gen-AI app & Observability"
 weight: 0
 ---
 In this workshop you will get hands-on and learn how to build your own self-hosted Generative-AI  application for performance, scale, and observability using an AWS AI stack of;
@@ -10,7 +10,8 @@ In this workshop you will get hands-on and learn how to build your own self-host
 
 In this workshop you will perform the following:
 
-- Build A Generative AI application
-- Deploy Observability dashboards
-- Build An Agentic AI workflow
-- Run through example scenarios
+- **Build A Generative AI chatbot** - Using open-source tools & model (Mistral-7B model, vLLM inference engine, Open WebUI interface)
+- **Deploy Observability dashboards** - View token usage metrics & inference workload performance
+- **Deploy an AI Gateway** - Enable flexibility across architecture and LLM models consumed
+- **Deploy AI Agents** - Test Agentic-AI permissions boundaries enforced by Amazon FSx & Amazon EKS
+- **Run through example prompt scenarios**

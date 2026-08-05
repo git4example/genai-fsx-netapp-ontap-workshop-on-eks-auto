@@ -1,21 +1,21 @@
 ---
-title : "Explore FSx for ONTAP in the AWS Console"
+title : "Explore FSx for NetApp"
 weight : 105
 ---
 
 ## Overview
 
-Before deploying the Trident CSI driver and configuring dynamic provisioning, let's first explore the pre-provisioned FSx for ONTAP file system in the AWS console. This will help you understand the key ONTAP concepts — **file systems**, **Storage Virtual Machines (SVMs)**, **volumes**, **NFS access**, **snapshots**, and **data tiering** — and establish a baseline view of the storage before Trident creates any volumes.
+Before deploying the Trident CSI driver and configuring dynamic provisioning, let's first explore the pre-provisioned FSx for ONTAP file system that we have already created as part of this workshop. This will help you understand the  FSx for NetApp key concepts — **file systems**, **Storage Virtual Machines (SVMs)**, **volumes**, **NFS access**, **snapshots**, and **data tiering** — and establish a baseline view of the storage before we use the Trident CSI driver to dynamically create new Persistent Volumes.
 
 ##### Understanding FSx for ONTAP architecture
 
 :::alert{header="FSx for ONTAP concepts" type="info"}
 - **File system** — The top-level resource. It defines the SSD storage capacity, throughput, and deployment type (Single-AZ or Multi-AZ). Think of it as the physical storage cluster.
 - **Storage Virtual Machine (SVM)** — A logical storage server within the file system. Each SVM has its own NFS/SMB endpoints and credentials. A single file system can host multiple SVMs for multi-tenant isolation.
-- **Volume** — A logical data container within an SVM. Volumes are where your data lives. Each volume has a **junction path** (like a mount point) and can be accessed via NFS. The Trident CSI driver creates ONTAP volumes automatically when you create a PVC.
-- **NFS access** — ONTAP volumes are accessed over NFS (TCP port 2049). The Trident CSI driver mounts volumes into your Kubernetes pods using NFS v4.1.
+- **Volume** — A logical data container within an SVM. Volumes are where your data lives. The Trident CSI driver creates FSx NetApp volumes automatically when you dynamically create a PVC.
+- **NFS access** — FSx NetApp volumes are accessed over NFS (TCP port 2049). The Trident CSI driver mounts volumes into your Kubernetes pods using NFS v4.1.
 - **Snapshots** — Point-in-time, read-only copies of a volume. Snapshots are space-efficient (they only store changed blocks) and can be used for backup, recovery, or cloning.
-- **Data tiering** — FSx for ONTAP can automatically tier infrequently accessed data from high-performance SSD storage to lower-cost capacity pool storage, reducing costs while keeping data accessible.
+- **Data tiering** — FSx for NetApp can automatically tier infrequently accessed data from high-performance SSD storage to lower-cost capacity pool storage, reducing costs while keeping data accessible.
 :::
 
 ##### View your FSx for ONTAP file system in the console
@@ -26,7 +26,7 @@ Before deploying the Trident CSI driver and configuring dynamic provisioning, le
 
 ![aws_region](/static/images/aws_region.png)
 
-3. In the FSx console you will see a list of your file systems. You should see the FSx for ONTAP file system that was pre-provisioned for you as part of the lab. The **File system type** column will show **ONTAP**.
+3. In the FSx console you will see a list of your file systems. You should see the FSx for NetApp ONTAP file system that was pre-provisioned for you as part of the lab. The **File system type** column will show **ONTAP**.
 
 4. Click on the **File system ID** of your FSx for ONTAP file system to view its details.
 
@@ -39,7 +39,7 @@ Before deploying the Trident CSI driver and configuring dynamic provisioning, le
    - **Standby subnet** — The AZ where the standby file server is ready for automatic failover
 
 :::alert{header="Note" type="info"}
-FSx for ONTAP Multi-AZ file systems provide **zero RPO** (Recovery Point Objective) and automatic failover between Availability Zones. Data is synchronously replicated between the preferred and standby subnets, so no data is lost during a failover event. The failover is transparent to NFS clients — Kubernetes pods continue to access the volume without interruption because the DNS endpoints automatically resolve to the active file server. You will explore this failover capability in a later module.
+FSx for NetApp ONTAP Multi-AZ file systems provide **zero RPO** (Recovery Point Objective) and automatic failover between Availability Zones. Data is synchronously replicated between the preferred and standby subnets. The failover is transparent to NFS clients — Kubernetes pods continue to access the volume without interruption because the DNS endpoints automatically resolve to the active file server. You will explore this failover capability in a later module.
 :::
 
 ##### View the Storage Virtual Machine (SVM)
@@ -85,4 +85,4 @@ The monitoring dashboard is currently quiet since no workloads are running yet. 
 
 ## Summary
 
-You have now explored the FSx for ONTAP file system in the AWS console and understand the storage architecture — **file systems** contain **SVMs**, which in turn contain **volumes** accessible over **NFS**. Currently only the root volume exists. In the next sections, you will deploy the Trident CSI driver and create a PVC, which will dynamically provision a new ONTAP volume that you can verify back in this console.
+You have now explored the FSx for ONTAP file system in the AWS console and understand the storage architecture — **file systems** contain **SVMs**, which in turn contain **volumes** accessible over **NFS**.

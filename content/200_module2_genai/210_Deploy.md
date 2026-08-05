@@ -1,11 +1,11 @@
 ---
-title : "Configure AI compute nodepool and load model"
+title : "Configure AI compute nodepool & load model"
 weight : 210
 ---
 
 ## Overview
 
-In this section you will configure an AWS Inferentia nodepool on the EKS cluster, and install the AWS Neuron plugins.
+In this section you will configure an AWS Inferentia nodepool (AI Compute) on the EKS cluster, and install the required AWS Neuron plugins that are required for using AWS Inferentia with Amazon EKS.
 
 ##### Step 1: Install Neuron Device Plugin, Scheduler & Node Problem Detector
 
@@ -111,7 +111,7 @@ nodeclass.eks.amazonaws.com/inferentia   eksworkshop-eks-auto-202501030632263297
 ##### Step 3: Verify the Mistral-7B Model is Present on the FSx for ONTAP Volume
 
 :::alert{header="The model is already pre-loaded" type="success"}
-To save you a multi-gigabyte download, the **pre-compiled Mistral-7B-Instruct-v0.3 model (with Neuron compiled artifacts) was already loaded onto an FSx for NetApp ONTAP volume during workshop provisioning**. The volume named `model` was imported into Kubernetes as the `ontap-model-claim` PVC (see the "How the model volume is wired" callout in Module 1). You do **not** need to download anything here — you'll simply confirm the model is present and then deploy vLLM against it.
+To save you a multi-gigabyte download, the **pre-compiled Mistral-7B-Instruct-v0.3 model (with Neuron compiled artifacts) was already loaded onto an FSx for NetApp ONTAP volume during workshop provisioning**. The volume named `model` was imported into Kubernetes as the `ontap-model-claim` PVC (see the "How the model volume is wired" callout in the optional **Dynamic Provisioning** module). You do **not** need to download anything here — you'll simply confirm the model is present and then deploy vLLM against it.
 :::
 
 :::alert{header="Why store the model on FSx for ONTAP?" type="info"}

@@ -8,57 +8,29 @@ Copyright Amazon Web Services, Inc. and its affiliates. All rights reserved. Thi
 Errors or corrections? Contact ppariksh@amazon.com, akbariw@amazon.com
 
 -------------------------------------------------------------
+
 ## Workshop Objective
 Learn how to build your own self-hosted Generative-AI  application for performance, scale, and observability using an AWS AI stack that is comprised of;
 
 * **Compute layer:** *AWS Trainium/Inferentia* - Accelerated Compute to power your Generative-AI application.
 * **Workload hosting & Orchestration:** *Amazon Elastic Kubernetes Service (EKS)* - Host your Generative-AI & Agentic-AI applications.
-* **Data layer:** *Amazon FSx for NetApp ONTAP* - High-performance shared storage used to host LLM models and unstructured data.
-
-:::alert{header="Why this matters — business outcomes" type="info"}
-Beyond the hands-on mechanics, this workshop demonstrates outcomes that matter when taking self-hosted AI to production:
-
-- **Control your AI costs** — self-host open-source models on AWS Inferentia for high-volume inference, and reserve premium managed models (via the AI Gateway) only for the workloads that need them.
-- **Keep your data on your terms** — models and enterprise data sit on your own FSx for NetApp ONTAP storage inside your VPC, not a third-party API, with the storage-layer controls (POSIX permissions, snapshots, Multi-AZ) your organization already trusts.
-- **Enforce data boundaries for autonomous agents** — as AI agents act on data, FSx for ONTAP enforces *who can read what* at the storage layer — below the application, where a prompt or a misbehaving agent cannot override it.
-- **Run resiliently** — a Multi-AZ storage foundation keeps your AI workloads serving through an Availability Zone failure with zero data loss.
-:::
+* **Data layer:** *Amazon FSx for NetApp ONTAP* - Highly Available, High-performance shared storage used to host LLM models and unstructured data.
 
 ---
 
-##### In this workshop you will deploy the following:
+##### In this workshop you will perform the following:
 
-- **A Generative AI chatbot:** Using an Open WebUI interface, and a vLLM (model serving engine) to serve the Mistral-7B open-source Large Language Model (LLM).
-
-- **Observability dashboards:** View *inference performance* and *token consumption*.
-
-- **An Agentic AI workflow:** Deploy AI Agents that integrate with your FSx for NetApp data.
-
-- **Run through example scenarios:** Chatbot capabilities, inspect inference & token metrics, Agentic-AI permissions boundaries.
+- **Build A Generative AI chatbot** - using open-source tools & model (Mistral-7B model, vLLM inference engine, Open WebUI interface)
+- **Deploy Observability dashboards** - view token usage metrics & inference workload performance
+- **Deploy an AI Gateway** - Enable flexibility across architecture and LLM models consumed
+- **Deploy AI Agents** - and test Agentic-AI permissions boundaries enforced by Amazon FSx & Amazon EKS
+- **Run through example prompt scenarios**
 
 ---
 
-##### Overview of flow of workshop:
+****Target Audience****: DevOps engineers, Machine Learning Scientists/Engineers, Platform engineers, Container & Storage engineers, Cloud Architects
 
-**1. Configure storage for model hosting -** Configure FSx for NetApp based Persistent Volume on Amazon EKS cluster, to store the Mistral-7B model.
-
-**2. Deploy Generative AI chatbot application on Amazon EKS -**
-   - Configure AWS Inferentia2 nodepool in Amazon EKS
-   - Deploy vLLM Pod to serve the Mistral-7B model
-   - Deploy Open WebUI Pod as chatbot interface
-
-
-**3. Deploy observability dashboards-** Deploy Grafana dashboards
-
-**4. Run through example inference scenarios -** Inspect setup & view capabilities of self-hosted Chatbot.
-
-**5. Deploy AI Agents & perform tests -** Deploy AI Agents (AWS Strands Agents) and test permissions & security boundaries enforced by Amazon EKS & Amazon FSx for NetApp for Agentic AI workflows.
-
----
-
-****Target Audience****: DevOps engineers, Machine Learning Scientists/Engineers, Container & Storage engineers, Cloud Architects
-
-****Prerequisites****: Recommended to have an fundamental understanding of AWS containers, and AWS Cloud
+****Prerequisites****: Recommended to have an fundamental understanding of AWS Cloud and Kubernetes
 
 ****Duration****: Approximately take 2 hours.
 

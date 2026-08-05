@@ -1,12 +1,12 @@
 ---
-title : "Setting up observability stack"
+title : "Setup observability stack"
 weight : 310
 ---
-### Overview
+## Overview
 
 In this section, you will install the core components required for the observability stack (Prometheus + Grafana) designed to monitor LLM inference workloads on Amazon EKS. Once you deploy these core components, you will then create dashboards using these metric collectors.
 
-## Observability Stack Components
+### Observability Stack Components
 
 For monitoring LLM inference workloads, we will need to deploy several key components (as outlined below) in the cluster for our observability stack:
 

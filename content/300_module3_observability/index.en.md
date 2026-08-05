@@ -6,12 +6,11 @@ weight : 300
 
 ## Module Overview
 
-It is important to have a mechanism that provides observability into Inference workloads, across metrics such as "prompt" & "generated" tokens, inference performance & queues, and also Accelerated Compute performance details. In this section, you will create a dashboard that provides detailed observability into LLM inference workload metrics running on Amazon EKS with AWS Neuron accelerators, focusing on key metrics that help understand model performance, Neuron utilization, and system health.
+It is important to have observability into Inference workloads so you can optimize accordingly. In this section, you will create Grafana based dashboards that provide detailed observability across inference workload metrics, tokens usage, AI stack performance, and system health.
 
-While this module demonstrates how to instrument observability tools directly on EKS for learning purposes, for production environments at scale, we recommend using AWS managed services such as Amazon Managed Service for Prometheus (AMP) and Amazon Managed Grafana (AMG) for improved scalability, reduced operational overhead, and better integration with the AWS ecosystem.
+While this module demonstrates how to instrument observability tools directly on Amazon EKS for learning purposes, for production environments at scale, we recommend using AWS managed services such as Amazon Managed Service for Prometheus (AMP) and Amazon Managed Grafana (AMG) for improved scalability, reduced operational overhead, and better integration with the AWS ecosystem.
 
-
-This module guides you through implementing Neuron and LLM inference monitoring, divided into four sections:
+This module guides you through implementing observability, divided into 3 sections:
 
 1. Setting-up the observability Stack
     - Understand the deployed monitoring components
@@ -20,7 +19,7 @@ This module guides you through implementing Neuron and LLM inference monitoring,
     - Deploy Node Exporter for Neuron metrics collection
 
 
-2. Configuring Neuron Performance Monitoring
+2. Configuring Performance Monitoring
     - Configure neuron-monitor metrics collection
     - Create Grafana dashboards for Neuron performance visualization
     - Track NeuronCore utilization, Model inference latency, Memory consumption, Hardware performance metrics

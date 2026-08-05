@@ -1,17 +1,17 @@
 ---
-title : "Configure storage for model hosting using Amazon FSx for NetApp ONTAP"
+title : "Configure FSx for NetApp storage for model hosting"
 weight : 100
 ---
 
 ## Module Overview
 
-In this workshop the **Mistral-7B-Instruct** model is stored on an Amazon FSx for NetApp ONTAP file system, which the vLLM container will use for the Generative AI ChatBot application.
+In this workshop the open-source **Mistral-7B-Instruct** AI model (LLM) is stored on an Amazon FSx for NetApp ONTAP volume. This FSx for NetApp volume system is mounted as a persistent volume by the vLLM inference engine. The vLLM inference engine reads the model from the FSx volume, loads it into memory, and then serves that model to the Generative AI chatbot application.
 
-In this module you will deploy and integrate the **NetApp Astra Trident CSI driver** with your Amazon EKS cluster, configure a **TridentBackendConfig** to connect to the pre-provisioned FSx for ONTAP file system, create a **StorageClass** for dynamic provisioning, and create a **PersistentVolumeClaim** to provision an ONTAP volume for model storage. You will learn about Kubernetes storage concepts such as CSI drivers, StorageClasses, PersistentVolumeClaims, and dynamic provisioning with Trident. The infrastructure for this module comprises an Amazon EKS cluster with EC2 worker nodes and an Amazon FSx for NetApp ONTAP file system.
+In this module you will configure an FSx for NetApp instance to be used as the persistent storage layer within an Amazon EKS cluster, by deploying the **NetApp Astra Trident CSI driver** within the Amazon EKS cluster and connecting it to your pre-provisioned FSx for NetApp ONTAP file system via a `TridentBackendConfig`. This establishes the storage foundation that the model and agent volumes are served from.
 
-
-![fsxn-architecture](/static/images/fsxn-architecture.png)
-<!-- TODO: Replace with FSx for ONTAP architecture diagram -->
+:::alert{header="Want to see dynamic provisioning hands-on?" type="info"}
+The model and agent volumes used in this workshop are pre-provisioned and imported for you. If you'd like hands-on experience creating a `StorageClass` and watching Trident **dynamically provision** a brand-new ONTAP volume from a `PersistentVolumeClaim`, work through the optional **"Dynamic Provisioning of PVCs using FSx for NetApp"** module later in the workshop.
+:::
 
 ---
 

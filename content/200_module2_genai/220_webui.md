@@ -1,5 +1,5 @@
 ---
-title : "Deploy Open WebUI chat application to interact with model"
+title : "Deploy WebUI chatbot interface"
 weight : 220
 ---
 ## Overview
@@ -7,12 +7,12 @@ weight : 220
 In this section you will deploy the Open WebUI (chatbot UI client), and run through example prompts and view Generative-AI output.
 
 ### How to consume an Inference endpoint from an Inference engine.
-A chatbot UI can interact with an Inference engine by accessing the Inference engine endpoint. The **"Open WebUI"** application is designed to consume any OpenAI-compatible endpoint. In this workshop, Open WebUI connects to the **LiteLLM AI Gateway** deployed in the previous step, which intelligently routes chat requests to the self-hosted Mistral-7B model on Inferentia. The Open WebUI application allows users to interact with the LLM model through a chat-based interface. To use the Open WebUI application, you need to deploy the application container and configure it to point at the AI Gateway endpoint, then connect to the Open WebUI URL and start chatting with the LLM model.
+A chatbot UI can interact with an Inference engine by accessing the Inference engine endpoint. The **"Open WebUI"** application is designed to consume any OpenAI-compatible endpoint. In this workshop, Open WebUI connects to the **LiteLLM AI Gateway** deployed in the previous step, which intelligently routes chat requests to the self-hosted Mistral-7B model on Inferentia. The Open WebUI application allows users to interact with the LLM model through a chat-based interface. To use the Open WebUI application, you need to deploy the application container and configure it to point at the **LiteLLM AI Gateway** AI Gateway endpoint, then you simply connect to the Open WebUI URL address, and start chatting with the LLM model.
 
 <br></br>
 
 -------------------------
-### Step 1: Deploy the Open WebUI pod.
+## Step 1: Deploy the Open WebUI pod.
 -------------------------
 
 We will deploy Open WebUI using its official Helm chart. The chart values are defined in `open-webui-helm/values.yaml` and pre-configured to connect to the vLLM Mistral service deployed in the previous step.
@@ -86,10 +86,10 @@ If you don't see the model in the dropdown, please refresh the WebUI page. (Reme
 
 -------------------------
 
-### Step 2: Run example input prompt queries and view Generative-AI output.
+## Step 2: Run example input prompt queries and view Generative-AI output.
 
 ---
-
+---
 Task 1  | Scripting task
 ---
 
@@ -97,8 +97,8 @@ Task 1  | Scripting task
 
 ::code[write a Linux bash script that creates files, taking inputs for the size of the file (in terms of KB), the number of files to create, the number of concurrent file creation threads for the script to execute, where each file has the words "this is a test file" in it. Each created filename starts with "test" and has a 5 digit suffix appended to it, starting with 00000]{language=bash showLineNumbers=false showCopyAction=true}
 
-
-
+---
+---
 Task 2  | Language translation task
 ---
 
@@ -119,8 +119,8 @@ Task 2  | Language translation task
 
 ::code[translate this : <paste the Japanese language section that you copied>]{language=bash showLineNumbers=false showCopyAction=true}
 
-
-
+---
+---
 Task 3  | Context for input prompts using a context document
 ---
 

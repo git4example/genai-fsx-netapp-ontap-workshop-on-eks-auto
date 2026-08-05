@@ -1,6 +1,6 @@
 ---
-title : "Create StorageClass and PVC for Dynamic Provisioning"
-weight : 120
+title : "Dynamic Provisioning of PVCs using FSx for NetApp"
+weight : 810
 ---
 -------------------------------------------------------------
 

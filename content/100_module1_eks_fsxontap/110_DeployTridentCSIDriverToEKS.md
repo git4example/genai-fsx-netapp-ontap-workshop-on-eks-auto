@@ -1,13 +1,13 @@
 ---
-title : "Deploy Trident CSI Driver for Amazon FSx for NetApp ONTAP"
+title : "Configure FSx for NetApp storage on EKS"
 weight : 110
 ---
 
 ## Overview
 
-Imagine the scenario where you need to host many AI models, or vast amounts of training data-sets, which will be accessed by hundreds of Pods in your workload. You can store this data on a single Persistent Volume (PV) backed by Amazon FSx for NetApp ONTAP. FSx for ONTAP provides fully managed shared storage built on the NetApp ONTAP file system, offering NFS access, snapshots, cloning, and automatic data tiering between SSD and capacity pool storage. The NetApp Astra Trident CSI driver integrates FSx for ONTAP with Kubernetes, enabling dynamic volume provisioning so your Pods can mount high-performance shared storage without manual PV creation.
+Imagine the scenario where you need to host many AI models, or vast amounts of training data-sets, which will be accessed by hundreds of Pods in your workload. You can store this data in a operationally efficient and performant way on a single high-performant Persistent Volume (PV) backed by Amazon FSx for NetApp ONTAP, instead of each Pod using its own small local instance-based storage. FSx for ONTAP provides fully managed shared storage built on the NetApp ONTAP file system, offering NFS access, snapshots, cloning, and automatic data tiering between SSD and capacity pool storage. The NetApp Astra Trident CSI driver integrates FSx for ONTAP with Kubernetes, enabling dynamic volume provisioning so your Pods can mount high-performance shared storage without manual PV creation.
 
-In this section, the following steps will guide you to create an IAM policy with the required FSx for ONTAP and Secrets Manager permissions, create a service account, deploy the Trident CSI driver using Helm, and configure a Trident backend that connects to your pre-provisioned FSx for ONTAP file system and SVM.
+In this module you will deploy the **NetApp Astra Trident CSI driver** within Amazon EKS cluster, configure a **TridentBackendConfig** to connect to a pre-provisioned FSx file system (static provisioning). You will also create a new **StorageClass** definition (that allows for dynamic provisioning), and create a **PersistentVolumeClaim** that is  backed by an FSx for NetApp volume, where that volume will store the LLM model. You will learn about Kubernetes storage concepts such as CSI drivers, StorageClasses, PersistentVolumeClaims, and dynamic provisioning with Trident. The infrastructure for this module comprises an Amazon EKS cluster with EC2 worker nodes, and an Amazon FSx for NetApp ONTAP file system.
 
 :::alert{header="Note" type="info"}
 For an AWS Sponsored Workshop, the FSx for ONTAP file system, SVM, and Security Group have been pre-created for you.
