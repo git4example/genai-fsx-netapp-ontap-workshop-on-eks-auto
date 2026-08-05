@@ -2662,38 +2662,41 @@ Resources:
                   echo "Waiting for Trident operator to be ready..."
                   kubectl -n trident rollout status deploy/trident-operator --timeout=300s
 
-                  # The operator installs Trident asynchronously (via the TridentOrchestrator
-                  # CR), which is what registers the TridentBackendConfig CRD and starts the
-                  # Trident controller. Operator-pod readiness does NOT mean the CRDs exist yet,
-                  # so we must explicitly wait for the CRD to be established before applying a
-                  # TridentBackendConfig — otherwise we hit:
+                  # The trident-operator Helm chart auto-creates a cluster-scoped
+                  # TridentOrchestrator CR named "trident". The operator installs Trident
+                  # asynchronously and sets .status.status to "Installed" ONLY after it has
+                  # (a) registered and established all Trident CRDs (incl.
+                  # TridentBackendConfig), (b) created and verified the trident-controller
+                  # Deployment, and (c) confirmed the node DaemonSet pods are Ready.
+                  # Gating on this single authoritative signal avoids the earlier races:
                   #   "no matches for kind TridentBackendConfig ... ensure CRDs are installed first"
-                  echo "Waiting for TridentBackendConfig CRD to be registered..."
-                  for i in $(seq 1 60); do
-                    if kubectl get crd tridentbackendconfigs.trident.netapp.io >/dev/null 2>&1; then
+                  #   "deployments.apps \"trident-controller\" not found"
+                  echo "Waiting for TridentOrchestrator/trident to reach status=Installed..."
+                  TORC_STATUS=""
+                  for i in $(seq 1 120); do
+                    TORC_STATUS=$(kubectl get tridentorchestrator trident -o jsonpath='{.status.status}' 2>/dev/null || echo "")
+                    if [ "$TORC_STATUS" = "Installed" ]; then
+                      echo "  Trident install complete (status=Installed)."
                       break
                     fi
-                    echo "  ...CRD not present yet (attempt $i/60), waiting 5s"
+                    if [ "$TORC_STATUS" = "Failed" ] || [ "$TORC_STATUS" = "Error" ]; then
+                      echo "  FATAL: TridentOrchestrator status=$TORC_STATUS"
+                      kubectl get tridentorchestrator trident -o yaml || true
+                      exit 1
+                    fi
+                    echo "  ...status='$TORC_STATUS' (attempt $i/120), waiting 5s"
                     sleep 5
                   done
-                  kubectl wait --for=condition=established --timeout=180s \
+                  if [ "$TORC_STATUS" != "Installed" ]; then
+                    echo "FATAL: timed out waiting for Trident to install."
+                    kubectl get tridentorchestrator trident -o yaml || true
+                    exit 1
+                  fi
+
+                  # Belt-and-suspenders: confirm the CRD is served by the API server before
+                  # applying a resource of that kind (normally already true post-Installed).
+                  kubectl wait --for=condition=established --timeout=60s \
                     crd/tridentbackendconfigs.trident.netapp.io
-
-                  # The trident-controller Deployment is created by the operator only after
-                  # it reconciles the TridentOrchestrator — which can lag behind CRD
-                  # registration — so poll for the Deployment to EXIST before waiting on its
-                  # rollout (otherwise: deployments.apps "trident-controller" not found).
-                  echo "Waiting for the Trident controller deployment to be created..."
-                  for i in $(seq 1 60); do
-                    if kubectl -n trident get deploy trident-controller >/dev/null 2>&1; then
-                      break
-                    fi
-                    echo "  ...trident-controller not created yet (attempt $i/60), waiting 5s"
-                    sleep 5
-                  done
-
-                  echo "Waiting for the Trident controller to be ready..."
-                  kubectl -n trident rollout status deploy/trident-controller --timeout=300s
 
                   echo "=== Step 2: Configure Trident Backend ==="
                   # Get FSxN SVM details
@@ -2735,8 +2738,30 @@ Resources:
                       snapshotDir: "true"
                   EOF
 
-                  echo "Waiting for backend to be available..."
-                  sleep 15
+                  # The backend must reach phase "Bound"/status "Success" before any
+                  # import PVC can bind against it. Poll the TridentBackendConfig status
+                  # instead of a fixed sleep, so the later volume imports don't race it.
+                  echo "Waiting for TridentBackendConfig to reach Success..."
+                  TBC_PHASE=""
+                  for i in $(seq 1 60); do
+                    TBC_PHASE=$(kubectl -n trident get tridentbackendconfig fsx-ontap-nas -o jsonpath='{.status.lastOperationStatus}' 2>/dev/null || echo "")
+                    if [ "$TBC_PHASE" = "Success" ]; then
+                      echo "  Backend ready (lastOperationStatus=Success)."
+                      break
+                    fi
+                    if [ "$TBC_PHASE" = "Failed" ]; then
+                      echo "  FATAL: TridentBackendConfig lastOperationStatus=Failed"
+                      kubectl -n trident get tridentbackendconfig fsx-ontap-nas -o yaml || true
+                      exit 1
+                    fi
+                    echo "  ...backend status='$TBC_PHASE' (attempt $i/60), waiting 5s"
+                    sleep 5
+                  done
+                  if [ "$TBC_PHASE" != "Success" ]; then
+                    echo "FATAL: timed out waiting for Trident backend to become ready."
+                    kubectl -n trident get tridentbackendconfig fsx-ontap-nas -o yaml || true
+                    exit 1
+                  fi
 
                   # Apply StorageClass
                   kubectl apply -f /home/${VSCodeUser}/environment/eks/FSxONTAP/ontap-storage-class.yaml
@@ -2745,8 +2770,9 @@ Resources:
                   kubectl create namespace agents 2>/dev/null || true
                   kubectl apply -f /home/${VSCodeUser}/environment/eks/agentic-agents/agent-shared-pvc.yaml
 
-                  echo "Waiting for PVC to bind..."
-                  sleep 30
+                  echo "Waiting for agent-shared-data PVC to bind..."
+                  kubectl wait --for=jsonpath='{.status.phase}'=Bound \
+                    pvc/agent-shared-data -n agents --timeout=180s
                   kubectl get pvc -n agents agent-shared-data
 
                   echo "=== Step 4: Populate Agent Data and Set Permissions ==="
@@ -2767,8 +2793,9 @@ Resources:
                   # so participants do not wait 4-6 minutes during Module 2.
                   kubectl apply -f /home/${VSCodeUser}/environment/eks/FSxONTAP/ontap-pvc.yaml
 
-                  echo "Waiting for model PVC to bind..."
-                  sleep 30
+                  echo "Waiting for ontap-model-claim PVC to bind..."
+                  kubectl wait --for=jsonpath='{.status.phase}'=Bound \
+                    pvc/ontap-model-claim --timeout=180s
                   kubectl get pvc ontap-model-claim
 
                   echo "Starting model download job (public HuggingFace repo, no token required)..."
