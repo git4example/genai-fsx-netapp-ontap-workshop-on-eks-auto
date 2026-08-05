@@ -146,14 +146,33 @@ helm repo add netapp-trident https://netapp.github.io/trident-helm-chart --force
 helm repo update
 
 helm upgrade --install trident-operator netapp-trident/trident-operator \
-    --version 100.2602.0 \
+    --version 100.2606.0 \
     --set cloudProvider="AWS" \
     --set cloudIdentity="'eks.amazonaws.com/role-arn: ${ROLE_ARN}'" \
     --namespace trident \
     --create-namespace
 
-echo "Waiting for Trident pods to be ready..."
-sleep 30
+# Wait for Trident to be FULLY installed before applying a TridentBackendConfig.
+# The operator installs Trident asynchronously (via the TridentOrchestrator CR)
+# and sets .status.status=Installed only after CRDs are established, the
+# trident-controller Deployment is available, and node pods are Ready. Gating on
+# this avoids "no matches for kind TridentBackendConfig" / "trident-controller
+# not found" races.
+echo "Waiting for Trident operator to be ready..."
+kubectl -n trident rollout status deploy/trident-operator --timeout=300s
+
+echo "Waiting for TridentOrchestrator/trident to reach status=Installed..."
+TORC_STATUS=""
+for i in $(seq 1 180); do
+    TORC_STATUS=$(kubectl get tridentorchestrator trident -o jsonpath='{.status.status}' 2>/dev/null || echo "")
+    if [ "$TORC_STATUS" = "Installed" ]; then echo "  Trident installed."; break; fi
+    if [ "$TORC_STATUS" = "Failed" ] || [ "$TORC_STATUS" = "Error" ]; then
+        echo "  FATAL: TridentOrchestrator status=$TORC_STATUS"; kubectl get tridentorchestrator trident -o yaml; exit 1
+    fi
+    echo "  ...status='$TORC_STATUS' ($i/180), waiting 8s"; sleep 8
+done
+[ "$TORC_STATUS" = "Installed" ] || { echo "FATAL: timed out waiting for Trident install."; exit 1; }
+kubectl wait --for=condition=established --timeout=60s crd/tridentbackendconfigs.trident.netapp.io
 kubectl get pods -n trident
 
 # --- Step 5b: Install Kubernetes VolumeSnapshot CRDs (required for Module 5) ---
@@ -201,9 +220,19 @@ echo "SVM Name: $SVM_NAME"
 export SVM_MGMT_LIF SVM_NAME
 envsubst '$SVM_MGMT_LIF $SVM_NAME' < trident-backend-config.yaml | kubectl apply -f -
 
-# Step 6.12: Verify backend
-echo "Waiting for Trident backend to register..."
-sleep 15
+# Step 6.12: Wait for the backend to reach Success before using it (replaces a
+# fixed sleep, so the StorageClass/PVC steps below can't race backend registration)
+echo "Waiting for TridentBackendConfig to reach Success..."
+TBC_PHASE=""
+for i in $(seq 1 60); do
+    TBC_PHASE=$(kubectl -n trident get tridentbackendconfig fsx-ontap-nas -o jsonpath='{.status.lastOperationStatus}' 2>/dev/null || echo "")
+    if [ "$TBC_PHASE" = "Success" ]; then echo "  Backend ready."; break; fi
+    if [ "$TBC_PHASE" = "Failed" ]; then
+        echo "  FATAL: backend lastOperationStatus=Failed"; kubectl -n trident get tridentbackendconfig fsx-ontap-nas -o yaml; exit 1
+    fi
+    echo "  ...backend status='$TBC_PHASE' ($i/60), waiting 5s"; sleep 5
+done
+[ "$TBC_PHASE" = "Success" ] || { echo "FATAL: timed out waiting for Trident backend."; exit 1; }
 kubectl get tridentbackendconfig -n trident
 
 echo ""
@@ -217,10 +246,10 @@ cd "$EKS_ONTAP_DIR"
 kubectl apply -f ontap-storage-class.yaml
 kubectl get storageclass ontap-nas-sc
 
-# Apply PVC
+# Apply PVC (imports the pre-provisioned "model" volume) and wait for it to bind
 kubectl apply -f ontap-pvc.yaml
-echo "Waiting for PVC to bind..."
-sleep 10
+echo "Waiting for ontap-model-claim PVC to bind..."
+kubectl wait --for=jsonpath='{.status.phase}'=Bound pvc/ontap-model-claim --timeout=180s
 kubectl get pvc ontap-model-claim
 
 # Verify backend health

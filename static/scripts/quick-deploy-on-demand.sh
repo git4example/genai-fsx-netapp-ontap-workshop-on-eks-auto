@@ -408,8 +408,10 @@ fi
 # NOTE: The Mistral-7B model is NOT uploaded to S3 by this script. The
 # workshop uses a pre-compiled v0.3 model hosted on HuggingFace
 # (Hello2pariksit/Mistral-7B-Instruct-v0.3-neuron) that is pulled directly
-# into FSx ONTAP by a Kubernetes Job (see static/eks/FSxONTAP/model-loading-job.yaml).
-# This one-time download per account persists across pod restarts.
+# into FSx ONTAP by a Kubernetes Job during CloudFormation provisioning (the
+# PreloadAgentData SSM step; see static/eks/FSxONTAP/model-loading-job.yaml).
+# This one-time download per account persists across pod restarts, so
+# participants don't wait for it during the modules.
 
 # Part 2 : Provision workshop resources
 log_info "Starting CloudFormation stack deployment..."
@@ -526,9 +528,9 @@ echo "  - S3 Bucket: $ASSET_BUCKET (workshop assets synced for VSCode instance b
 echo "  - CloudFormation Stack: $STACK_NAME"
 echo "  - Workshop files uploaded to S3"
 echo ""
-log_info "Note: The Mistral-7B model is NOT staged locally or in S3. It will be"
+log_info "Note: The Mistral-7B model is NOT staged locally or in S3. It is"
 log_info "      pulled directly from HuggingFace into FSx ONTAP by a Kubernetes"
-log_info "      Job during the first workshop module (one-time, ~3 minutes)."
+log_info "      Job during CloudFormation provisioning (one-time, ~3 minutes)."
 
 log_info "Next steps:"
 echo "  1. Access your VS Code server using the URL from stack outputs"

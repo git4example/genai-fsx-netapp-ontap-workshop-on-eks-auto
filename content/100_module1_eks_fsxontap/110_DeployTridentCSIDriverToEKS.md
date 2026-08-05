@@ -115,7 +115,7 @@ helm repo update
 **Install the Trident operator**
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 helm upgrade --install trident-operator netapp-trident/trident-operator \
-    --version 100.2602.0 \
+    --version 100.2606.0 \
     --set cloudProvider="AWS" \
     --set cloudIdentity="'eks.amazonaws.com/role-arn: ${ROLE_ARN}'" \
     --namespace trident \
