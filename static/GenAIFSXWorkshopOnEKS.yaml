@@ -2679,6 +2679,19 @@ Resources:
                   kubectl wait --for=condition=established --timeout=180s \
                     crd/tridentbackendconfigs.trident.netapp.io
 
+                  # The trident-controller Deployment is created by the operator only after
+                  # it reconciles the TridentOrchestrator — which can lag behind CRD
+                  # registration — so poll for the Deployment to EXIST before waiting on its
+                  # rollout (otherwise: deployments.apps "trident-controller" not found).
+                  echo "Waiting for the Trident controller deployment to be created..."
+                  for i in $(seq 1 60); do
+                    if kubectl -n trident get deploy trident-controller >/dev/null 2>&1; then
+                      break
+                    fi
+                    echo "  ...trident-controller not created yet (attempt $i/60), waiting 5s"
+                    sleep 5
+                  done
+
                   echo "Waiting for the Trident controller to be ready..."
                   kubectl -n trident rollout status deploy/trident-controller --timeout=300s
 
