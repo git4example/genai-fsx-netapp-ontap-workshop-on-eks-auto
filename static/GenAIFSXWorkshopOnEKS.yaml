@@ -2603,7 +2603,7 @@ Resources:
     Type: Custom::RunSSMDocLambda
     Properties:
       ServiceToken: !GetAtt RunSSMDocLambda.Arn
-      ServiceTimeout: 1800
+      ServiceTimeout: 3600
       InstanceId: !Ref VSCodeInstance
       DocumentName: !Ref PreloadAgentDataDocument
       DeleteDocumentName: ""
@@ -2635,7 +2635,7 @@ Resources:
                 - '{{ LinuxFlavor }}'
                 - al2023
             inputs:
-              timeoutSeconds: '1500'
+              timeoutSeconds: '3600'
               runCommand:
                 - !Sub |
                   #!/bin/bash
@@ -2656,7 +2656,7 @@ Resources:
                   helm repo update
                   helm upgrade --install trident-operator netapp-trident/trident-operator \
                     --namespace trident --create-namespace \
-                    --version 100.2502.1 \
+                    --version 100.2606.0 \
                     --wait --timeout 5m
 
                   echo "Waiting for Trident operator to be ready..."
@@ -2673,7 +2673,7 @@ Resources:
                   #   "deployments.apps \"trident-controller\" not found"
                   echo "Waiting for TridentOrchestrator/trident to reach status=Installed..."
                   TORC_STATUS=""
-                  for i in $(seq 1 120); do
+                  for i in $(seq 1 180); do
                     TORC_STATUS=$(kubectl get tridentorchestrator trident -o jsonpath='{.status.status}' 2>/dev/null || echo "")
                     if [ "$TORC_STATUS" = "Installed" ]; then
                       echo "  Trident install complete (status=Installed)."
@@ -2684,8 +2684,8 @@ Resources:
                       kubectl get tridentorchestrator trident -o yaml || true
                       exit 1
                     fi
-                    echo "  ...status='$TORC_STATUS' (attempt $i/120), waiting 5s"
-                    sleep 5
+                    echo "  ...status='$TORC_STATUS' (attempt $i/180), waiting 8s"
+                    sleep 8
                   done
                   if [ "$TORC_STATUS" != "Installed" ]; then
                     echo "FATAL: timed out waiting for Trident to install."
