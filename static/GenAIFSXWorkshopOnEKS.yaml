@@ -2659,8 +2659,28 @@ Resources:
                     --version 100.2502.1 \
                     --wait --timeout 5m
 
-                  echo "Waiting for Trident pods..."
-                  kubectl wait --for=condition=Ready pods --all -n trident --timeout=300s
+                  echo "Waiting for Trident operator to be ready..."
+                  kubectl -n trident rollout status deploy/trident-operator --timeout=300s
+
+                  # The operator installs Trident asynchronously (via the TridentOrchestrator
+                  # CR), which is what registers the TridentBackendConfig CRD and starts the
+                  # Trident controller. Operator-pod readiness does NOT mean the CRDs exist yet,
+                  # so we must explicitly wait for the CRD to be established before applying a
+                  # TridentBackendConfig — otherwise we hit:
+                  #   "no matches for kind TridentBackendConfig ... ensure CRDs are installed first"
+                  echo "Waiting for TridentBackendConfig CRD to be registered..."
+                  for i in $(seq 1 60); do
+                    if kubectl get crd tridentbackendconfigs.trident.netapp.io >/dev/null 2>&1; then
+                      break
+                    fi
+                    echo "  ...CRD not present yet (attempt $i/60), waiting 5s"
+                    sleep 5
+                  done
+                  kubectl wait --for=condition=established --timeout=180s \
+                    crd/tridentbackendconfigs.trident.netapp.io
+
+                  echo "Waiting for the Trident controller to be ready..."
+                  kubectl -n trident rollout status deploy/trident-controller --timeout=300s
 
                   echo "=== Step 2: Configure Trident Backend ==="
                   # Get FSxN SVM details
