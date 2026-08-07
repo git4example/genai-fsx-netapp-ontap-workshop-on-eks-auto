@@ -20,7 +20,7 @@ Learn how to build your own self-hosted Generative-AI  application for performan
 
 ##### In this workshop you will perform the following:
 
-- **Build A Generative AI chatbot** - using open-source tools & model (Mistral-7B model, vLLM inference engine, Open WebUI interface)
+- **Build a Generative AI chatbot** - using open-source tools & model (Mistral-7B model, vLLM inference engine, Open WebUI interface)
 - **Deploy Observability dashboards** - view token usage metrics & inference workload performance
 - **Deploy an AI Gateway** - Enable flexibility across architecture and LLM models consumed
 - **Deploy AI Agents** - and test Agentic-AI permissions boundaries enforced by Amazon FSx & Amazon EKS
