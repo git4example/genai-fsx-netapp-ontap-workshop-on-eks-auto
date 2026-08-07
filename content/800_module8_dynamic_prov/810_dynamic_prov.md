@@ -170,7 +170,27 @@ The **STATUS** should show `Success` and the **PHASE** should show `Bound`, conf
 You just used **dynamic provisioning** for the demo volume — Trident created a fresh ONTAP volume on demand. The **model volume** works a little differently:
 
 - During Terraform provisioning, a dedicated ONTAP volume named **`model`** (junction path `/model`) was created ahead of time.
-- During workshop setup, that volume was **imported** into Kubernetes via a PVC named `ontap-model-claim` (using Trident's `trident.netapp.io/importVolume` annotation), and the **pre-compiled Mistral-7B-Instruct-v0.3 model was downloaded onto it**.
+- During workshop setup, that volume was **imported** into Kubernetes via a PVC named `ontap-model-claim`, and the **pre-compiled Mistral-7B-Instruct-v0.3 model was downloaded onto it**.
+- The import is driven by three annotations on the PVC:
+
+:::code[]{language=yaml showLineNumbers=false showCopyAction=false}
+annotations:
+  trident.netapp.io/importOriginalName: "model"      # existing volume name
+  trident.netapp.io/importBackendUUID: "<uuid>"      # backend UUID, not its name
+  trident.netapp.io/importNoRename: "true"           # keep the name "model"
+:::
+
+  `importBackendUUID` takes the backend's **UUID**, which is generated when the backend registers — so the manifest is templated at deploy time rather than checked in with a fixed value. And without `importNoRename`, Trident would rename the ONTAP volume to `trident_pvc_<uuid>` on import, discarding the meaningful name.
+
+:::alert{header="Verifying an import actually happened" type="info"}
+Trident **silently ignores** annotation keys it does not recognise — a typo produces no warning and no error. The PVC still reaches `Bound`, but against a brand-new empty volume created by dynamic provisioning. The only reliable check is the ONTAP volume name recorded on the PV:
+
+```bash
+kubectl get pv <pv-name> -o jsonpath='{.spec.csi.volumeAttributes.internalName}'
+```
+
+`model` means the volume was imported. `trident_pvc_<uuid>` means it was dynamically provisioned.
+:::
 - This is why, in the next module, the vLLM pod can start serving almost immediately — the model data is already on FSx for ONTAP, so there's no multi-gigabyte download to wait for.
 
 **Dynamic provisioning** (demo volume) and **volume import** (model volume) are the two ways Trident connects Kubernetes PVCs to ONTAP storage. You'll see the import pattern again in the Agentic AI module, where a pre-provisioned shared volume holds the finance and IT Ops data.

@@ -2767,6 +2767,55 @@ Resources:
                     exit 1
                   fi
 
+                  # --- Resolve the Trident backend UUID (needed to import volumes) ---
+                  # Importing a pre-existing ONTAP volume requires the backend's *UUID*,
+                  # not its name, and that UUID is generated when the backend registers.
+                  # So it can only be resolved at runtime -- which is why the PVC manifests
+                  # are templated below rather than applied as static files.
+                  #
+                  # The three annotations that actually drive an import are:
+                  #   trident.netapp.io/importOriginalName  - volume name on the backend
+                  #   trident.netapp.io/importBackendUUID   - the UUID resolved here
+                  #   trident.netapp.io/importNoRename      - keep the ONTAP volume name
+                  # Trident SILENTLY IGNORES unknown trident.netapp.io/* annotations: a
+                  # misspelled key produces no warning and no error, and the PVC quietly
+                  # falls through to dynamic provisioning (a new, empty volume) while still
+                  # reaching Bound. The internalName assertions further down exist to catch
+                  # exactly that failure mode.
+                  echo "Resolving Trident backend UUID for volume import..."
+                  BACKEND_UUID=$(kubectl get tbe -n trident \
+                    -o jsonpath='{.items[?(@.backendName=="fsx-ontap-nas")].backendUUID}' 2>/dev/null || echo "")
+                  if [ -z "$BACKEND_UUID" ]; then
+                    echo "FATAL: could not resolve backendUUID for backend 'fsx-ontap-nas'."
+                    kubectl get tbe -n trident -o wide || true
+                    exit 1
+                  fi
+                  echo "  BACKEND_UUID=$BACKEND_UUID"
+
+                  # assert_imported <pvc> <namespace> <expected-ontap-volume-name>
+                  # Verifies the bound PV really points at the pre-provisioned ONTAP volume.
+                  # Without this, a broken import is invisible: the PVC binds, the model
+                  # downloads, the stack reports CREATE_COMPLETE -- but the data lands on a
+                  # brand-new empty volume while the pre-provisioned one sits unused.
+                  assert_imported() {
+                    _pvc="$1"; _ns="$2"; _want="$3"
+                    _pv=$(kubectl get pvc "$_pvc" -n "$_ns" -o jsonpath='{.spec.volumeName}' 2>/dev/null || echo "")
+                    if [ -z "$_pv" ]; then
+                      echo "FATAL: PVC $_ns/$_pvc has no bound PV."; exit 1
+                    fi
+                    _got=$(kubectl get pv "$_pv" -o jsonpath='{.spec.csi.volumeAttributes.internalName}' 2>/dev/null || echo "")
+                    if [ "$_got" = "$_want" ]; then
+                      echo "  OK: $_ns/$_pvc imported ONTAP volume '$_got'."
+                    else
+                      echo "FATAL: $_ns/$_pvc did NOT import '$_want' -- internalName='$_got'."
+                      echo "       A '$_want' value is required; 'trident_pvc_*' means Trident"
+                      echo "       dynamically provisioned a new empty volume instead of importing."
+                      kubectl get pvc "$_pvc" -n "$_ns" -o yaml || true
+                      kubectl logs -n trident deploy/trident-controller -c trident-main --tail=80 2>/dev/null | grep -iE 'import|error' || true
+                      exit 1
+                    fi
+                  }
+
                   # Apply StorageClass with allowedTopologies covering all region AZs.
                   # Trident registers topologyKeys=null for an FSxN Multi-AZ backend (correct:
                   # the NFS floating endpoint is reachable from every AZ). With
@@ -2807,12 +2856,36 @@ Resources:
 
                   echo "=== Step 3: Create Agents Namespace and Import Volume ==="
                   kubectl create namespace agents 2>/dev/null || true
-                  kubectl apply -f /home/${VSCodeUser}/environment/eks/agentic-agents/agent-shared-pvc.yaml
+
+                  # Import the pre-provisioned "agent_shared_data" volume. The manifest is
+                  # built inline (matching the TridentBackendConfig heredoc above) rather
+                  # than read from the static file, because importBackendUUID is only known
+                  # once the backend registers (see BACKEND_UUID above).
+                  echo "--- agent-shared-data PVC (import of agent_shared_data) ---"
+                  cat <<EOF | tee /tmp/agent-shared-pvc.yaml | kubectl apply -f -
+                  apiVersion: v1
+                  kind: PersistentVolumeClaim
+                  metadata:
+                    name: agent-shared-data
+                    namespace: agents
+                    annotations:
+                      trident.netapp.io/importOriginalName: "agent_shared_data"
+                      trident.netapp.io/importBackendUUID: "$BACKEND_UUID"
+                      trident.netapp.io/importNoRename: "true"
+                  spec:
+                    accessModes:
+                      - ReadWriteMany
+                    storageClassName: ontap-nas-sc
+                    resources:
+                      requests:
+                        storage: 10Gi
+                  EOF
 
                   echo "Waiting for agent-shared-data PVC to bind..."
                   kubectl wait --for=jsonpath='{.status.phase}'=Bound \
                     pvc/agent-shared-data -n agents --timeout=180s
                   kubectl get pvc -n agents agent-shared-data
+                  assert_imported agent-shared-data agents agent_shared_data
 
                   echo "=== Step 4: Populate Agent Data and Set Permissions ==="
                   kubectl apply -f /home/${VSCodeUser}/environment/eks/agentic-agents/populate-shared-data-job.yaml
@@ -2830,12 +2903,30 @@ Resources:
                   # Bind the pre-provisioned "model" volume (junction /model) via the
                   # import PVC, then download the pre-compiled Mistral-7B model onto it
                   # so participants do not wait 4-6 minutes during Module 2.
-                  kubectl apply -f /home/${VSCodeUser}/environment/eks/FSxONTAP/ontap-pvc.yaml
+                  echo "--- ontap-model-claim PVC (import of model) ---"
+                  cat <<EOF | tee /tmp/ontap-pvc.yaml | kubectl apply -f -
+                  apiVersion: v1
+                  kind: PersistentVolumeClaim
+                  metadata:
+                    name: ontap-model-claim
+                    annotations:
+                      trident.netapp.io/importOriginalName: "model"
+                      trident.netapp.io/importBackendUUID: "$BACKEND_UUID"
+                      trident.netapp.io/importNoRename: "true"
+                  spec:
+                    accessModes:
+                      - ReadWriteMany
+                    storageClassName: ontap-nas-sc
+                    resources:
+                      requests:
+                        storage: 100Gi
+                  EOF
 
                   echo "Waiting for ontap-model-claim PVC to bind..."
                   kubectl wait --for=jsonpath='{.status.phase}'=Bound \
                     pvc/ontap-model-claim --timeout=180s
                   kubectl get pvc ontap-model-claim
+                  assert_imported ontap-model-claim default model
 
                   echo "Starting model download job (public HuggingFace repo, no token required)..."
                   kubectl apply -f /home/${VSCodeUser}/environment/eks/FSxONTAP/model-loading-job.yaml

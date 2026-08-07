@@ -1,18 +1,38 @@
 # ontap-pvc.yaml — imports the pre-provisioned "model" volume (junction /model)
-# created by Terraform. Trident's importVolume annotation binds this PVC to that
-# existing ONTAP volume rather than dynamically provisioning a new one, so the
-# Mistral-7B model can be pre-loaded onto it during workshop provisioning.
+# created by Terraform, so the Mistral-7B model can be pre-loaded onto it during
+# workshop provisioning instead of downloaded by each participant.
+#
+# $BACKEND_UUID must be substituted before applying, e.g.:
+#   export BACKEND_UUID=$(kubectl get tbe -n trident \
+#     -o jsonpath='{.items[?(@.backendName=="fsx-ontap-nas")].backendUUID}')
+#   envsubst '$BACKEND_UUID' < ontap-pvc.yaml | kubectl apply -f -
+#
+# Trident's import annotations take a backend *UUID*, which is generated when the
+# backend registers — hence the templating. Trident silently ignores unrecognised
+# trident.netapp.io/* keys, so a typo here does not error: the PVC binds to a new,
+# empty, dynamically provisioned volume instead. Verify an import actually happened:
+#   kubectl get pv <pv> -o jsonpath='{.spec.csi.volumeAttributes.internalName}'
+#   -> "model" means imported; "trident_pvc_*" means dynamically provisioned.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: ontap-model-claim
   annotations:
-    trident.netapp.io/importVolume: "model"
-    trident.netapp.io/importBackend: "fsx-ontap-nas"
+    # Name of the existing volume on the ONTAP backend.
+    trident.netapp.io/importOriginalName: "model"
+    # Backend UUID (not the backend name) — substituted at deploy time.
+    trident.netapp.io/importBackendUUID: "$BACKEND_UUID"
+    # Keep the ONTAP volume named "model". Without this, a managed import renames
+    # it to trident_pvc_<uuid>, which defeats using a known, pre-provisioned name.
+    # Requires Trident 25.10+ (this workshop deploys 26.06).
+    trident.netapp.io/importNoRename: "true"
 spec:
   accessModes:
     - ReadWriteMany
   storageClassName: ontap-nas-sc
+  # Must not exceed the volume's writable space. The Terraform volume is 100 GiB
+  # with ONTAP's default 5% snapshot reserve, leaving ~95 GiB writable; the model
+  # occupies ~27 GiB.
   resources:
     requests:
       storage: 100Gi

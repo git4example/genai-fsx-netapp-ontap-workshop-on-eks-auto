@@ -235,6 +235,35 @@ done
 [ "$TBC_PHASE" = "Success" ] || { echo "FATAL: timed out waiting for Trident backend."; exit 1; }
 kubectl get tridentbackendconfig -n trident
 
+# --- Resolve the Trident backend UUID (required to import volumes) ---
+# Trident's import annotations take the backend *UUID*, which is generated when the
+# backend registers — so it can only be resolved at runtime, and the PVC manifests
+# have to be templated rather than applied directly.
+echo "Resolving Trident backend UUID..."
+BACKEND_UUID=$(kubectl get tbe -n trident \
+  -o jsonpath='{.items[?(@.backendName=="fsx-ontap-nas")].backendUUID}' 2>/dev/null || echo "")
+[ -n "$BACKEND_UUID" ] || { echo "FATAL: could not resolve backendUUID for 'fsx-ontap-nas'."; kubectl get tbe -n trident -o wide; exit 1; }
+export BACKEND_UUID
+echo "  BACKEND_UUID=$BACKEND_UUID"
+
+# assert_imported <pvc> <namespace> <expected-ontap-volume-name>
+# Trident silently ignores unknown trident.netapp.io/* annotations, so a broken
+# import still Binds — just to a new, empty, dynamically provisioned volume. This
+# check is what makes that failure visible instead of silent.
+assert_imported() {
+    local pvc="$1" ns="$2" want="$3" pv got
+    pv=$(kubectl get pvc "$pvc" -n "$ns" -o jsonpath='{.spec.volumeName}' 2>/dev/null || echo "")
+    [ -n "$pv" ] || { echo "FATAL: PVC $ns/$pvc has no bound PV."; exit 1; }
+    got=$(kubectl get pv "$pv" -o jsonpath='{.spec.csi.volumeAttributes.internalName}' 2>/dev/null || echo "")
+    if [ "$got" = "$want" ]; then
+        echo "  OK: $ns/$pvc imported ONTAP volume '$got'."
+    else
+        echo "FATAL: $ns/$pvc did NOT import '$want' — internalName='$got'."
+        echo "       'trident_pvc_*' means a new empty volume was provisioned instead."
+        exit 1
+    fi
+}
+
 echo ""
 echo "============================================================"
 echo "  Module 1: Create StorageClass and PVC (Dynamic Provisioning)"
@@ -246,11 +275,13 @@ cd "$EKS_ONTAP_DIR"
 kubectl apply -f ontap-storage-class.yaml
 kubectl get storageclass ontap-nas-sc
 
-# Apply PVC (imports the pre-provisioned "model" volume) and wait for it to bind
-kubectl apply -f ontap-pvc.yaml
+# Apply PVC (imports the pre-provisioned "model" volume) and wait for it to bind.
+# envsubst injects $BACKEND_UUID resolved above.
+envsubst '$BACKEND_UUID' < ontap-pvc.yaml | kubectl apply -f -
 echo "Waiting for ontap-model-claim PVC to bind..."
 kubectl wait --for=jsonpath='{.status.phase}'=Bound pvc/ontap-model-claim --timeout=180s
 kubectl get pvc ontap-model-claim
+assert_imported ontap-model-claim default model
 
 # Verify backend health
 kubectl get tridentbackendconfig -n trident

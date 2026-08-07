@@ -33,7 +33,7 @@ Before deploying the Trident CSI driver and configuring dynamic provisioning, le
 5. On the file system details page, you can see the key configuration for your ONTAP file system:
    - **Deployment type** — Multi-AZ (the file system spans two Availability Zones for high availability with automatic failover)
    - **SSD storage capacity** — The total SSD storage provisioned for the file system (1024 GiB in this lab)
-   - **Throughput capacity** — The sustained throughput the file system can deliver (256 MB/s in this lab)
+   - **Throughput capacity** — The sustained throughput the file system can deliver (512 MB/s in this lab)
    - **VPC and Subnets** — The networking configuration, which places the file system across two subnets in the same VPC as your EKS cluster
    - **Preferred subnet** — The AZ where the active file server runs under normal conditions
    - **Standby subnet** — The AZ where the standby file server is ready for automatic failover
@@ -48,11 +48,22 @@ FSx for NetApp ONTAP Multi-AZ file systems provide **zero RPO** (Recovery Point 
 
 7. You will see the SVM that was created for this lab. Click on the **SVM ID** to view its details.
 
-8. On the SVM details page, note the following:
-   - **SVM name** — The name of the SVM (this is the value that will be used in the Trident backend configuration)
-   - **Management DNS name** — The management LIF endpoint that Trident will use to communicate with the SVM
-   - **NFS DNS name** — The NFS data LIF endpoint that Kubernetes pods will use to mount volumes
-   - **Protocols** — NFS should be listed as an enabled protocol
+8. On the SVM details page, the **Summary** panel shows:
+   - **SVM name** — The name of the SVM, e.g. `eksworkshop-svm` (this is the value used in the Trident backend configuration)
+   - **SVM ID** — The unique identifier, e.g. `svm-0d76a00b3bfedcdb7`
+   - **Lifecycle state** — Should show **Created**
+   - **File system ID** — A link back to the parent file system
+
+9. Now click on the **Endpoints** tab to see the SVM's access endpoints:
+   - **Management DNS name** — The management LIF endpoint that Trident uses to communicate with the SVM
+   - **NFS DNS name** — The NFS data LIF endpoint that Kubernetes pods use to mount volumes
+   - **iSCSI DNS name** and **iSCSI IP addresses** — Block-storage endpoints (not used in this workshop)
+
+:::alert{header="Notice the shared floating IP" type="info"}
+The **Management DNS name** and **NFS DNS name** resolve to the *same* address (e.g. `198.19.107.123`). This is the Multi-AZ **floating IP** — it lives outside your VPC CIDR and automatically moves to whichever Availability Zone is hosting the active file server. This is exactly what makes failover transparent to your pods, and it is why the Trident StorageClass in this workshop does not pin volumes to a single AZ.
+
+Compare this with the **iSCSI IP addresses**, which are regular in-VPC addresses (e.g. `10.0.71.127`, `10.0.94.89`) — one per subnet, since iSCSI does not use a floating endpoint.
+:::
 
 :::alert{header="Note" type="info"}
 The SVM acts as a logical storage server. It has its own DNS endpoints, credentials (`vsadmin`), and security settings. In a production environment, you could create multiple SVMs on a single file system to isolate different teams or applications — each with their own NFS endpoints and access controls.
@@ -60,27 +71,46 @@ The SVM acts as a logical storage server. It has its own DNS endpoints, credenti
 
 ##### View the existing ONTAP volumes
 
-9. From the SVM details page, click on the **Volumes** tab. Alternatively, you can navigate to the **Volumes** section from the left-hand navigation menu in the FSx console.
+10. From the SVM details page, click on the **Volumes** tab. Alternatively, you can navigate to the **Volumes** section from the left-hand navigation menu in the FSx console.
 
-10. At this point, you should only see the **root volume** (e.g., `eksworkshop_svm_root` or similar). This is the SVM's internal root volume, created automatically by ONTAP. There are no data volumes yet — those will be created dynamically by Trident when you apply a PersistentVolumeClaim in the next sections.
+11. You should see three volumes, all pre-created for you before the workshop began:
+
+| Volume name | Path | Size | What it holds |
+|---|---|---|---|
+| `eksworkshop_svm_root` | `/` | 1 GiB | The SVM's internal root volume, created automatically by ONTAP |
+| `model` | `/model` | 100 GiB | The Mistral-7B model, pre-loaded during workshop provisioning |
+| `agent_shared_data` | `/agent_data` | 10 GiB | The finance and IT datasets used by the AI agents in a later module |
+
+:::alert{header="Why the model volume already exists" type="info"}
+The `model` and `agent_shared_data` volumes were created by Terraform, and the Mistral-7B model was downloaded onto `/model` automatically while your workshop environment was being built. This saves you a 4–6 minute wait later on.
+
+Because these volumes already exist, Trident does not need to create them — instead it **imports** them, binding a PersistentVolumeClaim to a volume that is already there. You will see how this differs from dynamic provisioning in the next section.
+:::
 
 :::alert{header="Remember this view" type="warning"}
-Take note of the current state: only the root volume exists. After you deploy Trident and create a PVC in the upcoming steps, you will return to this console to see the dynamically provisioned volume appear here. This before-and-after comparison demonstrates how Trident automates ONTAP volume creation through Kubernetes.
+Take note of the volumes listed here. If you complete the optional **Dynamic Provisioning** module later, you will return to this console and see an *additional* volume appear with a machine-generated name like `trident_pvc_8603f702_54b7_4096_b18f_29b82ac2f698` — created by Trident on demand in response to a PersistentVolumeClaim. Comparing that auto-named volume against the human-named `model` and `agent_shared_data` volumes above is the clearest way to see what Trident automates.
 :::
 
 ##### View FSx for ONTAP monitoring and performance
 
-11. Navigate back to the file system details page by clicking on the **File system ID** in the breadcrumb navigation at the top.
+12. Navigate back to the file system details page by clicking on the **File system ID** in the breadcrumb navigation at the top.
 
-12. Scroll to the bottom of the screen and click on the **Monitoring & performance** tab. Here you can view performance metrics for your ONTAP file system across several dimensions:
-    - **Summary** — Overall file system health, SSD storage utilization, and capacity pool utilization
-    - **SSD IOPS** — Read and write IOPS on the SSD storage tier
-    - **Throughput** — Network throughput (data read/written per second)
-    - **Network I/O** — Detailed network performance metrics
-    - **Capacity pool utilization** — How much data has been tiered to capacity pool storage
+13. Select the **Monitoring & performance** tab. At the top of this tab you will find four views, selectable via radio buttons: **Summary**, **Storage**, **Performance**, and **CloudWatch alarms**.
+
+14. Leave **Summary** selected. This view shows **Warnings and CloudWatch alarms** followed by a **File system activity** section with the following panels:
+    - **Available primary storage capacity** — Free space remaining on the SSD (primary) storage tier, in bytes
+    - **Total client throughput** — Bytes per second read and written by NFS clients
+    - **Total client IOPS** — Operations per second from NFS clients
+    - **Average latency** — Milliseconds per operation
+    - **Storage distribution** — A pie chart breaking down how capacity is consumed
+    - **Storage efficiency savings** — Space reclaimed by ONTAP deduplication and compression, shown in bytes and as a percentage
+
+15. Use the time-range selector (**1h**, **3h**, **12h**, **1d**, **3d**, **1w**, or **Custom**) above the panels to change the window the graphs cover.
 
 :::alert{header="Note" type="info"}
-The monitoring dashboard is currently quiet since no workloads are running yet. After you deploy the model loading Job and vLLM inference pod in later modules, you will see activity in these metrics — write throughput during model download, and sustained read IOPS during inference.
+Most of these graphs will be flat at zero right now — the file system exists but no pods are mounting it yet. After you deploy the vLLM inference pod in a later module, return here and you will see sustained read IOPS and client throughput as the model is read from FSx for ONTAP.
+
+**Storage efficiency savings** is the exception and may already show a non-zero value, because ONTAP deduplicates and compresses the model data that was pre-loaded during workshop provisioning.
 :::
 
 ## Summary

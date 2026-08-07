@@ -1,11 +1,27 @@
+# agent-shared-pvc.yaml — imports the pre-provisioned "agent_shared_data" volume
+# (junction /agent_data) created by Terraform. A single shared volume is used by all
+# three agents; POSIX ownership and modes on the subdirectories provide the access
+# isolation the Agentic AI module demonstrates.
+#
+# $BACKEND_UUID must be substituted before applying, e.g.:
+#   export BACKEND_UUID=$(kubectl get tbe -n trident \
+#     -o jsonpath='{.items[?(@.backendName=="fsx-ontap-nas")].backendUUID}')
+#   envsubst '$BACKEND_UUID' < agent-shared-pvc.yaml | kubectl apply -f -
+#
+# See ontap-pvc.yaml for why the UUID is templated and how to verify the import
+# actually took effect (a silent fallback to dynamic provisioning still Binds).
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: agent-shared-data
   namespace: agents
   annotations:
-    trident.netapp.io/importVolume: "agent_shared_data"
-    trident.netapp.io/importBackend: "fsx-ontap-nas"
+    # Name of the existing volume on the ONTAP backend.
+    trident.netapp.io/importOriginalName: "agent_shared_data"
+    # Backend UUID (not the backend name) — substituted at deploy time.
+    trident.netapp.io/importBackendUUID: "$BACKEND_UUID"
+    # Keep the ONTAP volume named "agent_shared_data" (Trident 25.10+).
+    trident.netapp.io/importNoRename: "true"
 spec:
   accessModes:
     - ReadWriteMany
