@@ -2646,10 +2646,37 @@ Resources:
                   export AWS_REGION=${AWS::Region}
                   export KUBECONFIG=/home/${VSCodeUser}/.kube/config
 
+                  # --- Hand the home directory back to the workshop user on ANY exit ---
+                  # This whole document runs as root, so every tool invoked below writes
+                  # root-owned state into the participant's home:
+                  #   ~/.kube/config + cache/ + http-cache/   (kubectl, aws eks)
+                  #   ~/.config/helm/repositories.{yaml,lock} (helm repo add/update)
+                  # Left root-owned, the participant's first command fails with
+                  # "[Errno 13] Permission denied" on the kubeconfig, or
+                  # "permission denied" on repositories.lock for helm.
+                  #
+                  # Registered as an EXIT trap rather than a final line because this
+                  # script runs under `set -e` and has numerous hard `exit 1` paths
+                  # (Trident gates, import assertions). A trailing chown would be skipped
+                  # on any of those, leaving the environment unusable for the participant
+                  # AND making the real failure harder to diagnose. The trap runs on
+                  # success and failure alike.
+                  #
+                  # Safe for anything that runs later (stack delete / terraform destroy):
+                  # those run as root in a new SSM session, and root bypasses file
+                  # permission checks, so participant ownership never blocks them.
+                  restore_home_ownership() {
+                    _rc=$?
+                    echo "Restoring ownership of /home/${VSCodeUser} to ${VSCodeUser} (exit=$_rc)..."
+                    chown -R ${VSCodeUser}:${VSCodeUser} /home/${VSCodeUser} || true
+                    return $_rc
+                  }
+                  trap restore_home_ownership EXIT
+
                   # Ensure kubeconfig is available. NOTE: this SSM document runs as root,
                   # so the kubeconfig and ~/.kube cache dirs are created root-owned
-                  # (mode 600). Ownership is handed back to the workshop user in a single
-                  # chown at the END of this script — see the note there. Root ignores
+                  # (mode 600). Ownership is handed back to the workshop user by the
+                  # EXIT trap registered above — see the note there. Root ignores
                   # file permissions, so every command in between is unaffected either way.
                   aws eks update-kubeconfig --name eksworkshop --region $AWS_REGION --kubeconfig $KUBECONFIG
 
@@ -2939,23 +2966,9 @@ Resources:
                   echo "PVC: ontap-model-claim"
                   echo "Path on volume: /Mistral-7B-Instruct-v0.3"
 
-                  # --- Final step: hand the home directory back to the workshop user ---
-                  # Everything above ran as root, creating root-owned files under
-                  # ~/.kube (config, cache/, http-cache/) and ~/.config. Without this,
-                  # the participant's first command fails with:
-                  #   "Can't open kubeconfig for reading: [Errno 13] Permission denied"
-                  #
-                  # This is deliberately the LAST action in the document:
-                  #  - It must come after every root kubectl/helm call, since those
-                  #    recreate root-owned cache files that would otherwise be missed.
-                  #  - It is safe for anything that runs later (stack delete /
-                  #    terraform destroy): those run as root in a new SSM session, and
-                  #    root bypasses file permission checks, so participant ownership
-                  #    never blocks them.
-                  # RunPreloadAgentData is also the last step in the CFN dependency
-                  # chain (nothing DependsOn it), so no other create-time step follows.
-                  echo "Restoring ownership of /home/${VSCodeUser} to ${VSCodeUser}..."
-                  chown -R ${VSCodeUser}:${VSCodeUser} /home/${VSCodeUser}
+                  echo "=== Provisioning complete ==="
+                  # Ownership of the home directory is restored by the EXIT trap
+                  # registered at the top of this script.
 
   RunDestroyTerraformResources:
     Type: Custom::RunSSMDocLambda
