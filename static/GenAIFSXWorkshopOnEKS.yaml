@@ -2998,14 +2998,22 @@ Resources:
 
                   # Under Retain the PVs stay behind in Released state. Leaving them would
                   # block re-import, because the ONTAP volume would still be claimed.
+                  # Match on claimRef rather than internalName. claimRef survives PVC
+                  # deletion -- that is precisely what makes a PV "Released" -- and it
+                  # identifies the right PVs regardless of whether the underlying volume
+                  # was imported ("model") or dynamically provisioned ("trident_pvc_*"),
+                  # so the reset stays correct if the import ever silently regresses.
                   echo "Removing released PVs..."
                   for pv in $(kubectl get pv -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null); do
-                    _int=$(kubectl get pv "$pv" -o jsonpath='{.spec.csi.volumeAttributes.internalName}' 2>/dev/null || echo "")
-                    if [ "$_int" = "model" ] || [ "$_int" = "agent_shared_data" ]; then
-                      echo "  deleting PV $pv (ONTAP volume '$_int' is retained)"
-                      kubectl patch pv "$pv" -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-                      kubectl delete pv "$pv" --ignore-not-found --timeout=60s || true
-                    fi
+                    _claim=$(kubectl get pv "$pv" -o jsonpath='{.spec.claimRef.name}' 2>/dev/null || echo "")
+                    case "$_claim" in
+                      ontap-model-claim|agent-shared-data)
+                        _int=$(kubectl get pv "$pv" -o jsonpath='{.spec.csi.volumeAttributes.internalName}' 2>/dev/null || echo "")
+                        echo "  deleting PV $pv (claim=$_claim, ONTAP volume '$_int' is retained)"
+                        kubectl patch pv "$pv" -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+                        kubectl delete pv "$pv" --ignore-not-found --timeout=60s || true
+                        ;;
+                    esac
                   done
 
                   echo "Removing the agents namespace and StorageClass..."
@@ -3013,12 +3021,91 @@ Resources:
                   kubectl delete storageclass ontap-nas-sc --ignore-not-found
 
                   echo "Uninstalling Trident so the participant installs it themselves..."
-                  # Delete the TridentOrchestrator first and let the operator remove Trident's
-                  # own resources; uninstalling the chart first would strand the operator's CRs.
+                  # Trident's own CRs (tridentbackends, tridentvolumes, tridentnodes,
+                  # tridentversions, ...) carry `trident.netapp.io` finalizers that ONLY the
+                  # trident-controller can remove. Tear down in an order that keeps the
+                  # controller alive long enough to clean up after itself, then sweep up
+                  # anything still holding a finalizer before deleting the namespace --
+                  # otherwise the namespace wedges in Terminating forever with
+                  # "SomeFinalizersRemain: trident.netapp.io in N resource instances".
+                  #
+                  # Deleting the TridentBackendConfig has to come first and be allowed to
+                  # finish: it is the object the controller uses to deregister the backend.
+                  # Note `kubectl delete tbc` can report "timed out waiting for the
+                  # condition" even when the object is gone, so its failure is tolerated.
                   kubectl delete tridentbackendconfig fsx-ontap-nas -n trident --ignore-not-found --timeout=120s || true
-                  kubectl delete tridentorchestrator trident --ignore-not-found --timeout=300s || true
+
+                  # Ask the operator to tear Trident down gracefully while it is still
+                  # running: spec.uninstall=true is the supported path and removes the
+                  # controller/node pods (unpublishing volumes on the way out).
+                  #
+                  # Measured behaviour (validated on a live cluster): this does NOT clear
+                  # the finalizers on Trident's CRs -- 6 objects across tridentbackends,
+                  # tridentvolumes, tridentnodes, tridentversions and tridentbackendconfigs
+                  # survived it. The sweep further down is what actually releases them, so
+                  # it is load-bearing rather than a fallback. Do not remove it.
+                  echo "  -> asking the operator to uninstall Trident (spec.uninstall=true)"
+                  kubectl patch tridentorchestrator trident --type=merge \
+                    -p '{"spec":{"uninstall":true}}' 2>/dev/null || true
+                  for i in $(seq 1 30); do
+                    if ! kubectl get deploy trident-controller -n trident >/dev/null 2>&1; then
+                      echo "     trident-controller removed by the operator."; break
+                    fi
+                    echo "     ...waiting for operator-driven uninstall ($i/30)"; sleep 5
+                  done
+
+                  kubectl delete tridentorchestrator trident --ignore-not-found --timeout=180s || true
                   helm uninstall trident-operator --namespace trident --wait --timeout 5m || true
-                  kubectl delete namespace trident --ignore-not-found --timeout=300s || true
+
+                  # REQUIRED, not optional. Trident's CRs carry trident.netapp.io finalizers
+                  # that only the trident-controller can release, and the controller is gone
+                  # by this point -- so without this sweep the namespace hangs in Terminating
+                  # forever with "SomeFinalizersRemain: trident.netapp.io in N resource
+                  # instances" (observed: 425s of waiting, then a stuck namespace).
+                  #
+                  # Deleting these CRs does NOT touch data on FSxN: they are Trident's own
+                  # bookkeeping (backend registration, volume metadata, node registry).
+                  # The list is deliberately wider than the 6 object types seen in practice,
+                  # so a CR type added by a future Trident release cannot silently re-wedge
+                  # the namespace.
+                  echo "  -> clearing leftover Trident CR finalizers (required, see above)"
+                  # Enumerate the namespaced trident.netapp.io types from the API server
+                  # rather than hardcoding them, so this keeps working across Trident
+                  # versions. Falls back to a static list if discovery fails (e.g. the CRDs
+                  # were already removed, in which case there is nothing to sweep anyway).
+                  _tkinds=$(kubectl api-resources --api-group=trident.netapp.io \
+                    --namespaced -o name 2>/dev/null)
+                  if [ -z "$_tkinds" ]; then
+                    _tkinds="tridentbackendconfigs tridentbackends tridentvolumes tridentsnapshots tridentnodes tridentversions"
+                  fi
+                  for _kind in $_tkinds; do
+                    for _res in $(kubectl get "$_kind" -n trident -o name 2>/dev/null); do
+                      echo "     patching $_res"
+                      kubectl patch "$_res" -n trident --type=merge \
+                        -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+                      kubectl delete "$_res" -n trident --ignore-not-found --timeout=30s 2>/dev/null || true
+                    done
+                  done
+
+                  # 120s, not 300s: with the finalizers already cleared above this completes
+                  # in seconds, and a longer wait only delays the diagnostics below when
+                  # something unexpected is still holding the namespace.
+                  kubectl delete namespace trident --ignore-not-found --timeout=120s || true
+
+                  # Do NOT fail the deploy if the namespace is still Terminating. The data on
+                  # FSxN is intact and `helm install --create-namespace` succeeds once the
+                  # namespace clears, so this is cosmetic for the participant -- whereas
+                  # failing here would roll back a stack whose real work is already done.
+                  if kubectl get ns trident >/dev/null 2>&1; then
+                    echo "  WARNING: namespace 'trident' is still Terminating."
+                    kubectl get ns trident -o jsonpath='{.status.conditions[?(@.type=="NamespaceFinalizersRemaining")].message}' 2>/dev/null || true
+                    echo ""
+                    echo "  Remaining Trident CRs (should be none):"
+                    kubectl api-resources --api-group=trident.netapp.io --namespaced -o name 2>/dev/null \
+                      | xargs -I{} sh -c 'kubectl get {} -n trident --no-headers 2>/dev/null | sed "s|^|    {} |"' 2>/dev/null || true
+                  else
+                    echo "  Namespace 'trident' fully removed."
+                  fi
 
                   echo "--- Post-reset state (participant's starting point) ---"
                   echo "Trident pods (expect none):"
