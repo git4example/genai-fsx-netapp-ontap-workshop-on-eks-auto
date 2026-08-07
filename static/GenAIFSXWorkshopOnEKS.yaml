@@ -2966,6 +2966,70 @@ Resources:
                   echo "PVC: ontap-model-claim"
                   echo "Path on volume: /Mistral-7B-Instruct-v0.3"
 
+                  echo "=== Step 6: Reset the Kubernetes layer for the participant ==="
+                  # Everything above existed only to get DATA onto the two ONTAP volumes:
+                  # the Mistral-7B model on "model", and the finance/IT Ops datasets with
+                  # their POSIX ownership on "agent_shared_data".
+                  #
+                  # That data lives on FSx for ONTAP, not in Kubernetes. The StorageClass
+                  # is Retain, so tearing down the Kubernetes objects leaves both FlexVols
+                  # and their contents completely intact -- the participant re-imports them
+                  # in Module 1 and immediately has the pre-loaded model.
+                  #
+                  # Without this reset, Module 1 is a no-op: `helm upgrade --install` finds
+                  # the existing release and reports "has been upgraded ... REVISION: 2",
+                  # and every kubectl apply is already satisfied. Participants would never
+                  # see Trident install, a backend register, or a volume import happen.
+                  #
+                  # ORDER MATTERS. Kubernetes puts a `pvc-protection` finalizer on any PVC
+                  # referenced by a pod -- including Completed pods from finished Jobs. Delete
+                  # the Jobs first or the PVCs hang in Terminating forever, and Trident's own
+                  # uninstall then blocks behind them.
+                  echo "Removing pre-load Jobs (their pods hold pvc-protection finalizers)..."
+                  kubectl delete job model-download --ignore-not-found --wait=true
+                  kubectl delete job populate-agent-shared-data -n agents --ignore-not-found --wait=true
+                  # Belt-and-braces: catch any stray pod still referencing the PVCs.
+                  kubectl delete pod -l app=model-download --ignore-not-found --wait=true
+                  kubectl delete pod --all -n agents --ignore-not-found --wait=true
+
+                  echo "Removing PVCs (ONTAP volumes survive: reclaimPolicy=Retain)..."
+                  kubectl delete pvc ontap-model-claim --ignore-not-found --timeout=120s
+                  kubectl delete pvc agent-shared-data -n agents --ignore-not-found --timeout=120s
+
+                  # Under Retain the PVs stay behind in Released state. Leaving them would
+                  # block re-import, because the ONTAP volume would still be claimed.
+                  echo "Removing released PVs..."
+                  for pv in $(kubectl get pv -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null); do
+                    _int=$(kubectl get pv "$pv" -o jsonpath='{.spec.csi.volumeAttributes.internalName}' 2>/dev/null || echo "")
+                    if [ "$_int" = "model" ] || [ "$_int" = "agent_shared_data" ]; then
+                      echo "  deleting PV $pv (ONTAP volume '$_int' is retained)"
+                      kubectl patch pv "$pv" -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+                      kubectl delete pv "$pv" --ignore-not-found --timeout=60s || true
+                    fi
+                  done
+
+                  echo "Removing the agents namespace and StorageClass..."
+                  kubectl delete namespace agents --ignore-not-found --timeout=120s
+                  kubectl delete storageclass ontap-nas-sc --ignore-not-found
+
+                  echo "Uninstalling Trident so the participant installs it themselves..."
+                  # Delete the TridentOrchestrator first and let the operator remove Trident's
+                  # own resources; uninstalling the chart first would strand the operator's CRs.
+                  kubectl delete tridentbackendconfig fsx-ontap-nas -n trident --ignore-not-found --timeout=120s || true
+                  kubectl delete tridentorchestrator trident --ignore-not-found --timeout=300s || true
+                  helm uninstall trident-operator --namespace trident --wait --timeout 5m || true
+                  kubectl delete namespace trident --ignore-not-found --timeout=300s || true
+
+                  echo "--- Post-reset state (participant's starting point) ---"
+                  echo "Trident pods (expect none):"
+                  kubectl get pods -n trident 2>/dev/null || echo "  namespace gone (expected)"
+                  echo "StorageClasses (expect no ontap-nas-sc):"
+                  kubectl get storageclass 2>/dev/null || true
+                  echo "ONTAP volumes retained with their data:"
+                  aws fsx describe-volumes --region $AWS_REGION \
+                    --query "Volumes[?Name=='model' || Name=='agent_shared_data'].{Name:Name,Junction:OntapConfiguration.JunctionPath,State:Lifecycle}" \
+                    --output table 2>/dev/null || true
+
                   echo "=== Provisioning complete ==="
                   # Ownership of the home directory is restored by the EXIT trap
                   # registered at the top of this script.

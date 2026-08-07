@@ -9,8 +9,8 @@ Imagine the scenario where you need to host many AI models, or vast amounts of t
 
 In this module you will deploy the **NetApp Astra Trident CSI driver** within your Amazon EKS cluster and configure a **TridentBackendConfig** that connects Trident to the pre-provisioned FSx for ONTAP file system and SVM. You will learn about Kubernetes storage concepts such as CSI drivers, StorageClasses, PersistentVolumeClaims, and the two ways Trident connects a PVC to ONTAP storage — **volume import** and **dynamic provisioning**. The infrastructure for this module comprises an Amazon EKS cluster with EC2 worker nodes, and an Amazon FSx for NetApp ONTAP file system.
 
-:::alert{header="The StorageClass and PVCs already exist" type="info"}
-To save time, the `ontap-nas-sc` StorageClass and the two PVCs (`ontap-model-claim` and `agent-shared-data`) were created for you during workshop provisioning, and the Mistral-7B model was pre-loaded onto its volume. This module focuses on the Trident driver and backend configuration. You will verify the StorageClass and PVCs in the next module, and you can create your own from scratch in the optional **Dynamic Provisioning** module.
+:::alert{header="The model data is already on FSx for ONTAP" type="info"}
+To save you a multi-gigabyte download, the Mistral-7B model and the AI-agent datasets were loaded onto their FSx for ONTAP volumes while your environment was being built. That data lives on the **storage side**, not in Kubernetes — so you will still install Trident and import those volumes yourself in this module, exactly as you would on a real cluster. When you do, the model will already be there.
 :::
 
 :::alert{header="Note" type="info"}

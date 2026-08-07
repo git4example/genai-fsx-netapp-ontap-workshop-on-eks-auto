@@ -10,7 +10,7 @@ In this workshop the open-source **Mistral-7B-Instruct** AI model (LLM) is store
 In this module you will configure an FSx for NetApp instance to be used as the persistent storage layer within an Amazon EKS cluster, by deploying the **NetApp Astra Trident CSI driver** within the Amazon EKS cluster and connecting it to pre-provisioned FSx for NetApp ONTAP file system via a `TridentBackendConfig`. This establishes the storage foundation that the model and agent volumes are served from.
 
 :::alert{header="Want to see dynamic provisioning hands-on?" type="info"}
-The model and agent volumes used in this workshop are pre-provisioned and imported for you. If you'd like hands-on experience creating a `StorageClass` and watching Trident **dynamically provision** a brand-new ONTAP volume from a `PersistentVolumeClaim`, work through the optional **"Dynamic Provisioning of PVCs using FSx for NetApp"** module later in the workshop.
+In this module you will **import** two ONTAP volumes that were pre-provisioned for you. If you'd also like hands-on experience creating a `StorageClass` and watching Trident **dynamically provision** a brand-new ONTAP volume from a `PersistentVolumeClaim`, work through the optional **"Dynamic Provisioning of PVCs using FSx for NetApp"** module later in the workshop.
 :::
 
 ---
