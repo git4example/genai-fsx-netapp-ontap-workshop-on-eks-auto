@@ -36,15 +36,19 @@ This section covers Kubernetes storage concepts and how they integrate with FSx 
 **Persistent volume claim (PVC)** - Persistent Volume Claim (PVC) is the request for storage volume by a user. Claims can request specific size and access modes (e.g., they can be mounted ReadWriteOnce, ReadOnlyMany or ReadWriteMany). In this workshop, the PVC uses `ReadWriteMany` access mode so that both the model loading Job and the vLLM inference pod can mount the volume concurrently.
 
 
-**Dynamic provisioning with Trident:**
+**Two ways Trident connects a PVC to ONTAP storage:**
 
-With Trident and FSx for ONTAP, this workshop uses **dynamic provisioning** — the recommended approach for ONTAP-backed storage in Kubernetes. The workflow is:
+Trident supports both patterns, and this workshop uses each one:
+
+**1. Volume import** — binding a PVC to an ONTAP volume that *already exists*. This is what the workshop uses for the `model` and `agent_shared_data` volumes, which were pre-provisioned by Terraform. It is also the common enterprise pattern: storage teams frequently create and govern ONTAP volumes ahead of time, then hand them to Kubernetes teams to consume. The PVC carries annotations naming the existing volume, and Trident creates the PersistentVolume around it instead of allocating new storage.
+
+**2. Dynamic provisioning** — Trident creates a brand-new ONTAP volume on demand:
 
 1. An administrator deploys the Trident CSI driver and creates a `TridentBackendConfig` that connects Trident to the FSx for ONTAP file system and SVM.
 2. An administrator creates a `StorageClass` that references the Trident provisioner and the ONTAP backend.
 3. A user submits a `PersistentVolumeClaim` (PVC) referencing the StorageClass. Trident automatically provisions a new ONTAP volume on the file system and creates the corresponding PersistentVolume — no manual PV creation is needed.
 4. Pods reference the PVC to mount the dynamically provisioned volume at the desired path (e.g., `/work-dir`).
 
-This eliminates the need for administrators to manually create PersistentVolume definitions or look up storage-specific details like volume handles or DNS names. Trident handles the full lifecycle of the volume, including creation, mounting, and deletion.
+Either way, administrators never hand-write PersistentVolume definitions or look up storage-specific details like volume handles or DNS names — Trident handles the volume lifecycle. You can try dynamic provisioning yourself in the optional **Dynamic Provisioning** module.
 
 ::::

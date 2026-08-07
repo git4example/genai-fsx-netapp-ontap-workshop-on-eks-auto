@@ -5,7 +5,7 @@ weight : 105
 
 ## Overview
 
-Before deploying the Trident CSI driver and configuring dynamic provisioning, let's first explore the pre-provisioned FSx for ONTAP file system that we have already created as part of this workshop. This will help you understand the  FSx for NetApp key concepts — **file systems**, **Storage Virtual Machines (SVMs)**, **volumes**, **NFS access**, **snapshots**, and **data tiering** — and establish a baseline view of the storage before we use the Trident CSI driver to dynamically create new Persistent Volumes.
+Before deploying the Trident CSI driver, let's first explore the pre-provisioned FSx for ONTAP file system that we have already created as part of this workshop. This will help you understand the FSx for NetApp key concepts — **file systems**, **Storage Virtual Machines (SVMs)**, **volumes**, **NFS access**, **snapshots**, and **data tiering** — and see the storage layer that Trident will connect your Kubernetes workloads to.
 
 ##### Understanding FSx for ONTAP architecture
 

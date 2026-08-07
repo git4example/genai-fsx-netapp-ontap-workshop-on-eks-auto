@@ -248,10 +248,16 @@ defaults:
   snapshotDir: "true"
 :::
 
-This means every volume provisioned by Trident automatically gets:
+This means every volume **provisioned by Trident** automatically gets:
 - **snapshotPolicy: "default"** — automatic hourly (6), daily (2), and weekly (2) snapshots
-- **snapshotReserve: "10"** — 10% of volume capacity reserved for snapshot data (10 GiB on a 100 GiB volume — more than sufficient for static model data)
+- **snapshotReserve: "10"** — 10% of volume capacity reserved for snapshot data
 - **snapshotDir: "true"** — the `.snapshot` directory is accessible from within pods
+
+:::alert{header="These defaults apply to provisioned volumes, not imported ones" type="info"}
+The `defaults` block above only applies to volumes Trident **creates**. The model volume you are inspecting was pre-provisioned by Terraform and **imported** by Trident, so it keeps the snapshot policy and reserve it was created with — `default` policy (set in Terraform) and ONTAP's standard 5% reserve rather than 10%.
+
+That difference is worth noticing: when you import existing storage, the storage team's settings win. It is one of the practical trade-offs between importing pre-provisioned volumes and letting Trident provision them.
+:::
 
 ##### Step 7: Verify the snapshot policy on your volume
 
@@ -343,7 +349,7 @@ In this section, you have:
 - Created an on-demand `VolumeSnapshot` of the model data PVC using `kubectl` (immediately visible)
 - Verified snapshots from within a pod using the `.snapshot` directory
 - Learned how to create space-efficient clones from snapshots using `dataSource`
-- Verified that automatic ONTAP snapshots are enabled via the Trident backend configuration (`snapshotPolicy: "default"`, `snapshotReserve: "10"`)
+- Verified that automatic ONTAP snapshots are enabled on the model volume (`snapshotPolicy: "default"`), and learned that Trident's backend `defaults` apply to volumes it provisions rather than to imported ones
 - Viewed snapshots in the FSx console
 - (Optional) Managed snapshot policies via the AWS CLI
 

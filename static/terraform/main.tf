@@ -549,6 +549,12 @@ resource "aws_fsx_ontap_volume" "fsx_ontap_volume" {
   storage_virtual_machine_id = aws_fsx_ontap_storage_virtual_machine.fsx_ontap_svm.id
   storage_efficiency_enabled = true
 
+  # This volume is IMPORTED by Trident (not created by it), so the
+  # snapshotPolicy/snapshotReserve defaults in TridentBackendConfig do not apply
+  # -- those are only used for volumes Trident provisions itself. Set the policy
+  # here so the snapshot module has hourly/daily/weekly snapshots to inspect.
+  snapshot_policy = "default"
+
   tiering_policy {
     name = "AUTO"
   }
@@ -570,6 +576,9 @@ resource "aws_fsx_ontap_volume" "agent_shared_data" {
   storage_virtual_machine_id = aws_fsx_ontap_storage_virtual_machine.fsx_ontap_svm.id
   storage_efficiency_enabled = true
   volume_style               = "FLEXVOL"
+
+  # Imported by Trident, so set the snapshot policy here (see "model" above).
+  snapshot_policy = "default"
 
   tiering_policy {
     name = "AUTO"
