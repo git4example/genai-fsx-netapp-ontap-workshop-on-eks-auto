@@ -2881,6 +2881,25 @@ Resources:
                   echo "--- generated StorageClass ---"; cat "$SC_FILE"
                   kubectl apply -f "$SC_FILE"
 
+                  # --- Enable NetworkPolicy enforcement (EKS Auto Mode) ---
+                  # Auto Mode manages the VPC CNI and ships its network policy controller
+                  # DISABLED. Without this the API server still accepts a NetworkPolicy and
+                  # reports it "created", but nothing enforces it -- so the defence-in-depth
+                  # exercise in the Agentic AI module silently proves the opposite of what it
+                  # claims. Enabled here rather than in the module so participants are not
+                  # debugging cluster configuration mid-exercise.
+                  # Ref: https://docs.aws.amazon.com/eks/latest/userguide/auto-net-pol.html
+                  echo "=== Enabling NetworkPolicy controller (EKS Auto Mode) ==="
+                  cat <<EOF | kubectl apply -f -
+                  apiVersion: v1
+                  kind: ConfigMap
+                  metadata:
+                    name: amazon-vpc-cni
+                    namespace: kube-system
+                  data:
+                    enable-network-policy-controller: "true"
+                  EOF
+
                   echo "=== Step 3: Create Agents Namespace and Import Volume ==="
                   kubectl create namespace agents 2>/dev/null || true
 

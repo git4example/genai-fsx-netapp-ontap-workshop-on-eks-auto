@@ -1,0 +1,23 @@
+# enable-network-policy.yaml — turns on NetworkPolicy enforcement.
+#
+# EKS Auto Mode manages the VPC CNI itself, and its network policy controller is
+# OFF by default. Without this ConfigMap the API server still ACCEPTS a
+# NetworkPolicy ("networkpolicy.../deny-malicious-to-agents created") but nothing
+# enforces it, so blocked traffic keeps flowing. Upstream Kubernetes is explicit
+# about this: "Creating a NetworkPolicy resource without a controller that
+# implements it will have no effect."
+#
+#   kubectl apply -f enable-network-policy.yaml
+#
+# Confirm the controller then reconciles a policy by checking for PolicyEndpoints:
+#   kubectl get policyendpoints -n agents
+# No PolicyEndpoint means the controller has not picked the policy up.
+#
+# Ref: https://docs.aws.amazon.com/eks/latest/userguide/auto-net-pol.html
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: amazon-vpc-cni
+  namespace: kube-system
+data:
+  enable-network-policy-controller: "true"

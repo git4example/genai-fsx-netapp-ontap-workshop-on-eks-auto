@@ -138,16 +138,47 @@ This demonstrates the real-world risk: if an agent has network access and anothe
 
 ##### Test 3C: Apply NetworkPolicy to Block the Attack
 
-Now apply a Kubernetes NetworkPolicy that blocks the malicious agent from reaching the finance and IT ops agent services:
+Now apply a Kubernetes NetworkPolicy that blocks the malicious agent from reaching the finance and IT ops agent services. First leave the netshoot pod:
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 exit
 :::
 
+:::alert{header="EKS Auto Mode ships the network policy controller turned off" type="warning"}
+On EKS Auto Mode, AWS manages the VPC CNI, and its **network policy controller is disabled by default**. Until you enable it, the API server will happily accept a NetworkPolicy and report it as `created`, but **nothing enforces it** and blocked traffic keeps flowing. This is standard Kubernetes behaviour: a NetworkPolicy without a controller to implement it has no effect.
+
+Enable the controller first, then apply the policy.
+:::
+
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/agentic-agents
+
+# Step 1: turn on the network policy controller (EKS Auto Mode)
+kubectl apply -f enable-network-policy.yaml
+
+# Step 2: apply the policy itself
 kubectl apply -f network-policy-deny-malicious.yaml
 :::
+
+Confirm the controller has picked up the policy. It creates a `PolicyEndpoint` object for each policy it is enforcing, so an empty result here means the policy is inert:
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=true}
+kubectl get policyendpoints -n agents
+:::
+
+::::expand{header="No PolicyEndpoint listed? Click to troubleshoot"}
+
+The controller needs a moment after being enabled. Wait about 30 seconds and check again.
+
+If the list is still empty, restart the agent pods so they are re-attached with enforcement active:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl rollout restart deploy/finance-agent deploy/itops-agent deploy/malicious-agent -n agents
+kubectl rollout status deploy/malicious-agent -n agents --timeout=180s
+kubectl get policyendpoints -n agents
+:::
+
+::::
 
 Re-enter the netshoot pod and retry the same attack:
 
