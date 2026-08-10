@@ -20,10 +20,20 @@ All agents mount the **same volume**. Only UNIX UID/GID permissions differentiat
 
 Each agent runs as a FastAPI web server exposing an `/ask` endpoint. You can query all three agents from a single utility pod using `curl`.
 
+You already started the `netshoot-fsxn` pod when you verified the model data, so confirm it is still running:
+
+::code[kubectl get pod netshoot-fsxn]{language=bash showLineNumbers=false showCopyAction=true}
+
+::::expand{header="Not running? Click to start it"}
+
+If the pod was deleted, or you skipped ahead to this module, start it again:
+
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 kubectl apply -f /home/participant/environment/eks/FSxONTAP/netshoot-fsxn.yaml
 kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=300s
 :::
+
+::::
 
 Now exec into the netshoot pod, from which you will run all agent tests. The pod has `curl` and `jq` pre-installed:
 

@@ -173,17 +173,22 @@ When `READYTOUSE` shows `true`, the snapshot has been created successfully on th
 
 ##### Step 5: Verify snapshots from within a pod
 
-To confirm that both automatic ONTAP snapshots and the Kubernetes VolumeSnapshot are visible on the volume, deploy a lightweight utility pod and inspect the `.snapshot` directory.
+To confirm that both automatic ONTAP snapshots and the Kubernetes VolumeSnapshot are visible on the volume, inspect the `.snapshot` directory from a pod that mounts it.
 
-1. Deploy the netshoot pod (mounts the same `ontap-model-claim` PVC):
+1. The `netshoot-fsxn` pod already mounts the `ontap-model-claim` PVC, so confirm it is still running:
 
-::code[kubectl apply -f netshoot-fsxn.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+::code[kubectl get pod netshoot-fsxn]{language=bash showLineNumbers=false showCopyAction=true}
 
-2. Wait for the pod to be running:
+::::expand{header="Not running? Click to start it"}
 
-::code[kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=300s]{language=bash showLineNumbers=false showCopyAction=true}
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl apply -f netshoot-fsxn.yaml
+kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=300s
+:::
 
-3. List the `.snapshot` directory to see all snapshots on the volume:
+::::
+
+2. List the `.snapshot` directory to see all snapshots on the volume:
 
 ::code[kubectl exec -it netshoot-fsxn -- ls -la /work-dir/.snapshot]{language=bash showLineNumbers=false showCopyAction=true}
 
@@ -204,7 +209,7 @@ drwxrwxrwx    3 4294967294 4294967294    4.0K Jul  1 05:04 snapshot-e76743b6-2a8
 The `hourly.<date>_<time>` snapshots are created by the ONTAP `default` snapshot policy at 5 minutes past each hour. If you don't see them yet, the first scheduled snapshot hasn't fired (wait until the next hour mark). The `snapshot-<uuid>` entry is the Kubernetes VolumeSnapshot you created in Step 4. Each snapshot directory contains a full read-only copy of the volume data at that point in time.
 :::
 
-4. Verify the model data is intact inside a snapshot:
+3. Verify the model data is intact inside a snapshot:
 
 ::code[kubectl exec -it netshoot-fsxn -- sh -c 'ls /work-dir/.snapshot/snapshot-*/Mistral-7B-Instruct-v0.3/']{language=bash showLineNumbers=false showCopyAction=true}
 
@@ -336,7 +341,7 @@ Modifying a Trident-managed volume's snapshot policy via the FSx API is safe and
 
 ##### Clean up
 
-Delete the utility pod now that you're done with the snapshot exercises:
+No later module needs the `netshoot-fsxn` utility pod, so you can delete it now that the snapshot exercises are complete:
 
 ::code[kubectl delete pod netshoot-fsxn]{language=bash showLineNumbers=false showCopyAction=true}
 
