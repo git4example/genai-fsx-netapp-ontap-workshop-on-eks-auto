@@ -269,7 +269,7 @@ That difference is worth noticing: when you import existing storage, the storage
 1. Get the ONTAP volume name from the PersistentVolume:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-ONTAP_VOL_NAME=$(kubectl get pv $(kubectl get pvc ontap-model-claim -o jsonpath='{.spec.volumeName}') -o jsonpath='{.spec.csi.volumeAttributes.internalName}')
+ONTAP_VOL_NAME=$(kubectl get pv -o jsonpath='{.items[?(@.spec.claimRef.name=="ontap-model-claim")].spec.csi.volumeAttributes.internalName}')
 echo "ONTAP Volume Name: $ONTAP_VOL_NAME"
 :::
 
@@ -306,7 +306,7 @@ You can also view and manage the snapshot policy on Trident-provisioned volumes 
 ##### View the current snapshot policy
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-ONTAP_VOL_NAME=$(kubectl get pv $(kubectl get pvc ontap-model-claim -o jsonpath='{.spec.volumeName}') -o jsonpath='{.spec.csi.volumeAttributes.internalName}')
+ONTAP_VOL_NAME=$(kubectl get pv -o jsonpath='{.items[?(@.spec.claimRef.name=="ontap-model-claim")].spec.csi.volumeAttributes.internalName}')
 FSX_ID=$(aws fsx describe-file-systems --query "FileSystems[?FileSystemType=='ONTAP'].FileSystemId" --output text)
 VOLUME_ID=$(aws fsx describe-volumes --filters Name=file-system-id,Values=$FSX_ID --query "Volumes[?Name=='${ONTAP_VOL_NAME}'].VolumeId" --output text)
 

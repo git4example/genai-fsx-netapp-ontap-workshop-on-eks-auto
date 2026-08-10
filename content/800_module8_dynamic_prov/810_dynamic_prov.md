@@ -186,10 +186,18 @@ annotations:
 Trident **silently ignores** annotation keys it does not recognise, so a typo produces no warning and no error. The PVC still reaches `Bound`, but against a brand-new empty volume created by dynamic provisioning. The only reliable check is the ONTAP volume name recorded on the PV:
 
 ```bash
-kubectl get pv <pv-name> -o jsonpath='{.spec.csi.volumeAttributes.internalName}'
+kubectl get pv -o custom-columns='PV:.metadata.name,CLAIM:.spec.claimRef.name,ONTAP_VOLUME:.spec.csi.volumeAttributes.internalName'
 ```
 
-`model` means the volume was imported. `trident_pvc_<uuid>` means it was dynamically provisioned.
+This lists every volume at once, so you can compare them side by side:
+
+```
+PV                                         CLAIM               ONTAP_VOLUME
+pvc-c2b8f1b9-9622-4c5c-968f-7f9602e0f3b3   ontap-model-claim   model
+pvc-2dafb4be-71ee-42e4-9d57-aca021d18c5d   demo-claim          trident_pvc_2dafb4be_71ee_42e4_9d57_aca021d18c5d
+```
+
+The contrast is the whole lesson on this page. `ontap-model-claim` shows `model`, the pre-provisioned volume it **imported**. `demo-claim` shows a machine-generated `trident_pvc_<uuid>` name, the volume Trident **created** for it. If an import silently failed, its row would show a `trident_pvc_*` name too.
 :::
 - This is why, in the next module, the vLLM pod can start serving almost immediately, because the model data is already on FSx for ONTAP, so there's no multi-gigabyte download to wait for.
 
