@@ -15,7 +15,7 @@ In this section, you will deploy **three AI agents** built with the [AWS Strands
 The difference: **POSIX UID/GID permissions on FSxN** determine which data each agent can actually read — same volume, same tools, only the UID differs.
 
 :::alert{header="AI Gateway Model Routing" type="info"}
-In Module 2, you deployed the LiteLLM AI Gateway with two named models:
+In **Module 2: Deploy Generative AI Chat application**, you deployed the LiteLLM AI Gateway with two named models:
 - **`workshop-llm`** → self-hosted Mistral-7B (used by OpenWebUI for chat)
 - **`workshop-llm-tools`** → Bedrock Claude Haiku 4.5 (used by agents for tool-calling)
 

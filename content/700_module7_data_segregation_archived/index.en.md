@@ -1,5 +1,5 @@
 ---
-title : "Multi-Model Data Segregation with On-Premises to Cloud Replication"
+title : "Module 7: Multi-Model Data Segregation with On-Premises to Cloud Replication"
 weight : 700
 # hidden : true
 ---

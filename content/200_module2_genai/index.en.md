@@ -1,5 +1,5 @@
 ---
-title : "Deploy Generative AI Chat application"
+title : "Module 2: Deploy Generative AI Chat application"
 weight : 200
 ---
 

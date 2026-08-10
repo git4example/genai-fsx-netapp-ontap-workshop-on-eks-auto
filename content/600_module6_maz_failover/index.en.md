@@ -1,5 +1,5 @@
 ---
-title : "(Optional) Multi-AZ Resiliency and Live Failover"
+title : "Module 6 (Optional): Multi-AZ Resiliency and Live Failover"
 weight : 600
 ---
 

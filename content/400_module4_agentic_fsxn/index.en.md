@@ -1,5 +1,5 @@
 ---
-title : "Agentic AI with FSxN Native Access Control"
+title : "Module 4: Agentic AI with FSxN Native Access Control"
 weight : 400
 ---
 
@@ -81,8 +81,8 @@ In this module, each agent has file-access tools (`list_files`, `read_file`, `se
 
 :::alert{header="Prerequisites" type="info"}
 This module assumes you have completed:
-- **Module 1** — Configure storage (Trident CSI driver installed)
-- **Module 2** — Deploy Generative AI Chat application (vLLM + LiteLLM Gateway running)
+- **Module 1: Configure FSx for NetApp storage for model hosting** — Trident CSI driver installed
+- **Module 2: Deploy Generative AI Chat application** — vLLM + LiteLLM Gateway running
 
 The agent data volume and permissions were **pre-configured during workshop provisioning**.
 :::

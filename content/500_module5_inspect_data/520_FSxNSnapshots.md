@@ -15,7 +15,7 @@ FSx for ONTAP provides two complementary snapshot mechanisms:
 
 In this exercise, you will:
 1. Create an on-demand Kubernetes VolumeSnapshot of your model data (always visible immediately)
-2. Verify that automatic ONTAP snapshots are enabled (configured in Module 1)
+2. Verify that automatic ONTAP snapshots are enabled (configured in **Module 1: Configure FSx for NetApp storage for model hosting**)
 3. View snapshots and understand recovery options
 4. (Optional) View snapshots using the AWS CLI
 
@@ -239,7 +239,7 @@ With Kubernetes VolumeSnapshots, you can take on-demand snapshots before any exp
 
 ## Part 2: Automatic ONTAP Snapshots
 
-In addition to on-demand Kubernetes VolumeSnapshots, FSx for ONTAP also provides **automatic scheduled snapshots** via the ONTAP snapshot policy. When you configured the Trident backend in Module 1, the `TridentBackendConfig` included these snapshot defaults:
+In addition to on-demand Kubernetes VolumeSnapshots, FSx for ONTAP also provides **automatic scheduled snapshots** via the ONTAP snapshot policy. When you configured the Trident backend in **Module 1**, the `TridentBackendConfig` included these snapshot defaults:
 
 :::code[]{language=yaml showLineNumbers=true showCopyAction=false}
 defaults:

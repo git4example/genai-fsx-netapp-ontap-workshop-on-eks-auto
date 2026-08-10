@@ -1,5 +1,5 @@
 ---
-title : "Observability dashboard for LLM Inference"
+title : "Module 3: Observability dashboard for LLM Inference"
 weight : 300
 ---
 

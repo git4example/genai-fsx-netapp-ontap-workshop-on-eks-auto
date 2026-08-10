@@ -1,5 +1,5 @@
 ---
-title : "Configure FSx for NetApp storage for model hosting"
+title : "Module 1: Configure FSx for NetApp storage for model hosting"
 weight : 100
 ---
 

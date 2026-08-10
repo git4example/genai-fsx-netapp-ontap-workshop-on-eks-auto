@@ -180,7 +180,7 @@ envsubst '$SVM_MGMT_LIF $SVM_NAME' < trident-backend-config.yaml | kubectl apply
 :::
 
 :::alert{header="Snapshot configuration" type="info"}
-The backend configuration includes `defaults` for snapshot management: `snapshotPolicy: "default"` enables automatic hourly/daily/weekly ONTAP snapshots, `snapshotReserve: "10"` reserves 10% of volume capacity for snapshot data, and `snapshotDir: "true"` makes the `.snapshot` directory accessible from within pods. You will explore these snapshots in Module 5.
+The backend configuration includes `defaults` for snapshot management: `snapshotPolicy: "default"` enables automatic hourly/daily/weekly ONTAP snapshots, `snapshotReserve: "10"` reserves 10% of volume capacity for snapshot data, and `snapshotDir: "true"` makes the `.snapshot` directory accessible from within pods. These snapshot settings apply to volumes Trident provisions; the pre-provisioned `model` and `agent_shared_data` volumes carry the snapshot policy they were created with.
 :::
 
 11. Verify that the Trident backend has been registered successfully.
@@ -213,4 +213,4 @@ If the Phase shows anything other than `Bound` or the Status is not `Success`, c
 
 ## Summary
 
-In this section you have created an IAM policy with FSx for ONTAP and Secrets Manager permissions, created a service account for the Trident CSI driver, deployed the Trident CSI driver using Helm, and configured a Trident backend that connects to your FSx for ONTAP file system and SVM. In the next section you will create the StorageClass and PersistentVolumeClaim for dynamic volume provisioning, so your Pods can use FSx for ONTAP as persistent storage.
+In this section you have created an IAM policy with FSx for ONTAP and Secrets Manager permissions, created a service account for the Trident CSI driver, deployed the Trident CSI driver using Helm, and configured a Trident backend that connects to your FSx for ONTAP file system and SVM. In the (Optional) Dynamic Provisioning of PVCs using FSx for NetApp section you will learn to create the StorageClass and PersistentVolumeClaim for dynamic volume provisioning, so your Pods can use FSx for ONTAP as persistent storage.

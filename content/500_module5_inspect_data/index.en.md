@@ -1,5 +1,5 @@
 ---
-title : "(Optional) Inspect vLLM & Neuron tools"
+title : "Module 5 (Optional): Inspect vLLM & Neuron tools"
 weight : 500
 ---
 
