@@ -12,16 +12,55 @@
 # agent-shared-data in `agents`), so a single pod cannot mount both — hence two
 # separate pods below.
 #
-# Read-only: every command is ls / du / stat / mount / df. Pods are --rm.
+# NOTE ON POD LIFECYCLE: these pods are created detached, then waited on, then
+# deleted explicitly. They deliberately do NOT use `kubectl run --rm -it`:
+# on an EKS Auto Mode cluster scaled to zero nodes, a node has to be provisioned
+# first (1-2 min), `-it` times out waiting for the TTY, and `--rm` then deletes
+# the pod — destroying the very diagnostics you wanted. See run_probe() below.
+#
+# Read-only: every command is ls / du / stat / mount / df.
 # =============================================================================
 
 hdr() { echo; echo "============================================================"; echo "  $*"; echo "============================================================"; }
 
+# run_probe <pod-name> <namespace> <overrides-json>
+# Creates the pod, waits for it to finish (tolerating slow node scale-up),
+# prints its logs, and cleans up. On timeout it dumps the pod's Events, which is
+# what actually explains a Pending pod (no capacity, PVC unbound, image pull).
+run_probe() {
+    local pod="$1" ns="$2" overrides="$3"
+    kubectl delete pod "$pod" -n "$ns" --ignore-not-found >/dev/null 2>&1
+
+    if ! kubectl run "$pod" -n "$ns" --restart=Never \
+            --image=nicolaka/netshoot --overrides="$overrides" >/dev/null; then
+        echo "FAILED to create pod $ns/$pod"; return 1
+    fi
+
+    # 5 min: covers EKS Auto Mode provisioning a node from zero + image pull.
+    echo "Waiting for $ns/$pod (a node may need to scale up first)..."
+    if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
+            "pod/$pod" -n "$ns" --timeout=300s >/dev/null 2>&1; then
+        echo "Pod did not reach Succeeded. Current state and Events:"
+        kubectl get pod "$pod" -n "$ns" 2>/dev/null
+        kubectl describe pod "$pod" -n "$ns" 2>/dev/null | sed -n '/Events:/,$p'
+        echo "--- logs (may be empty if it never started) ---"
+        kubectl logs "$pod" -n "$ns" 2>/dev/null || true
+        kubectl delete pod "$pod" -n "$ns" --ignore-not-found >/dev/null 2>&1
+        return 1
+    fi
+
+    kubectl logs "$pod" -n "$ns"
+    kubectl delete pod "$pod" -n "$ns" --ignore-not-found >/dev/null 2>&1
+}
+
 # -----------------------------------------------------------------------------
 hdr "1. MODEL VOLUME  (PVC: ontap-model-claim, ns: default)"
 # -----------------------------------------------------------------------------
-kubectl run netshoot-model --rm -i --tty --image=nicolaka/netshoot --restart=Never \
-  --overrides='
+# The file count is 16 entries: 15 model/tokenizer/config files plus the .cache
+# directory left behind by `hf download --local-dir`. HuggingFace reports
+# "Fetching 17 files" because it counts differently — do not treat 17 as the
+# expected value here.
+run_probe netshoot-model default '
 {
   "spec": {
     "containers": [{
@@ -40,11 +79,16 @@ kubectl run netshoot-model --rm -i --tty --image=nicolaka/netshoot --restart=Nev
         echo \"--- Mistral-7B model files ---\";
         ls -la /model-vol/Mistral-7B-Instruct-v0.3/ 2>/dev/null || echo \"MODEL DIR NOT FOUND\";
         echo;
-        echo \"--- total size ---\";
+        echo \"--- total size (expect ~27 GiB) ---\";
         du -sh /model-vol/Mistral-7B-Instruct-v0.3/ 2>/dev/null;
         echo;
-        echo \"--- expect 17 files; count: ---\";
-        ls -1 /model-vol/Mistral-7B-Instruct-v0.3/ 2>/dev/null | wc -l;
+        echo \"--- entry count (expect 16: 15 files + .cache) ---\";
+        ls -1a /model-vol/Mistral-7B-Instruct-v0.3/ 2>/dev/null | grep -vc \"^\\.\\{1,2\\}$\";
+        echo;
+        echo \"--- required vLLM artifacts present? ---\";
+        for f in config.json neuron_config.json model.pt model.safetensors.index.json tokenizer.json; do
+          if [ -f \"/model-vol/Mistral-7B-Instruct-v0.3/$f\" ]; then echo \"  OK   $f\"; else echo \"  MISSING $f\"; fi;
+        done;
         echo;
         echo \"--- .snapshot dir visible? (snapshotDir=true) ---\";
         ls -d /model-vol/.snapshot 2>/dev/null && ls /model-vol/.snapshot/ | head -5 || echo \"not visible\"
@@ -58,10 +102,9 @@ kubectl run netshoot-model --rm -i --tty --image=nicolaka/netshoot --restart=Nev
 # -----------------------------------------------------------------------------
 hdr "2. AGENT DATA VOLUME  (PVC: agent-shared-data, ns: agents)"
 # -----------------------------------------------------------------------------
-# The stat loop matters: Module 4's RBAC/defense-in-depth demo depends on
+# The stat loop matters: the Agentic AI module's access-control demo depends on
 # per-agent UID ownership and directory modes being correct on FSxN.
-kubectl run netshoot-agent -n agents --rm -i --tty --image=nicolaka/netshoot --restart=Never \
-  --overrides='
+run_probe netshoot-agent agents '
 {
   "spec": {
     "containers": [{
@@ -80,7 +123,7 @@ kubectl run netshoot-agent -n agents --rm -i --tty --image=nicolaka/netshoot --r
         echo \"--- per-dir sizes ---\";
         du -sh /agent-vol/* 2>/dev/null;
         echo;
-        echo \"--- POSIX owners + modes (Module 4 RBAC depends on this) ---\";
+        echo \"--- POSIX owners + modes (expect finance UID 1001, itops UID 1002, mode 750) ---\";
         find /agent-vol -maxdepth 2 -exec stat -c \"%u:%g %a %n\" {} \\; 2>/dev/null;
         echo;
         echo \"--- file counts per dir ---\";

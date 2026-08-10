@@ -120,14 +120,24 @@ FSx for NetApp ONTAP is a fully-featured enterprise file system (NFS, SMB, iSCSI
 
 Verify that the model data is present on the persistent volume:
 
-:::code[]{language=bash showLineNumbers=false showCopyAction=true}
-kubectl run model-check --rm -it --restart=Never \
-  --image=public.ecr.aws/amazonlinux/amazonlinux:2023 \
-  --overrides='{"spec":{"containers":[{"name":"model-check","image":"public.ecr.aws/amazonlinux/amazonlinux:2023","command":["ls","-la","/work-dir/Mistral-7B-Instruct-v0.3/"],"volumeMounts":[{"name":"persistent-storage","mountPath":"/work-dir"}]}],"volumes":[{"name":"persistent-storage","persistentVolumeClaim":{"claimName":"ontap-model-claim"}}]}}' \
-  -- ls -la /work-dir/Mistral-7B-Instruct-v0.3/
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+cd /home/participant/environment/eks/FSxONTAP
+kubectl apply -f netshoot-model.yaml
+kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/netshoot-model --timeout=300s
+kubectl logs netshoot-model
 :::
 
-You should see the model weight files (e.g., `model-00001-of-00003.safetensors`), tokenizer files, and configuration files listed in the output. This confirms the model is ready for the vLLM inference pod.
+:::alert{header="This step can take 1–2 minutes" type="info"}
+Your cluster runs **EKS Auto Mode**, which scales worker nodes to zero when nothing is running. This is likely the first pod you have scheduled, so EKS provisions a node before it can start. The `kubectl wait` command handles that pause for you.
+
+If the wait times out, run `kubectl describe pod netshoot-model` and read the **Events** section at the bottom — it will tell you whether the pod is waiting on node capacity, an image pull, or an unbound PVC.
+:::
+
+You should see the model weight files (e.g., `model-00001-of-00003.safetensors`), tokenizer files, the Neuron compiled artifacts (`model.pt`, `neuron_config.json`), and configuration files — roughly 27 GiB in total. This confirms the model is ready for the vLLM inference pod.
+
+Clean up the verification pod:
+
+::code[kubectl delete -f netshoot-model.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
 ### Summary
 You have configured the EKS NodePool for AWS Inferentia accelerators and confirmed the pre-loaded Mistral-7B model is present on the FSx for NetApp ONTAP volume — ready for the vLLM deployment in the next section.

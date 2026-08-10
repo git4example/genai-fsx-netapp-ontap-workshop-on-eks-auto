@@ -71,11 +71,12 @@ kubectl get namespace agents
 # Check PVC is bound
 kubectl get pvc -n agents agent-shared-data
 
-# Check data was populated
-kubectl run verify-data --rm -it --restart=Never -n agents \
-  --image=public.ecr.aws/amazonlinux/amazonlinux:2023 \
-  --overrides='{"spec":{"containers":[{"name":"verify","image":"public.ecr.aws/amazonlinux/amazonlinux:2023","command":["ls","-la","/data/"],"volumeMounts":[{"name":"shared","mountPath":"/data"}]}],"volumes":[{"name":"shared","persistentVolumeClaim":{"claimName":"agent-shared-data"}}]}}' \
-  -- ls -la /data/
+# Check the data was populated with the correct ownership and modes
+cd /home/participant/environment/eks/agentic-agents
+kubectl apply -f netshoot-agent-data.yaml
+kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/netshoot-agent-data -n agents --timeout=300s
+kubectl logs netshoot-agent-data -n agents
+kubectl delete -f netshoot-agent-data.yaml
 :::
 
 You should see `finance` (owned by 1001) and `itops` (owned by 1002), both with mode `drwxr-x---` (750).

@@ -1,0 +1,49 @@
+# netshoot-agent-data.yaml — mounts the shared agent volume for inspection.
+#
+#   kubectl apply -f netshoot-agent-data.yaml
+#   kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/netshoot-agent-data -n agents --timeout=300s
+#   kubectl logs netshoot-agent-data -n agents
+#   kubectl delete -f netshoot-agent-data.yaml
+#
+# Runs as root so it can read both agents' directories -- the point is to verify
+# the POSIX ownership and modes that enforce isolation between them. The agents
+# themselves run as UID 1001 / 1002 and can only read their own directory.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: netshoot-agent-data
+  namespace: agents
+  labels:
+    app: netshoot-agent-data
+spec:
+  restartPolicy: Never
+  containers:
+    - name: netshoot
+      image: nicolaka/netshoot
+      command:
+        - sh
+        - -c
+        - |
+          echo "--- NFS mount source ---"
+          mount | grep /agent-vol
+          echo
+          echo "--- capacity ---"
+          df -h /agent-vol
+          echo
+          echo "--- tree ---"
+          ls -la /agent-vol/
+          echo
+          echo "--- ownership + modes (expect finance 1001, itops 1002, mode 750) ---"
+          find /agent-vol -maxdepth 2 -exec stat -c "%u:%g %a %n" {} \; 2>/dev/null
+          echo
+          echo "--- file counts ---"
+          for d in /agent-vol/*/; do
+            printf "%s: %s files\n" "$d" "$(ls -1 "$d" 2>/dev/null | wc -l)"
+          done
+      volumeMounts:
+        - name: agent
+          mountPath: /agent-vol
+  volumes:
+    - name: agent
+      persistentVolumeClaim:
+        claimName: agent-shared-data
