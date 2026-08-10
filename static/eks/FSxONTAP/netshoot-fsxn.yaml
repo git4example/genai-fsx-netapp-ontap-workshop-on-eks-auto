@@ -1,3 +1,20 @@
+# netshoot-fsxn.yaml — general-purpose utility pod with the model volume mounted
+# at /work-dir. Used throughout the workshop to inspect the FSx for ONTAP volume,
+# view snapshots, and query the agent endpoints (it has curl and jq).
+#
+#   kubectl apply -f netshoot-fsxn.yaml
+#   kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=300s
+#   kubectl exec -it netshoot-fsxn -- bash
+#   kubectl delete -f netshoot-fsxn.yaml
+#
+# The containers sleep so the pod stays available to exec into. On EKS Auto Mode
+# the cluster scales worker nodes to zero, so the first pod scheduled waits 1-2
+# minutes for a node -- hence the 300s wait rather than 120s.
+#
+# NOTE: this pod lives in the `default` namespace and mounts ontap-model-claim.
+# The agent data volume (agent-shared-data) is in the `agents` namespace, and a
+# pod can only reference PVCs in its own namespace, so agent data is inspected
+# from within the agent pods themselves.
 apiVersion: v1
 kind: Pod
 metadata:

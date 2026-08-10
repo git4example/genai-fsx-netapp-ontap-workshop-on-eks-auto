@@ -181,7 +181,7 @@ To confirm that both automatic ONTAP snapshots and the Kubernetes VolumeSnapshot
 
 2. Wait for the pod to be running:
 
-::code[kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=120s]{language=bash showLineNumbers=false showCopyAction=true}
+::code[kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=300s]{language=bash showLineNumbers=false showCopyAction=true}
 
 3. List the `.snapshot` directory to see all snapshots on the volume:
 

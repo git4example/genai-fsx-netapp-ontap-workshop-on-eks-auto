@@ -118,26 +118,43 @@ To save you a multi-gigabyte download, the **pre-compiled Mistral-7B-Instruct-v0
 FSx for NetApp ONTAP is a fully-featured enterprise file system (NFS, SMB, iSCSI) with snapshots, clones, SnapMirror replication, compression, and deduplication. Here it serves as a high-performance shared volume for model data — the same volume can be mounted `ReadWriteMany` across pods. Because the model lives on persistent storage rather than being baked into the container image, it persists across pod restarts and can be reused by any pod that mounts the volume. Using pre-compiled Neuron artifacts also lets vLLM skip the compilation step and start serving quickly.
 :::
 
-Verify that the model data is present on the persistent volume:
+Verify that the model data is present on the persistent volume. Start the `netshoot-fsxn` utility pod, which mounts the model volume at `/work-dir`:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/FSxONTAP
-kubectl apply -f netshoot-model.yaml
-kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/netshoot-model --timeout=300s
-kubectl logs netshoot-model
+kubectl apply -f netshoot-fsxn.yaml
+kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=300s
 :::
 
 :::alert{header="This step can take 1–2 minutes" type="info"}
 Your cluster runs **EKS Auto Mode**, which scales worker nodes to zero when nothing is running. This is likely the first pod you have scheduled, so EKS provisions a node before it can start. The `kubectl wait` command handles that pause for you.
 
-If the wait times out, run `kubectl describe pod netshoot-model` and read the **Events** section at the bottom — it will tell you whether the pod is waiting on node capacity, an image pull, or an unbound PVC.
+If the wait times out, run `kubectl describe pod netshoot-fsxn` and read the **Events** section at the bottom — it will tell you whether the pod is waiting on node capacity, an image pull, or an unbound PVC.
 :::
 
-You should see the model weight files (e.g., `model-00001-of-00003.safetensors`), tokenizer files, the Neuron compiled artifacts (`model.pt`, `neuron_config.json`), and configuration files — roughly 27 GiB in total. This confirms the model is ready for the vLLM inference pod.
+Now list the model files:
 
-Clean up the verification pod:
+::code[kubectl exec netshoot-fsxn -c netshoot -- ls -la /work-dir/Mistral-7B-Instruct-v0.3/]{language=bash showLineNumbers=false showCopyAction=true}
 
-::code[kubectl delete -f netshoot-model.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+You should see the model weight files (e.g., `model-00001-of-00003.safetensors`), tokenizer files, the Neuron compiled artifacts (`model.pt`, `neuron_config.json`), and configuration files.
+
+::::expand{header="Optional: confirm the size and which ONTAP volume is mounted"}
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+# Total size on the volume — expect roughly 27 GiB
+kubectl exec netshoot-fsxn -c netshoot -- du -sh /work-dir/Mistral-7B-Instruct-v0.3/
+
+# Which FSx for ONTAP volume is actually mounted, and how full it is
+kubectl exec netshoot-fsxn -c netshoot -- df -h /work-dir
+:::
+
+The `df` output shows the NFS export path, which is the name of the ONTAP volume backing this PVC — the same `model` volume you saw in the FSx console earlier.
+
+::::
+
+Leave this pod running — later modules reuse it. When you no longer need it:
+
+::code[kubectl delete -f netshoot-fsxn.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
 ### Summary
 You have configured the EKS NodePool for AWS Inferentia accelerators and confirmed the pre-loaded Mistral-7B model is present on the FSx for NetApp ONTAP volume — ready for the vLLM deployment in the next section.

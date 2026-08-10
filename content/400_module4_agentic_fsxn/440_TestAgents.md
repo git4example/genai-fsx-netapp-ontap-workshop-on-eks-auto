@@ -22,7 +22,7 @@ Each agent runs as a FastAPI web server exposing an `/ask` endpoint. You can que
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 kubectl apply -f /home/participant/environment/eks/FSxONTAP/netshoot-fsxn.yaml
-kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=120s
+kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=300s
 :::
 
 Now exec into the netshoot pod — you'll run all agent tests from here. The pod has `curl` and `jq` pre-installed:
