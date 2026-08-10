@@ -10,8 +10,8 @@ In this module you will explore **ONTAP volume snapshots**, one of the most powe
 
 FSx for ONTAP provides two complementary snapshot mechanisms:
 
-1. **Automatic ONTAP snapshots** — scheduled by the ONTAP snapshot policy (`default`), configured in the Trident backend. These run on a fixed schedule (hourly, daily, weekly) and are accessible via the `.snapshot` directory on the volume.
-2. **Kubernetes VolumeSnapshots** — on-demand, Kubernetes-native snapshots created through the CSI snapshot API. These are managed as Kubernetes objects and can be used to create new PVCs (clones).
+1. **Automatic ONTAP snapshots**: scheduled by the ONTAP snapshot policy (`default`), configured in the Trident backend. These run on a fixed schedule (hourly, daily, weekly) and are accessible via the `.snapshot` directory on the volume.
+2. **Kubernetes VolumeSnapshots**: on-demand, Kubernetes-native snapshots created through the CSI snapshot API. These are managed as Kubernetes objects and can be used to create new PVCs (clones).
 
 In this exercise, you will:
 1. Create an on-demand Kubernetes VolumeSnapshot of your model data (always visible immediately)
@@ -20,21 +20,21 @@ In this exercise, you will:
 4. (Optional) View snapshots using the AWS CLI
 
 :::alert{header="How ONTAP Snapshots Work" type="info"}
-Unlike traditional backup methods that copy all data, ONTAP snapshots use a **redirect-on-write** mechanism. When data is modified after a snapshot is taken, only the changed blocks consume additional space. This means snapshots are created almost instantly and are extremely storage-efficient — even for large volumes containing AI model data.
+Unlike traditional backup methods that copy all data, ONTAP snapshots use a **redirect-on-write** mechanism. When data is modified after a snapshot is taken, only the changed blocks consume additional space. This means snapshots are created almost instantly and are extremely storage-efficient, even for large volumes containing AI model data.
 :::
 
 ---
 
 ## Part 1: Create an On-Demand Kubernetes VolumeSnapshot
 
-Kubernetes VolumeSnapshots let you create point-in-time snapshots on demand — for example, before fine-tuning a model or modifying training data. These snapshots are fully Kubernetes-native, managed through `kubectl`, and are visible immediately after creation.
+Kubernetes VolumeSnapshots let you create point-in-time snapshots on demand, for example before fine-tuning a model or modifying training data. These snapshots are fully Kubernetes-native, managed through `kubectl`, and are visible immediately after creation.
 
 ##### Step 1: Install the VolumeSnapshot CRDs
 
 Kubernetes VolumeSnapshots require the **external-snapshotter** Custom Resource Definitions (CRDs) to be installed on the cluster. These CRDs define the `VolumeSnapshotClass`, `VolumeSnapshot`, and `VolumeSnapshotContent` resources. EKS Auto Mode does not install these by default.
 
 :::alert{header="Note" type="info"}
-Trident installs its own internal snapshot CRDs (`tridentsnapshots.trident.netapp.io`), but the **Kubernetes-native** VolumeSnapshot CRDs and controller (`snapshot.storage.k8s.io`) are a separate cluster-wide component maintained by the [kubernetes-csi/external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter) project. Both pieces — the CRDs (Step 1) **and** the standalone snapshot-controller Deployment (Step 2) — are required. Without the controller, a `VolumeSnapshot` you create will sit forever with empty `READYTOUSE` and `SNAPSHOTCONTENT` columns because nothing is translating it into a `VolumeSnapshotContent`.
+Trident installs its own internal snapshot CRDs (`tridentsnapshots.trident.netapp.io`), but the **Kubernetes-native** VolumeSnapshot CRDs and controller (`snapshot.storage.k8s.io`) are a separate cluster-wide component maintained by the [kubernetes-csi/external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter) project. Both pieces are required: the CRDs (Step 1) **and** the standalone snapshot-controller Deployment (Step 2). Without the controller, a `VolumeSnapshot` you create will sit forever with empty `READYTOUSE` and `SNAPSHOTCONTENT` columns because nothing is translating it into a `VolumeSnapshotContent`.
 :::
 
 1. Install the VolumeSnapshot CRDs:
@@ -59,7 +59,7 @@ volumesnapshots.snapshot.storage.k8s.io          2026-04-30T00:00:00Z
 
 ##### Step 2: Install the snapshot-controller Deployment
 
-The CRDs alone do not process snapshot requests — they only define the resource types. The **standalone snapshot-controller** is a cluster-wide Deployment that watches `VolumeSnapshot` objects and creates the corresponding `VolumeSnapshotContent` objects, which Trident's `csi-snapshotter` sidecar then turns into real ONTAP snapshots. Both pieces are required.
+The CRDs alone do not process snapshot requests; they only define the resource types. The **standalone snapshot-controller** is a cluster-wide Deployment that watches `VolumeSnapshot` objects and creates the corresponding `VolumeSnapshotContent` objects, which Trident's `csi-snapshotter` sidecar then turns into real ONTAP snapshots. Both pieces are required.
 
 1. Install the snapshot-controller RBAC and Deployment:
 
@@ -68,7 +68,7 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snaps
 kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
 :::
 
-2. Scale the Deployment to a single replica. The upstream manifest defaults to two replicas for leader-elected high availability. For this workshop we only need one — it keeps resource usage minimal on the workshop nodes and the leader-election overhead is unnecessary at this scale.
+2. Scale the Deployment to a single replica. The upstream manifest defaults to two replicas for leader-elected high availability. For this workshop we only need one, which keeps resource usage minimal on the workshop nodes and the leader-election overhead is unnecessary at this scale.
 
 ::code[kubectl -n kube-system scale deploy/snapshot-controller --replicas=1]{language=bash showLineNumbers=false showCopyAction=true}
 
@@ -121,9 +121,9 @@ deletionPolicy: Retain
 ::::
 
 Key points:
-- **driver**: `csi.trident.netapp.io` — uses the Trident CSI driver to create ONTAP snapshots
-- **deletionPolicy: Retain** — the underlying ONTAP snapshot is preserved even if the Kubernetes `VolumeSnapshot` object is deleted
-- **is-default-class: "true"** — makes this the default snapshot class, so you don't need to specify it in every `VolumeSnapshot`
+- **driver**: `csi.trident.netapp.io`, which uses the Trident CSI driver to create ONTAP snapshots
+- **deletionPolicy: Retain**: the underlying ONTAP snapshot is preserved even if the Kubernetes `VolumeSnapshot` object is deleted
+- **is-default-class: "true"**: makes this the default snapshot class, so you don't need to specify it in every `VolumeSnapshot`
 
 2. Apply the VolumeSnapshotClass:
 
@@ -210,7 +210,7 @@ The `hourly.<date>_<time>` snapshots are created by the ONTAP `default` snapshot
 
 ##### Step 6: Create a PVC from the snapshot (clone)
 
-One of the most powerful features of VolumeSnapshots is the ability to create a new PVC from a snapshot. This creates a **space-efficient clone** of the data — ideal for experimentation, A/B testing, or creating isolated environments.
+One of the most powerful features of VolumeSnapshots is the ability to create a new PVC from a snapshot. This creates a **space-efficient clone** of the data, ideal for experimentation, A/B testing, or creating isolated environments.
 
 :::code[]{language=yaml showLineNumbers=true showCopyAction=false}
 # Example: Create a new PVC from the snapshot
@@ -249,12 +249,12 @@ defaults:
 :::
 
 This means every volume **provisioned by Trident** automatically gets:
-- **snapshotPolicy: "default"** — automatic hourly (6), daily (2), and weekly (2) snapshots
-- **snapshotReserve: "10"** — 10% of volume capacity reserved for snapshot data
-- **snapshotDir: "true"** — the `.snapshot` directory is accessible from within pods
+- **snapshotPolicy: "default"**: automatic hourly (6), daily (2), and weekly (2) snapshots
+- **snapshotReserve: "10"**: 10% of volume capacity reserved for snapshot data
+- **snapshotDir: "true"**: the `.snapshot` directory is accessible from within pods
 
 :::alert{header="These defaults apply to provisioned volumes, not imported ones" type="info"}
-The `defaults` block above only applies to volumes Trident **creates**. The model volume you are inspecting was pre-provisioned by Terraform and **imported** by Trident, so it keeps the snapshot policy and reserve it was created with — `default` policy (set in Terraform) and ONTAP's standard 5% reserve rather than 10%.
+The `defaults` block above only applies to volumes Trident **creates**. The model volume you are inspecting was pre-provisioned by Terraform and **imported** by Trident, so it keeps the snapshot policy and reserve it was created with: `default` policy (set in Terraform) and ONTAP's standard 5% reserve rather than 10%.
 
 That difference is worth noticing: when you import existing storage, the storage team's settings win. It is one of the practical trade-offs between importing pre-provisioned volumes and letting Trident provision them.
 :::
@@ -353,4 +353,4 @@ In this section, you have:
 - Viewed snapshots in the FSx console
 - (Optional) Managed snapshot policies via the AWS CLI
 
-FSx for ONTAP provides both on-demand Kubernetes-native snapshots (always available immediately) and automatic scheduled ONTAP snapshots through Trident's CSI integration. Together, these give you comprehensive data protection for AI/ML workloads — on-demand snapshots for point-in-time captures before experiments, and automatic snapshots for ongoing protection.
+FSx for ONTAP provides both on-demand Kubernetes-native snapshots (always available immediately) and automatic scheduled ONTAP snapshots through Trident's CSI integration. Together, these give you comprehensive data protection for AI/ML workloads: on-demand snapshots for point-in-time captures before experiments, and automatic snapshots for ongoing protection.

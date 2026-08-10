@@ -11,8 +11,8 @@ In production environments, it is best practice to deploy an **AI Gateway** in f
 ::::expand{header="Why an AI Gateway? [Click to see more]"}
 
 In enterprise environments, you may self-host smaller LLM models for cost-effective inference where most of your requests are served. Then route less frequent but complex or deep reasoning requests to larger, more capable models. The AI Gateway pattern provides this intelligent routing capability:
-- **Single service endpoint** for all consumers — one DNS name, multiple model backends
-- **Model-per-workload routing** — consumers pick the right model for the job
+- **Single service endpoint** for all consumers: one DNS name, multiple model backends
+- **Model-per-workload routing**: consumers pick the right model for the job
 - **Fallback and retry** across multiple backends
 - **Cost tracking** and per-model usage visibility
 
@@ -28,8 +28,8 @@ To demonstrate AI Gateway and its capability, to serve different models, from di
 - The Open WebUI based Chatbot interface is configured to request the `workshop-llm` model (self-hosted Mistral-7B model), for chatbot related Q&A prompts;
 - The AI-Agents we will deploy later in this workshop, will be configured to request the `workshop-llm-tools` model (served via fully managed Amazon Bedrock LLM models) for tool execution.  
 
-:::alert{header="Deploy this now — no need to wait for vLLM" type="success"}
-The vLLM pod from the previous section is still warming up (~7 minutes), but **you do not need to wait for it**. The LiteLLM gateway starts independently — its readiness check only validates the gateway itself, and it resolves the vLLM backend address lazily, per request. Deploy the gateway now (and OpenWebUI in the next section) **in parallel** while vLLM finishes loading the model in the background. By the time you open the chat UI, vLLM will be ready to serve.
+:::alert{header="Deploy this now, no need to wait for vLLM" type="success"}
+The vLLM pod from the previous section is still warming up (~7 minutes), but **you do not need to wait for it**. The LiteLLM gateway starts independently: its readiness check only validates the gateway itself, and it resolves the vLLM backend address lazily, per request. Deploy the gateway now (and OpenWebUI in the next section) **in parallel** while vLLM finishes loading the model in the background. By the time you open the chat UI, vLLM will be ready to serve.
 :::
 
 ```mermaid
@@ -80,7 +80,7 @@ cat /home/participant/environment/eks/genai/litellm-config.yaml
 :::
 
 :::code[]{language=yaml showLineNumbers=true showCopyAction=false}
-# litellm-config.yaml — AI Gateway routing configuration
+# litellm-config.yaml: AI Gateway routing configuration
 model_list:
   - model_name: "workshop-llm"                                          # ← OpenWebUI uses this
     litellm_params:
@@ -104,7 +104,7 @@ envsubst '$AWS_REGION' < litellm-deployment.yaml | kubectl apply -f -
 :::
 
 :::alert{header="Pod Identity for Bedrock Access" type="info"}
-The Terraform script that provisioned this EKS cluster also created an **EKS Pod Identity Association** linking the `litellm` ServiceAccount to an IAM role with `bedrock:InvokeModel` permissions. When the LiteLLM pod starts, EKS automatically injects temporary AWS credentials — no access keys or IRSA annotations needed.
+The Terraform script that provisioned this EKS cluster also created an **EKS Pod Identity Association** linking the `litellm` ServiceAccount to an IAM role with `bedrock:InvokeModel` permissions. When the LiteLLM pod starts, EKS automatically injects temporary AWS credentials, with no access keys or IRSA annotations needed.
 :::
 
 ##### Step 3: Verify the gateway is ready

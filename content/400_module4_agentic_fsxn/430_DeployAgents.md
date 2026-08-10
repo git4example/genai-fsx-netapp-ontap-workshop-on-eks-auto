@@ -7,12 +7,12 @@ weight : 430
 
 In this section, you will deploy **three AI agents** built with the [AWS Strands Agents SDK](https://github.com/strands-agents/sdk-python). Each agent:
 
-- Uses the **LiteLLM AI Gateway** (`workshop-llm-tools` model) — which routes to Amazon Bedrock Claude Haiku 4.5 for reliable tool-calling
+- Uses the **LiteLLM AI Gateway** (`workshop-llm-tools` model), which routes to Amazon Bedrock Claude Haiku 4.5 for reliable tool-calling
 - Has the **same tool capabilities** (list files, read files, search documents)
 - Mounts the **same shared FSxN volume** via the `agent-shared-data` PVC
 - Runs with a specific **UID** that determines which subdirectory it can access
 
-The difference: **POSIX UID/GID permissions on FSxN** determine which data each agent can actually read — same volume, same tools, only the UID differs.
+The difference: **POSIX UID/GID permissions on FSxN** determine which data each agent can actually read: same volume, same tools, only the UID differs.
 
 :::alert{header="AI Gateway Model Routing" type="info"}
 In **Module 2: Deploy Generative AI Chat application**, you deployed the LiteLLM AI Gateway with two named models:
@@ -26,18 +26,18 @@ These agents request `workshop-llm-tools` because agentic workloads require reli
 
 ##### Step 1: Review the Agent Application Code
 
-::::expand{header="Click to review agent.py — the Strands AI Agent code"}
+::::expand{header="Click to review agent.py, the Strands AI Agent code"}
 
 ::code[cat /home/participant/environment/eks/agentic-agents/agent-app/agent.py]{language=bash showLineNumbers=false showCopyAction=true}
 
 :::code[]{language=python showLineNumbers=true showCopyAction=false}
-# agent.py — Strands AI Agent with FSxN file-access tools
+# agent.py: Strands AI Agent with FSxN file-access tools
 import os
 import glob
 from strands import Agent, tool
 from strands.models.openai import OpenAIModel
 
-# Connect to the LiteLLM AI Gateway — routes tool-calls to Bedrock
+# Connect to the LiteLLM AI Gateway, which routes tool-calls to Bedrock
 model = OpenAIModel(
     client_args={
         "base_url": os.environ.get("LLM_ENDPOINT", "http://litellm-service.default.svc.cluster.local:4000/v1"),
@@ -87,7 +87,7 @@ done
 :::
 
 :::alert{header="Tip" type="info"}
-Because each agent is a separate manifest, you can redeploy a single agent (e.g., after changing its role or UID) without touching the others — for example: `envsubst '$AGENT_IMAGE' < finance-agent-deployment.yaml | kubectl apply -f -`
+Because each agent is a separate manifest, you can redeploy a single agent (e.g., after changing its role or UID) without touching the others. For example: `envsubst '$AGENT_IMAGE' < finance-agent-deployment.yaml | kubectl apply -f -`
 :::
 
 ##### Step 3: Verify All Agents Are Running
@@ -116,11 +116,11 @@ All three agents use the **same container image**, the **same LiteLLM AI Gateway
 - **UID** (set via `securityContext.runAsUser` in the deployment)
 - **DATA_DIR** (environment variable pointing to the agent's subdirectory)
 
-FSxN's POSIX permissions enforce who can read what — the Kubernetes deployment doesn't enforce any data boundary. This is storage-level security.
+FSxN's POSIX permissions enforce who can read what, whereas the Kubernetes deployment doesn't enforce any data boundary. This is storage-level security.
 :::
 
 ---
 
 ### Summary
 
-You have deployed three AI agents with identical capabilities but different UIDs into a single namespace. They all mount the same shared FSxN volume. In the next section, you will query each agent and prove that POSIX permissions on FSxN enforce data boundaries — the Finance agent reads finance data, IT Ops reads its data, and the Malicious agent is denied access to both.
+You have deployed three AI agents with identical capabilities but different UIDs into a single namespace. They all mount the same shared FSxN volume. In the next section, you will query each agent and prove that POSIX permissions on FSxN enforce data boundaries: the Finance agent reads finance data, IT Ops reads its data, and the Malicious agent is denied access to both.

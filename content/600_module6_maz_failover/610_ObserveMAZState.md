@@ -5,7 +5,7 @@ weight : 610
 
 ## Overview
 
-Before triggering a failover, let's first observe the current state of your Multi-AZ FSx for ONTAP file system — which AZ is active, which is standby, and confirm that your vLLM pod is actively serving inference requests.
+Before triggering a failover, let's first observe the current state of your Multi-AZ FSx for ONTAP file system: which AZ is active, which is standby, and confirm that your vLLM pod is actively serving inference requests.
 
 ##### Step 1: Discover the file system and both subnets
 
@@ -62,7 +62,7 @@ echo "Standby AZ (takes over on failover):           $STANDBY_AZ"
 :::
 
 :::alert{header="What 'Preferred' means" type="info"}
-The **preferred subnet** is where the active file server runs *when both nodes are healthy*. It is a **configuration preference**, not a live indicator of which side is currently serving traffic. To determine the currently-active side after a takeover, you need to inspect the file system's endpoint ENIs — we will do that in Step 3.
+The **preferred subnet** is where the active file server runs *when both nodes are healthy*. It is a **configuration preference**, not a live indicator of which side is currently serving traffic. To determine the currently-active side after a takeover, you need to inspect the file system's endpoint ENIs, which we will do in Step 3.
 :::
 
 ##### Step 3: Confirm vLLM is healthy and serving inference
@@ -75,10 +75,10 @@ kubectl get pod $VLLM_POD
 kubectl exec $VLLM_POD -- curl -s http://localhost:8000/v1/models | python3 -m json.tool
 :::
 
-The pod should show `Running` (`1/1` ready) and you should see the `mistral-7b-neuron` model listed — confirming the inference engine is active. This is the workload that must **keep serving** through the failover you trigger next.
+The pod should show `Running` (`1/1` ready) and you should see the `mistral-7b-neuron` model listed, confirming the inference engine is active. This is the workload that must **keep serving** through the failover you trigger next.
 
 :::alert{header="AZ placement doesn't matter" type="info"}
-The vLLM pod's node and the active FSx file server may be in the **same** or **different** AZs — both work. With Multi-AZ FSx for ONTAP, NFS traffic is routed to the active file server regardless of which AZ the client runs in. During failover the floating endpoint IPs are re-homed to the new active node via VPC route table updates — no DNS change, no client reconfiguration.
+The vLLM pod's node and the active FSx file server may be in the **same** or **different** AZs, and both work. With Multi-AZ FSx for ONTAP, NFS traffic is routed to the active file server regardless of which AZ the client runs in. During failover the floating endpoint IPs are re-homed to the new active node via VPC route table updates, with no DNS change and no client reconfiguration.
 :::
 
 ::::expand{header="Optional: determine which AZ is actively serving right now (CLI)"}
@@ -97,7 +97,7 @@ ACTIVE_AZ=$(aws ec2 describe-subnets --subnet-ids $ACTIVE_SUBNET \
 echo "Currently-active file server is in AZ: $ACTIVE_AZ"
 :::
 
-With no failover yet triggered, this matches `$PREFERRED_AZ` from Step 2. In the next section you'll watch the active side flip — most visibly via the VPC route table.
+With no failover yet triggered, this matches `$PREFERRED_AZ` from Step 2. In the next section you'll watch the active side flip, most visibly via the VPC route table.
 
 ::::
 

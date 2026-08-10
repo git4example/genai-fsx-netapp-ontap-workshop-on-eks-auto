@@ -26,7 +26,7 @@ The workshop deploys the following AWS services via CloudFormation and Terraform
 * AWS IAM (roles, policies, OIDC provider for IRSA, service-linked roles)
 * AWS KMS (customer-managed keys for EKS secrets and FSx encryption)
 * AWS Secrets Manager (SVM admin password, VSCode server password)
-* Amazon S3 (workshop asset bucket — the Mistral model is NOT staged in S3)
+* Amazon S3 (workshop asset bucket; the Mistral model is NOT staged in S3)
 * Amazon CloudWatch Logs (EKS control-plane logs)
 * Elastic Load Balancing (for the Open WebUI front-end)
 * AWS Systems Manager (agent on the jumpbox)

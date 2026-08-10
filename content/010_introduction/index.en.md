@@ -42,7 +42,7 @@ Learn how to build your own self-hosted Generative-AI  application for performan
 
 # Additional Reading
 
-This section covers the key technologies used in this workshop — Generative AI, LLMs, vLLM, Amazon EKS, Amazon FSx for NetApp ONTAP, NetApp Astra Trident, and AWS Inferentia accelerators. Expand below to learn more about each component.
+This section covers the key technologies used in this workshop: Generative AI, LLMs, vLLM, Amazon EKS, Amazon FSx for NetApp ONTAP, NetApp Astra Trident, and AWS Inferentia accelerators. Expand below to learn more about each component.
 
 ::::expand{header="Click here to read more about the technologies used in this workshop"}
 
@@ -94,7 +94,7 @@ Key concepts of FSx for NetApp ONTAP include:
 
 
 #### Storing and accessing your model and training data
-In this workshop the **Mistral-7B-Instruct** LLM model data is loaded onto an [**Amazon FSx for NetApp ONTAP**](https://aws.amazon.com/fsx/netapp-ontap/) volume using a Kubernetes Job that downloads the pre-compiled model from HuggingFace. This is a one-time operation — once the model data is on the FSx for ONTAP volume, it persists across pod restarts and redeployments, and it has already been done for you during workshop provisioning. The vLLM Inference engine Pod deployment uses a PersistentVolumeClaim (PVC) that the NetApp Astra Trident CSI driver binds to that pre-provisioned FSx for ONTAP volume. When the vLLM Pod starts up, it loads the LLM model data (into its memory) directly from the FSx for ONTAP file system via NFS.
+In this workshop the **Mistral-7B-Instruct** LLM model data is loaded onto an [**Amazon FSx for NetApp ONTAP**](https://aws.amazon.com/fsx/netapp-ontap/) volume using a Kubernetes Job that downloads the pre-compiled model from HuggingFace. This is a one-time operation: once the model data is on the FSx for ONTAP volume, it persists across pod restarts and redeployments, and it has already been done for you during workshop provisioning. The vLLM Inference engine Pod deployment uses a PersistentVolumeClaim (PVC) that the NetApp Astra Trident CSI driver binds to that pre-provisioned FSx for ONTAP volume. When the vLLM Pod starts up, it loads the LLM model data (into its memory) directly from the FSx for ONTAP file system via NFS.
 
 
 #### Accelerating your Compute

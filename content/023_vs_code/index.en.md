@@ -7,7 +7,7 @@ weight: 23
 ## Connect to the Open-Source VSCode IDE for access to the AWS lab environment
 Ref : [code-server](https://github.com/coder/code-server)
 
-Throughout this workshop you will run commands from a browser-based **VSCode IDE** (code-server) that has already been provisioned for you, pre-loaded with all the workshop files, the AWS CLI, `kubectl`, `eksctl`, Terraform, and Helm. You do not install anything locally — you simply open the IDE in your browser and use its built-in terminal to copy-paste the commands provided in each module.
+Throughout this workshop you will run commands from a browser-based **VSCode IDE** (code-server) that has already been provisioned for you, pre-loaded with all the workshop files, the AWS CLI, `kubectl`, `eksctl`, Terraform, and Helm. You do not install anything locally; you simply open the IDE in your browser and use its built-in terminal to copy-paste the commands provided in each module.
 
 :::alert{header="Use Google Chrome" type="warning"}
 Please use **Google Chrome** for this workshop. Firefox users may experience issues with copy-paste into the IDE terminal.
@@ -34,7 +34,7 @@ Follow these steps to open your IDE:
 ![maximize](/static/images/maximize.png)
 
 :::alert{header="This terminal is your workspace for the whole workshop" type="info"}
-Every command in the following modules is run from this VSCode terminal. The workshop files live under `/home/participant/environment/` — you can browse them in the IDE's file explorer on the left, and open any YAML or script to inspect it as you go.
+Every command in the following modules is run from this VSCode terminal. The workshop files live under `/home/participant/environment/`, and you can browse them in the IDE's file explorer on the left, and open any YAML or script to inspect it as you go.
 :::
 
 

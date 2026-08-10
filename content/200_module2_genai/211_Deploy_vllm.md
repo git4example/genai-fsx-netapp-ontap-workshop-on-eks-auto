@@ -20,7 +20,7 @@ export FSX_ONTAP_AZ
 :::
 
 :::alert{header="Why pin to the FSx ONTAP preferred AZ?" type="info"}
-Although your FSx for ONTAP file system is deployed in **Multi-AZ** mode (accessible from both AZs), we pin the vLLM pod to the **preferred AZ** (where the active file server runs) to minimize cross-AZ NFS latency and avoid cross-AZ data transfer costs. The model data is accessible from either AZ, but placing compute in the same AZ as the active storage provides optimal performance. If a failover occurs, the pod continues to work — it just routes NFS traffic cross-AZ until the file system fails back.
+Although your FSx for ONTAP file system is deployed in **Multi-AZ** mode (accessible from both AZs), we pin the vLLM pod to the **preferred AZ** (where the active file server runs) to minimize cross-AZ NFS latency and avoid cross-AZ data transfer costs. The model data is accessible from either AZ, but placing compute in the same AZ as the active storage provides optimal performance. If a failover occurs, the pod continues to work; it just routes NFS traffic cross-AZ until the file system fails back.
 :::
 
 2. Run the below command to deploy the vLLM Pod, substituting the `$FSX_ONTAP_AZ` placeholder with the availability zone retrieved above.
@@ -32,12 +32,12 @@ Although your FSx for ONTAP file system is deployed in **Multi-AZ** mode (access
 3. Now run the below command, and you will see the Inferentia node count increase to 1, as we have deployed a pod that requires the accelerated compute node. Note that the increase to a value of 1 can take 30 seconds to update.
 ::code[kubectl get nodepool,nodeclass inferentia]{language=bash showLineNumbers=false showCopyAction=true}
 
-:::alert{header="The vLLM pod deployment will take approx. 7 minutes. Don't wait for it, continue to the next steps and then the next module to deploy the AI Gateway in parallel" type="warning"}
+:::alert{header="The vLLM pod deployment will take approx. 5-7 minutes. Don't wait for it, continue to the next steps and then the next module to deploy the AI Gateway in parallel" type="warning"}
 :::
 
 4. Optional - you can inspect the vLLM deployment manifest to understand its configuration:
 
-::::expand{header="Click to view mistral-ontap.yaml — vLLM deployment manifest"}
+::::expand{header="Click to view mistral-ontap.yaml, the vLLM deployment manifest"}
 
 ::code[cat mistral-ontap.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
@@ -112,7 +112,7 @@ spec:
 
 ::::
 
-5. You can monitor the vLLM pod creation by running the below command periodically, until you see it transitioning to `Running` (usually at 7 minute mark, when model has been loaded into memory)
+5. You can monitor the vLLM pod creation by running the below command periodically, until you see it transitioning to `Running` (usually at 5-7 minute mark, when model has been loaded into memory)
 
 ::code[kubectl get pod]{language=bash showLineNumbers=false showCopyAction=true}
 

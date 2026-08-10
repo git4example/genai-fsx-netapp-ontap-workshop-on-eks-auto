@@ -35,7 +35,7 @@ weight: 22
 
 ::alert[Before getting started, from the top right corner of your AWS Console session, select the **AWS Region** that has been stated for your workshop session.]{header="Important" type="warning"}
 
-:::alert{header="Tip — Browser paste issues" type="info"}
+:::alert{header="Tip: Browser paste issues" type="info"}
 Some browser-based lab environments (e.g., Workshop Studio terminals) may not support standard Ctrl+V / Cmd+V paste. If you experience paste issues:
 - Use the **clipboard widget** in the terminal toolbar (paste icon) to transfer text from your local clipboard into the terminal.
 - Alternatively, right-click in the terminal and select **Paste** from the context menu.

@@ -5,7 +5,7 @@ weight : 620
 
 ## Overview
 
-In this section you will trigger a **live failover and failback** of your FSx for ONTAP file system by performing an online **throughput capacity upgrade**. A throughput capacity change on a Multi-AZ file system requires both nodes of the HA pair to be replaced one at a time, which forces an internal takeover and failback as a side effect. This is a fully supported, online operation — throughput capacity update reliably reproduces the same data path behavior and lets you watch the route table flip in real time.
+In this section you will trigger a **live failover and failback** of your FSx for ONTAP file system by performing an online **throughput capacity upgrade**. A throughput capacity change on a Multi-AZ file system requires both nodes of the HA pair to be replaced one at a time, which forces an internal takeover and failback as a side effect. This is a fully supported, online operation, and a throughput capacity update reliably reproduces the same data path behavior and lets you watch the route table flip in real time.
 
 What you will observe:
 - The route table associated with your FSx file system has an entry for the floating endpoint range (typically `198.19.255.0/24`) pointing at the **preferred** ENI.
@@ -14,9 +14,9 @@ What you will observe:
 
 :::alert{header="What happens during this operation" type="info"}
 1. FSx provisions new file server hardware in the standby AZ at the new throughput capacity and joins it to the HA pair.
-2. The active node fails over to the new standby node — the route table entry for the floating endpoint range now points at the standby ENI. NFS clients see a brief pause and continue.
+2. The active node fails over to the new standby node, so the route table entry for the floating endpoint range now points at the standby ENI. NFS clients see a brief pause and continue.
 3. FSx provisions new file server hardware in the preferred AZ at the new throughput capacity.
-4. The file system fails back to the preferred node — the route table entry flips back to the preferred ENI.
+4. The file system fails back to the preferred node, and the route table entry flips back to the preferred ENI.
 5. All data is intact throughout because replication is synchronous (zero RPO).
 :::
 
@@ -34,22 +34,22 @@ chmod +x failover-test.sh
 ./failover-test.sh
 :::
 
-The script opens a `kubectl port-forward` tunnel to the vLLM service and probes `/v1/models` every 5 seconds, logging the status code **and per-call latency** in milliseconds. Keep this running — you'll watch it stay at `HTTP 200` throughout the failover.
+The script opens a `kubectl port-forward` tunnel to the vLLM service and probes `/v1/models` every 5 seconds, logging the status code **and per-call latency** in milliseconds. Keep this running, and you'll watch it stay at `HTTP 200` throughout the failover.
 
 ##### Step 2: Locate the ENIs and the route table entry
 
-The FSx floating endpoint range (typically `198.19.255.0/24`, allocated outside the VPC CIDR for Multi-AZ floating LIFs) is routed to the **Preferred subnet's ENI** today. During the operation this pointer flips to the **Standby ENI**, then back — that flip is the failover you'll watch.
+The FSx floating endpoint range (typically `198.19.255.0/24`, allocated outside the VPC CIDR for Multi-AZ floating LIFs) is routed to the **Preferred subnet's ENI** today. During the operation this pointer flips to the **Standby ENI**, then back. That flip is the failover you'll watch.
 
 1. In the [Amazon FSx console](https://console.aws.amazon.com/fsx/) (workshop region), open your file system → **Network & Security** tab.
 2. Note the **Network interface** ID for the **Preferred subnet** and for the **Standby subnet** (jot both down).
-3. Click the **Route table** link on that tab. In the **Routes** tab, find the `198.19.255.0/24` entry — it currently targets the **Preferred ENI**.
+3. Click the **Route table** link on that tab. In the **Routes** tab, find the `198.19.255.0/24` entry, which currently targets the **Preferred ENI**.
 
 ![Route table before failover](/static/images/routes.png)
 
 ##### Step 3: Trigger the failover by updating Throughput Capacity
 
 1. On the file system **Summary** tab, find **Throughput capacity** and click **Update**.
-2. Pick any value **different from the current one** (e.g. 128 → 256 MB/s). The absolute value doesn't matter — any change forces the internal takeover/failback. Click **Update**.
+2. Pick any value **different from the current one** (e.g. 128 → 256 MB/s). The absolute value doesn't matter, since any change forces the internal takeover/failback. Click **Update**.
 
 ![Update Throughput Capacity dialog](/static/images/update_throughput_capacity.png)
 
@@ -59,8 +59,8 @@ The file system enters `Updating` and the operation begins.
 
 Refresh the route table view every 30-60 seconds. You'll see **two flips** over the next several minutes:
 
-1. **Takeover** — the `198.19.255.0/24` entry changes from the **Preferred ENI** to the **Standby ENI**.
-2. **Failback** — once FSx finishes upgrading the preferred node, the entry flips **back** to the **Preferred ENI**. The **Updates** tab then shows `Completed` and the **Summary** page shows the new throughput value.
+1. **Takeover**: the `198.19.255.0/24` entry changes from the **Preferred ENI** to the **Standby ENI**.
+2. **Failback**: once FSx finishes upgrading the preferred node, the entry flips **back** to the **Preferred ENI**. The **Updates** tab then shows `Completed` and the **Summary** page shows the new throughput value.
 
 ![Route table during failover (now pointing at standby ENI)](/static/images/routes_2.png)
 
@@ -68,11 +68,11 @@ Meanwhile, watch the prober in your **second terminal**: it should stay at conti
 
 ::::expand{header="Why two flips, and what the edge cases look like"}
 
-Throughput capacity changes on Multi-AZ ONTAP perform **two** route-table updates — takeover (preferred → standby) and failback (standby → preferred) — so you see the system recover end-to-end with no manual intervention. This is a richer demo than a single one-way failover.
+Throughput capacity changes on Multi-AZ ONTAP perform **two** route-table updates, takeover (preferred → standby) and failback (standby → preferred), so you see the system recover end-to-end with no manual intervention. This is a richer demo than a single one-way failover.
 
-In the prober you may occasionally see one or two `HTTP 000` entries (rather than elevated-latency 200s) if the `kubectl port-forward` tunnel itself raced the failover — the script auto-restarts the tunnel and recovers. A *sustained* run of non-200s (more than a couple of minutes) would indicate a real problem — see Troubleshooting below.
+In the prober you may occasionally see one or two `HTTP 000` entries (rather than elevated-latency 200s) if the `kubectl port-forward` tunnel itself raced the failover; the script auto-restarts the tunnel and recovers. A *sustained* run of non-200s (more than a couple of minutes) would indicate a real problem. See Troubleshooting below.
 
-**Why `/v1/models` stays 200:** vLLM holds the model registry in memory and mmaps the weights at startup, so this endpoint doesn't touch NFS on every request — exactly the resilience we want to show.
+**Why `/v1/models` stays 200:** vLLM holds the model registry in memory and mmaps the weights at startup, so this endpoint doesn't touch NFS on every request, which is exactly the resilience we want to show.
 
 ::::
 
@@ -121,10 +121,10 @@ aws fsx describe-file-systems \
 
 You have demonstrated a **live failover and failback** of an FSx for ONTAP Multi-AZ file system by performing an online throughput capacity upgrade:
 
-- **Zero RPO** — synchronous replication means no data was lost.
-- **Two observable route flips** — takeover (preferred → standby) and failback (standby → preferred) — directly visible in the VPC route table.
-- **Brief, transparent interruption** — the prober showed continuous `HTTP 200` with at most a small latency bump at each flip.
-- **No pod restart, no DNS change** — failover is implemented by updating the route table entry for the floating endpoint range. The vLLM pod was unaffected; only the underlying ENI ownership of those IPs changed. This is why the Terraform configuration registers the FSx file system against the **EKS private route tables** rather than letting it default to the VPC main route table.
+- **Zero RPO**: synchronous replication means no data was lost.
+- **Two observable route flips**: takeover (preferred → standby) and failback (standby → preferred), both directly visible in the VPC route table.
+- **Brief, transparent interruption**: the prober showed continuous `HTTP 200` with at most a small latency bump at each flip.
+- **No pod restart, no DNS change**: failover is implemented by updating the route table entry for the floating endpoint range. The vLLM pod was unaffected; only the underlying ENI ownership of those IPs changed. This is why the Terraform configuration registers the FSx file system against the **EKS private route tables** rather than letting it default to the VPC main route table.
 - **Bonus:** the operation also delivers a real throughput capacity upgrade. You picked the failover mechanism *and* got new performance characteristics in the same step.
 
 This is what makes FSx for ONTAP Multi-AZ a strong fit for production GenAI serving: the storage layer survives a full AZ failure with no manual intervention, and routine maintenance operations like throughput upgrades exercise the same takeover/failback path so you can be confident the unplanned-failure case will behave identically.

@@ -35,7 +35,7 @@ helm upgrade --install open-webui open-webui/open-webui \
 
 ::::expand{header="Optional: Restrict ALB access to your IP (for on-demand / local laptop deployments only)"}
 
-If you are running this workshop from your **own laptop** (not the workshop VSCode IDE), you can lock down the ALB to your public IP. **Do not run this from the VSCode IDE** — the detected IP would be the IDE instance's IP, not your laptop's, and you would lock yourself out.
+If you are running this workshop from your **own laptop** (not the workshop VSCode IDE), you can lock down the ALB to your public IP. **Do not run this from the VSCode IDE**, because the detected IP would be the IDE instance's IP, not your laptop's, and you would lock yourself out.
 
 1. Detect your public IP:
 
@@ -74,7 +74,7 @@ Make sure your URL is "**http:**//<-URL-ADDRESS->" and doesn't start with "**htt
 5. In the Open WebUI interface you will see a drop down in the top menu bar, used to select your model. Select **workshop-llm** from the drop down, and start chatting with your newly deployed Generative AI chat application.
 
 :::alert{header="Why 'workshop-llm'?" type="info"}
-The model name shown in OpenWebUI is the **virtual model name** defined in the LiteLLM AI Gateway config. Behind the scenes, your chat requests are routed to the self-hosted Mistral-7B model on Inferentia. The gateway abstracts the backend — consumers see a logical model name, not the physical deployment details. This is a common enterprise pattern for managing multiple LLM backends through a single gateway.
+The model name shown in OpenWebUI is the **virtual model name** defined in the LiteLLM AI Gateway config. Behind the scenes, your chat requests are routed to the self-hosted Mistral-7B model on Inferentia. The gateway abstracts the backend, so consumers see a logical model name, not the physical deployment details. This is a common enterprise pattern for managing multiple LLM backends through a single gateway.
 :::
 
 If you don't see the model in the dropdown, please refresh the WebUI page. (Remember from the previous lab module, that the vLLM Pod and the model load into memory will take approx. 7 minutes)
