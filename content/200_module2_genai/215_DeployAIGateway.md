@@ -29,7 +29,7 @@ To demonstrate AI Gateway and its capability, to serve different models, from di
 - The AI-Agents we will deploy later in this workshop, will be configured to request the `workshop-llm-tools` model (served via fully managed Amazon Bedrock LLM models) for tool execution.  
 
 :::alert{header="Deploy this now, no need to wait for vLLM" type="success"}
-The vLLM pod from the previous section is still warming up (~7 minutes), but **you do not need to wait for it**. The LiteLLM gateway starts independently: its readiness check only validates the gateway itself, and it resolves the vLLM backend address lazily, per request. Deploy the gateway now (and OpenWebUI in the next section) **in parallel** while vLLM finishes loading the model in the background. By the time you open the chat UI, vLLM will be ready to serve.
+The vLLM pod from the previous section is still warming up (~5-7 minutes), but **you do not need to wait for it**. The LiteLLM gateway starts independently: its readiness check only validates the gateway itself, and it resolves the vLLM backend address lazily, per request. Deploy the gateway now (and OpenWebUI in the next section) **in parallel** while vLLM finishes loading the model in the background. By the time you open the chat UI, vLLM will be ready to serve.
 :::
 
 ```mermaid

@@ -73,15 +73,7 @@ kubectl get pvc -n agents agent-shared-data
 
 :::
 
-Once you have deployed the agents in the next section, you can confirm the ownership and modes on the shared volume from inside any agent pod:
-
-::code[kubectl exec -n agents deploy/finance-agent -- ls -la /data/]{language=bash showLineNumbers=false showCopyAction=true}
-
-You should see `finance` (owned by 1001) and `itops` (owned by 1002), both with mode `drwxr-x---` (750).
-
-:::alert{header="Why check from inside an agent pod?" type="info"}
-The shared volume's PVC lives in the `agents` namespace, and a pod can only mount PVCs from its own namespace, so the `netshoot-fsxn` pod in `default` cannot see this volume. Checking from an agent pod is also the more meaningful test: it shows the permissions exactly as the agent process sees them over NFS.
-:::
+The namespace should exist and the PVC should show `Bound`.
 
 ---
 

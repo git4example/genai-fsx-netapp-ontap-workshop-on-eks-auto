@@ -67,7 +67,7 @@ If your IP changes later, re-run the same command to refresh the restriction.
 4. The Open WebUI and load balancer will take up-to **2 minutes to come online**. Once you have waited 2 minutes, copy above the URL ADDRESS into a web browser as "*http://<-URL-ADDRESS->*". This will open a Open WebUI chat client interface.
 
 :::alert{header="Note" type="info"}
-Make sure your URL is "**http:**//<-URL-ADDRESS->" and doesn't start with "**https:**". Some browser like chrome try **"https"** by default if you dont provide protocol.
+Make sure your URL is "**http:**//<-URL-ADDRESS->" and **doesn't start** with "**https:**". Some browser like chrome try **"https"** by default if you dont provide protocol.
 :::
 
 

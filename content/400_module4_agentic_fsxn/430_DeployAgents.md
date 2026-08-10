@@ -119,6 +119,25 @@ All three agents use the **same container image**, the **same LiteLLM AI Gateway
 FSxN's POSIX permissions enforce who can read what, whereas the Kubernetes deployment doesn't enforce any data boundary. This is storage-level security.
 :::
 
+##### Step 4: Confirm the Data Layer Permissions
+
+Now that a pod is mounting the shared volume, you can check the ownership and modes that were set during workshop provisioning:
+
+::code[kubectl exec -n agents deploy/finance-agent -- ls -la /data/]{language=bash showLineNumbers=false showCopyAction=true}
+
+You should see `finance` (owned by 1001) and `itops` (owned by 1002), both with mode `drwxr-x---` (750):
+
+:::code{showCopyAction=false showLineNumbers=false language=bash}
+drwxr-x---    5 1001     1001          4096 Aug  5 09:40 finance
+drwxr-x---    5 1002     1002          4096 Aug  5 09:40 itops
+:::
+
+:::alert{header="What this output proves" type="info"}
+Mode `750` means **owner** can read, write, and enter the directory; **group** can read and enter; **everyone else gets nothing**. Since each directory is owned by a different UID and the agents run as different UIDs, neither agent falls into the other's owner or group category.
+
+This is the boundary you will test in the next section. Note that the `finance-agent` pod can *list* both directories here, because `/data` itself is world-readable, but listing a directory name is not the same as reading the files inside it.
+:::
+
 ---
 
 ### Summary
