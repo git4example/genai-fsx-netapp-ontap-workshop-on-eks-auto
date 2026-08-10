@@ -17,6 +17,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: ontap-model-claim
+  namespace: default
   annotations:
     # Name of the existing volume on the ONTAP backend.
     trident.netapp.io/importOriginalName: "model"

@@ -7,7 +7,7 @@ weight : 110
 
 Imagine the scenario where you need to host many AI models, or vast amounts of training data-sets, which will be accessed by hundreds of Pods in your workload. You can store this data in a operationally efficient and performant way on a single high-performant Persistent Volume (PV) backed by Amazon FSx for NetApp ONTAP, instead of each Pod using its own small local instance-based storage. FSx for ONTAP provides fully managed shared storage built on the NetApp ONTAP file system, offering NFS access, snapshots, cloning, and automatic data tiering between SSD and capacity pool storage. The NetApp Astra Trident CSI driver integrates FSx for ONTAP with Kubernetes, enabling dynamic volume provisioning so your Pods can mount high-performance shared storage without manual PV creation.
 
-In this module you will deploy the **NetApp Astra Trident CSI driver** within your Amazon EKS cluster and configure a **TridentBackendConfig** that connects Trident to the pre-provisioned FSx for ONTAP file system and SVM. You will learn about Kubernetes storage concepts such as CSI drivers, StorageClasses, PersistentVolumeClaims, and the two ways Trident connects a PVC to ONTAP storage — **volume import** and **dynamic provisioning**. The infrastructure for this module comprises an Amazon EKS cluster with EC2 worker nodes, and an Amazon FSx for NetApp ONTAP file system.
+In this module you will deploy the **NetApp Astra Trident CSI driver** within your Amazon EKS cluster, configure a **TridentBackendConfig** that connects Trident to the pre-provisioned FSx for ONTAP file system and SVM, create a **StorageClass**, and **import** the two existing ONTAP volumes as PersistentVolumeClaims. You will learn about Kubernetes storage concepts such as CSI drivers, StorageClasses, PersistentVolumeClaims, and the two ways Trident connects a PVC to ONTAP storage — **volume import** and **dynamic provisioning**. The infrastructure for this module comprises an Amazon EKS cluster with EC2 worker nodes, and an Amazon FSx for NetApp ONTAP file system.
 
 :::alert{header="The model data is already on FSx for ONTAP" type="info"}
 To save you a multi-gigabyte download, the Mistral-7B model and the AI-agent datasets were loaded onto their FSx for ONTAP volumes while your environment was being built. That data lives on the **storage side**, not in Kubernetes — so you will still install Trident and import those volumes yourself in this module, exactly as you would on a real cluster. When you do, the model will already be there.
@@ -211,6 +211,79 @@ In the output of the `describe` command, verify the following key fields:
 If the Phase shows anything other than `Bound` or the Status is not `Success`, check the Trident controller logs with `kubectl logs -n trident -l app=controller.csi.trident.netapp.io`.
 :::
 
+##### Step 7: Create the StorageClass
+
+A `StorageClass` tells Kubernetes which provisioner to use for a PersistentVolumeClaim. This one points at the Trident CSI driver and the ONTAP backend you just registered.
+
+12. Apply the StorageClass:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl apply -f ontap-storage-class.yaml
+kubectl get storageclass ontap-nas-sc
+:::
+
+::::expand{header="Why this StorageClass lists availability zones — click to expand"}
+
+FSx for ONTAP Multi-AZ presents a single **floating** NFS endpoint that is reachable from every Availability Zone, so Trident correctly advertises no zone topology of its own. With `volumeBindingMode: Immediate`, the CSI provisioner still wants an explicit zone list, and without one it fails with:
+
+:::code[]{language=bash showLineNumbers=false showCopyAction=false}
+error generating accessibility requirements: no available topology found
+:::
+
+The `allowedTopologies` block supplies the region's zones so the provisioner has something to resolve. `Immediate` is deliberate — `WaitForFirstConsumer` would leave a PVC that has no pod yet `Pending` forever, which matters because the volumes below are imported before any pod mounts them.
+
+::::
+
+##### Step 8: Import the pre-provisioned ONTAP volumes
+
+Rather than creating new storage, you will **import** the two ONTAP volumes that already exist — `model` (holding the Mistral-7B model) and `agent_shared_data` (holding the AI agent datasets). Trident builds a PersistentVolume around an existing volume instead of allocating new capacity.
+
+13. Trident identifies the backend by **UUID**, which is generated when the backend registers. Retrieve it:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+export BACKEND_UUID=$(kubectl get tbe -n trident \
+  -o jsonpath='{.items[?(@.backendName=="fsx-ontap-nas")].backendUUID}')
+echo "BACKEND_UUID: $BACKEND_UUID"
+:::
+
+14. Apply both import PVCs, substituting the UUID:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl create namespace agents 2>/dev/null || true
+envsubst '$BACKEND_UUID' < ontap-pvc.yaml | kubectl apply -f -
+envsubst '$BACKEND_UUID' < ../agentic-agents/agent-shared-pvc.yaml | kubectl apply -f -
+:::
+
+::::expand{header="Optional: click to view the import annotations"}
+
+:::code[]{language=yaml showLineNumbers=false showCopyAction=false}
+annotations:
+  trident.netapp.io/importOriginalName: "model"      # existing ONTAP volume name
+  trident.netapp.io/importBackendUUID: "<uuid>"      # backend UUID, not its name
+  trident.netapp.io/importNoRename: "true"           # keep the name "model"
+:::
+
+Without `importNoRename`, a managed import renames the ONTAP volume to `trident_pvc_<uuid>`, discarding the meaningful name the storage team gave it.
+
+::::
+
+15. Confirm both PVCs are **Bound**:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl get pvc ontap-model-claim
+kubectl get pvc -n agents agent-shared-data
+:::
+
+16. Verify the volumes were genuinely **imported** rather than newly created:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+kubectl get pv -o custom-columns='PV:.metadata.name,CLAIM:.spec.claimRef.name,ONTAP_VOLUME:.spec.csi.volumeAttributes.internalName'
+:::
+
+:::alert{header="This check matters" type="warning"}
+`ONTAP_VOLUME` must read **`model`** and **`agent_shared_data`**. If it shows `trident_pvc_<uuid>`, Trident ignored the import annotations and provisioned brand-new empty volumes instead — the model data would be missing and vLLM would fail to start. Trident does not warn when it ignores an unrecognised annotation, so this is the only reliable way to confirm an import succeeded.
+:::
+
 ## Summary
 
-In this section you have created an IAM policy with FSx for ONTAP and Secrets Manager permissions, created a service account for the Trident CSI driver, deployed the Trident CSI driver using Helm, and configured a Trident backend that connects to your FSx for ONTAP file system and SVM. In the (Optional) Dynamic Provisioning of PVCs using FSx for NetApp section you will learn to create the StorageClass and PersistentVolumeClaim for dynamic volume provisioning, so your Pods can use FSx for ONTAP as persistent storage.
+In this section you created an IAM policy with FSx for ONTAP and Secrets Manager permissions, created a service account for the Trident CSI driver, deployed the driver using Helm, configured a Trident backend connected to your FSx for ONTAP file system and SVM, created a StorageClass, and imported the two pre-provisioned ONTAP volumes as PersistentVolumeClaims. Your pods can now mount FSx for ONTAP as persistent storage. If you would also like to watch Trident **dynamically provision** a brand-new volume, work through the optional Dynamic Provisioning module later.

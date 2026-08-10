@@ -73,7 +73,7 @@ Key points about this StorageClass:
 - **nfsvers=4.1** — uses NFS version 4.1 for improved performance and security
 - **volumeBindingMode + allowedTopologies** — FSx for ONTAP's NFS endpoint is reachable from every Availability Zone, so Trident advertises no zone topology. With `Immediate` binding the CSI provisioner needs an explicit zone list to satisfy its accessibility requirement; without it, PVCs fail with *"no available topology found"*. The zones are populated for your region in the next step.
 
-2. Apply the StorageClass manifest:
+2. Apply the StorageClass manifest. You already created this in Module 1, so `kubectl apply` is a no-op here — it is repeated so this module stands on its own:
 
 ::code[kubectl apply -f ontap-storage-class.yaml]{language=bash showLineNumbers=false showCopyAction=true}
 
