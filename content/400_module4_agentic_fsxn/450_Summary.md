@@ -42,19 +42,34 @@ All three agents used the **same Mistral-7B LLM endpoint**. The intelligence is 
 
 ```mermaid
 flowchart LR
-    FT["Finance Team"] --> FA["Finance Agent"] --> FV["finance_data volume"]
-    IT["IT Ops Team"] --> IA["IT Ops Agent"] --> IV["it_ops_data volume"]
-    
+    FT["Finance Team"] --> FA["Finance Agent<br/>UID 1001"]
+    IT["IT Ops Team"] --> IA["IT Ops Agent<br/>UID 1002"]
+
+    subgraph VOL["agent_shared_data (one ONTAP volume)"]
+        FV["/data/finance<br/>owner 1001, mode 750"]
+        IV["/data/itops<br/>owner 1002, mode 750"]
+    end
+
+    FA --> FV
+    IA --> IV
+
     style FT fill:#c8e6c9,stroke:#2e7d32
     style FA fill:#c8e6c9,stroke:#2e7d32
     style FV fill:#c8e6c9,stroke:#2e7d32
     style IT fill:#bbdefb,stroke:#1565c0
     style IA fill:#bbdefb,stroke:#1565c0
     style IV fill:#bbdefb,stroke:#1565c0
-
 ```
 
-**Use case:** Multiple departments share a Kubernetes cluster and LLM, each with private data.
+**Use case:** Multiple departments share a Kubernetes cluster and LLM, each with private data. Note that both agents mount the **same** volume and the same PVC; the boundary between them is POSIX ownership on the subdirectories, not separate storage.
+
+::::expand{header="When would you use a volume per team instead?"}
+
+Separate volumes per team are also a valid pattern, and give you a coarser but simpler boundary: independent quotas, snapshot schedules, SnapMirror relationships, and export policies per team. The trade-off is more volumes to provision and manage.
+
+The shared-volume approach you built scales better when teams are numerous or fluid, since adding a team means creating a subdirectory rather than provisioning storage. It also demonstrates the stronger claim: even with no volume-level separation at all, ONTAP still enforces the boundary.
+
+::::
 
 ### Pattern B: On-Prem to Cloud with Agent Access (SnapMirror + Agents)
 
