@@ -7,39 +7,7 @@ weight : 450
 
 In this module, you built a real-world scenario where **multiple AI agents** with different roles access a shared storage system, and proved that **FSx for NetApp ONTAP's native security** enforces strict data boundaries regardless of what the AI agent or LLM attempts.
 
-```mermaid
-flowchart TD
-    subgraph Agents["AI Agents (same LLM, same tools, same shared volume)"]
-        FA["Finance Agent\nUID: 1001"]
-        IA["IT Ops Agent\nUID: 1002"]
-        MA["Malicious Agent\nUID: 1099"]
-    end
-
-    subgraph Security["Defense in Depth"]
-        L1["Layer 1: POSIX Permissions\n(UID/GID + mode 750)\nStorage-level (FSxN)"]
-        L2["Layer 2: NetworkPolicy\n(block inter-agent traffic)\nNetwork-level (Kubernetes)"]
-    end
-
-    subgraph FSxN["FSx for NetApp ONTAP: Single Shared Volume"]
-        FV["/data/finance\nOwner: UID 1001\nREAD ALLOWED"]
-        IV["/data/itops\nOwner: UID 1002\nREAD ALLOWED"]
-        BL["Both subdirectories\nUID 1099 ≠ owner\nPERMISSION DENIED"]
-    end
-
-    FA -->|"UID 1001 = owner"| FV
-    IA -->|"UID 1002 = owner"| IV
-    MA -.-x|"UID 1099 ≠ owner"| BL
-
-    style FA fill:#c8e6c9,stroke:#2e7d32
-    style IA fill:#bbdefb,stroke:#1565c0
-    style MA fill:#ffcdd2,stroke:#c62828
-    style FV fill:#c8e6c9,stroke:#2e7d32
-    style IV fill:#bbdefb,stroke:#1565c0
-    style BL fill:#ffcdd2,stroke:#c62828
-    style L1 fill:#fff9c4,stroke:#f9a825
-    style L2 fill:#fff9c4,stroke:#f9a825
-```
-
+![Defense in depth summary: Layer 1 is POSIX permissions (UID/GID and mode 750) enforced at the storage level by FSxN, Layer 2 is a Kubernetes NetworkPolicy blocking inter-agent traffic. The Finance agent (UID 1001) and IT Ops agent (UID 1002) each read their own directory as owner, while the Malicious agent (UID 1099) is denied on both because it owns neither](/static/images/SecuritySummary.png)
 ---
 
 ## Key Takeaways
@@ -76,17 +44,14 @@ All three agents used the **same Mistral-7B LLM endpoint**. The intelligence is 
 flowchart LR
     FT["Finance Team"] --> FA["Finance Agent"] --> FV["finance_data volume"]
     IT["IT Ops Team"] --> IA["IT Ops Agent"] --> IV["it_ops_data volume"]
-    HR["HR Team"] --> HA["HR Agent"] --> HV["hr_data volume"]
-
+    
     style FT fill:#c8e6c9,stroke:#2e7d32
     style FA fill:#c8e6c9,stroke:#2e7d32
     style FV fill:#c8e6c9,stroke:#2e7d32
     style IT fill:#bbdefb,stroke:#1565c0
     style IA fill:#bbdefb,stroke:#1565c0
     style IV fill:#bbdefb,stroke:#1565c0
-    style HR fill:#fff9c4,stroke:#f9a825
-    style HA fill:#fff9c4,stroke:#f9a825
-    style HV fill:#fff9c4,stroke:#f9a825
+
 ```
 
 **Use case:** Multiple departments share a Kubernetes cluster and LLM, each with private data.

@@ -32,33 +32,8 @@ To demonstrate AI Gateway and its capability, to serve different models, from di
 The vLLM pod from the previous section is still warming up (~5-7 minutes), but **you do not need to wait for it**. The LiteLLM gateway starts independently: its readiness check only validates the gateway itself, and it resolves the vLLM backend address lazily, per request. Deploy the gateway now (and OpenWebUI in the next section) **in parallel** while vLLM finishes loading the model in the background. By the time you open the chat UI, vLLM will be ready to serve.
 :::
 
-```mermaid
-flowchart TB
-    subgraph Consumers["Consumers"]
-        WEB["OpenWebUI<br/>model: workshop-llm"]
-        AGT["Strands Agents<br/>model: workshop-llm-tools"]
-    end
+![LiteLLM AI Gateway routing: OpenWebUI requests the workshop-llm model and the Strands agents request workshop-llm-tools, both through the single litellm-service:4000/v1 endpoint, which routes them to self-hosted vLLM Mistral-7B on Inferentia and managed Bedrock Claude Haiku 4.5 respectively](/static/images/DeployLiteLLM-AIGateway.png)
 
-    subgraph GW["LiteLLM AI Gateway (single endpoint)"]
-        direction LR
-        ROUTER["Router<br/>litellm-service:4000/v1"]
-    end
-
-    subgraph Backends["LLM Backends"]
-        direction LR
-        BA["workshop-llm<br/>vLLM (Mistral-7B)<br/>Self-hosted on Inferentia<br/>cost: $0 (infra only)"]
-        BB["workshop-llm-tools<br/>Bedrock (Claude Haiku 4.5)<br/>Managed<br/>cost: ~$0.25/1M tokens"]
-    end
-
-    WEB -->|"model: workshop-llm"| ROUTER
-    AGT -->|"model: workshop-llm-tools"| ROUTER
-    ROUTER --> BA
-    ROUTER --> BB
-
-    style BA fill:#e8f5e9,stroke:#2e7d32
-    style BB fill:#e3f2fd,stroke:#1565c0
-    style ROUTER fill:#fff3e0,stroke:#e65100
-```
 ---
 ### Deploy the AI Gateway (LiteLLM)
 
