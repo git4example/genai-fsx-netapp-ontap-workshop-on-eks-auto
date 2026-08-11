@@ -23,42 +23,7 @@ As organizations deploy autonomous AI agents that can read, analyze, and act on 
 
 ## Architecture
 
-```mermaid
-flowchart TB
-    subgraph GW_LAYER["LiteLLM AI Gateway"]
-        direction LR
-        GW["Model Router"]
-        LLM["workshop-llm\nvLLM Mistral-7B\n(OpenWebUI chat)"]
-        BR["workshop-llm-tools\nBedrock Haiku 4.5\n(Agent tool-calling)"]
-        GW --> LLM
-        GW --> BR
-    end
-
-    subgraph EKS["EKS Cluster (namespace: agents)"]
-        direction LR
-        FA["Finance Agent\nUID: 1001\nDATA_DIR: /data/finance"]
-        IA["IT Ops Agent\nUID: 1002\nDATA_DIR: /data/itops"]
-        MA["Malicious Agent\nUID: 1099\nDATA_DIR: /data"]
-    end
-
-    subgraph FSxN["FSx for NetApp ONTAP: Single Shared Volume"]
-        direction LR
-        FD["/data/finance\nOwner: 1001:1001\nMode: 0750"]
-        ID["/data/itops\nOwner: 1002:1002\nMode: 0750"]
-    end
-
-    FA & IA & MA -->|API calls| GW
-    FA -->|"READ ✓"| FD
-    IA -->|"READ ✓"| ID
-    MA -.-x|"DENIED ✗"| FD
-    MA -.-x|"DENIED ✗"| ID
-
-    style FA fill:#c8e6c9,stroke:#2e7d32
-    style IA fill:#bbdefb,stroke:#1565c0
-    style MA fill:#ffcdd2,stroke:#c62828
-    style FD fill:#c8e6c9,stroke:#2e7d32
-    style ID fill:#bbdefb,stroke:#1565c0
-```
+![Agent architecture: three agents in the agents namespace mount one shared FSx for ONTAP volume, where POSIX ownership grants the Finance and IT Ops agents read access to their own directory and denies the Malicious agent, while all three reach the same LiteLLM AI Gateway](/static/images/Agent-Architecture.png)
 
 **Key Design Point**: All agents mount the **same PVC** (`agent-shared-data`). There is no volume-level isolation, no namespace separation, and no Kubernetes RBAC involved. The **only** access control mechanism is POSIX UID/GID permissions set on the FSxN volume subdirectories.
 

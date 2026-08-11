@@ -194,6 +194,7 @@ This lists every volume at once, so you can compare them side by side:
 ```
 PV                                         CLAIM               ONTAP_VOLUME
 pvc-c2b8f1b9-9622-4c5c-968f-7f9602e0f3b3   ontap-model-claim   model
+pvc-d7756871-2a22-4937-ba50-98e31facf05a   agent-shared-data   agent_shared_data
 pvc-2dafb4be-71ee-42e4-9d57-aca021d18c5d   demo-claim          trident_pvc_2dafb4be_71ee_42e4_9d57_aca021d18c5d
 ```
 
