@@ -203,5 +203,5 @@ This module is under active development and has not been validated yet. Content 
 :::
 ### Summary
 
-You have successfully simulated an on-premises data environment with three isolated business domain volumes. In the next section, you will use SnapMirror to selectively replicate only the Finance and Healthcare volumes to the cloud — the Retail data will intentionally remain "on-prem" to demonstrate selective data movement.
+You have successfully simulated an on-premises data environment with three isolated business domain volumes. In the next section, you will use SnapMirror to selectively replicate only the Finance and Healthcare volumes to the cloud, while the Retail data will intentionally remain "on-prem" to demonstrate selective data movement.
 

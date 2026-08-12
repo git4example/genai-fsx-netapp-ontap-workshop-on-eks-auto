@@ -12,8 +12,8 @@ This module is under active development and has not been validated yet. Content 
 
 In this section you will deploy **two different AI models** in separate Kubernetes namespaces, each with access to only its designated data volume. This demonstrates enterprise-grade data segregation where:
 
-- **Model A (Mistral-7B)** — Deployed in namespace `model-finance`, can only access the `finance_data` volume
-- **Model B (Phi-2)** — Deployed in namespace `model-healthcare`, can only access the `health_data` volume
+- **Model A (Mistral-7B)**: Deployed in namespace `model-finance`, can only access the `finance_data` volume
+- **Model B (Phi-2)**: Deployed in namespace `model-healthcare`, can only access the `health_data` volume
 
 Neither model can access the other's data, enforced at both the Kubernetes layer (namespace isolation, RBAC) and the storage layer (ONTAP export policies).
 
@@ -205,10 +205,10 @@ healthcare-data-claim   Bound    healthcare-data-pv    50Gi       ROX           
 :::
 
 :::alert{header="ReadOnlyMany (ROX) access mode" type="info"}
-Notice both PVCs use `ReadOnlyMany` access mode. Since these are SnapMirror destination volumes (DP type), they are inherently read-only at the ONTAP level. This is perfect for inference workloads — the models read the data but cannot modify it. The source of truth remains on-prem.
+Notice both PVCs use `ReadOnlyMany` access mode. Since these are SnapMirror destination volumes (DP type), they are inherently read-only at the ONTAP level. This is perfect for inference workloads: the models read the data but cannot modify it. The source of truth remains on-prem.
 :::
 
-##### Step 4: Deploy Model A — Mistral-7B (Finance Domain)
+##### Step 4: Deploy Model A, Mistral-7B (Finance Domain)
 
 Deploy the Mistral-7B model in the `model-finance` namespace with access only to the finance data volume.
 
@@ -302,7 +302,7 @@ spec:
 kubectl apply -f model-a-finance-deployment.yaml
 :::
 
-##### Step 5: Deploy Model B — Phi-2 (Healthcare Domain)
+##### Step 5: Deploy Model B, Phi-2 (Healthcare Domain)
 
 Deploy a different model (Phi-2) in the `model-healthcare` namespace with access only to the healthcare data volume.
 

@@ -10,7 +10,7 @@ This module is under active development and has not been validated yet. Content 
 :::
 ## Overview
 
-In this section you will establish **SnapMirror replication** between the on-prem simulator and your cloud FSx for ONTAP file system. The critical point: you will replicate **only** the Finance and Healthcare volumes — the Retail volume stays on-prem, demonstrating that you control exactly which data subsets move to the cloud.
+In this section you will establish **SnapMirror replication** between the on-prem simulator and your cloud FSx for ONTAP file system. The critical point: you will replicate **only** the Finance and Healthcare volumes, while the Retail volume stays on-prem, demonstrating that you control exactly which data subsets move to the cloud.
 
 This is how enterprises manage petabyte-scale data: instead of moving everything, you selectively replicate only what each cloud-deployed model needs.
 

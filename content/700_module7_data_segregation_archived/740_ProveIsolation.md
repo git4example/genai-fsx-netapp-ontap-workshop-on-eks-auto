@@ -1,5 +1,5 @@
 ---
-title : "Prove Data Isolation — Break It to Prove It"
+title : "Prove Data Isolation: Break It to Prove It"
 weight : 740
 # hidden : true
 ---
@@ -12,9 +12,9 @@ This module is under active development and has not been validated yet. Content 
 
 Security claims are only meaningful when tested. In this section you will attempt to **break** the data isolation from multiple angles and observe each attempt being denied. This "break it to prove it" approach demonstrates defense-in-depth:
 
-1. **Kubernetes layer** — Try to access a PVC from a different namespace
-2. **Storage layer** — Try to mount another model's volume directly via NFS
-3. **Network layer** — Try to reach another model's data endpoint from within a pod
+1. **Kubernetes layer**: Try to access a PVC from a different namespace
+2. **Storage layer**: Try to mount another model's volume directly via NFS
+3. **Network layer**: Try to reach another model's data endpoint from within a pod
 
 Each layer independently prevents unauthorized access, providing multiple safeguards.
 
@@ -53,14 +53,14 @@ spec:
 EOF
 :::
 
-**Expected result — DENIED:**
+**Expected result: DENIED**
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
 Error from server (NotFound): persistentvolumeclaims "healthcare-data-claim" not found
 :::
 
 :::alert{header="Why it failed" type="info"}
-PVCs are **namespace-scoped** resources in Kubernetes. The `healthcare-data-claim` PVC exists only in the `model-healthcare` namespace. A pod in `model-finance` cannot reference it — Kubernetes returns a "not found" error because the PVC simply doesn't exist in that namespace's scope.
+PVCs are **namespace-scoped** resources in Kubernetes. The `healthcare-data-claim` PVC exists only in the `model-healthcare` namespace. A pod in `model-finance` cannot reference it, because Kubernetes returns a "not found" error because the PVC simply doesn't exist in that namespace's scope.
 :::
 
 ##### Test 2: Attempt Direct NFS Mount (Storage Layer)
@@ -96,7 +96,7 @@ sleep 30
 kubectl logs direct-nfs-attempt -n model-finance
 :::
 
-**Expected result — DENIED:**
+**Expected result: DENIED**
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
 mount.nfs4: access denied by server while mounting 198.19.x.x:/health_data
@@ -211,7 +211,7 @@ kubectl run network-test --rm -it --restart=Never \
   -- sh -c "curl -s --connect-timeout 5 http://model-b-healthcare-svc.model-healthcare.svc.cluster.local:8000/v1/models 2>&1 || echo 'CONNECTION BLOCKED'"
 :::
 
-**Expected result — BLOCKED:**
+**Expected result: BLOCKED**
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
 curl: (28) Connection timed out after 5000 milliseconds
@@ -231,7 +231,7 @@ kubectl auth can-i list persistentvolumeclaims \
   --as=system:serviceaccount:model-finance:finance-model-sa
 :::
 
-**Expected result — DENIED:**
+**Expected result: DENIED**
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
 no
@@ -244,7 +244,7 @@ kubectl auth can-i list persistentvolumeclaims \
   --as=system:serviceaccount:model-finance:finance-model-sa
 :::
 
-**Expected result — ALLOWED:**
+**Expected result: ALLOWED**
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
 yes
@@ -296,7 +296,7 @@ This module is under active development and has not been validated yet. Content 
 :::
 ### Summary
 
-You have proven that data isolation between models is enforced at **four independent layers**: Kubernetes namespace scoping, ONTAP storage export policies, Kubernetes NetworkPolicies, and RBAC. A breach of any single layer does not compromise the isolation — all four must be bypassed simultaneously to access another model's data.
+You have proven that data isolation between models is enforced at **four independent layers**: Kubernetes namespace scoping, ONTAP storage export policies, Kubernetes NetworkPolicies, and RBAC. A breach of any single layer does not compromise the isolation; all four must be bypassed simultaneously to access another model's data.
 
 This defense-in-depth approach gives enterprises confidence that deploying multiple AI models against different data domains maintains strict data governance boundaries, even in a shared Kubernetes cluster.
 

@@ -10,7 +10,7 @@ This module is under active development and has not been validated yet. Content 
 :::
 ## Module Overview
 
-In enterprise environments, customers often have **petabytes of data on-premises** and need to deploy **multiple AI models** in the cloud — each with access to only a **specific subset** of that data. This module demonstrates how to achieve secure, model-level data segregation by replicating data from an on-premises NetApp ONTAP system to AWS using Amazon FSx for NetApp ONTAP's native SnapMirror replication.
+In enterprise environments, customers often have **petabytes of data on-premises** and need to deploy **multiple AI models** in the cloud, each with access to only a **specific subset** of that data. This module demonstrates how to achieve secure, model-level data segregation by replicating data from an on-premises NetApp ONTAP system to AWS using Amazon FSx for NetApp ONTAP's native SnapMirror replication.
 
 :::alert{header="On-Premises Focus" type="info"}
 The primary scenario this module addresses is **on-premises to cloud** data movement. Customers keep their petabyte-scale data on-prem and selectively replicate only the subsets each cloud-hosted model needs. For workshop purposes, we simulate the on-premises environment using a second FSx for ONTAP file system in a different region (cross-region), but the SnapMirror workflow is identical to a true on-prem-to-cloud deployment using physical NetApp ONTAP hardware.
@@ -23,7 +23,7 @@ You will:
 4. Deploy two different LLM models (Mistral-7B and Phi-2), each with access to only its designated data volume
 5. **Prove isolation** by attempting cross-model data access and observing it being denied
 
-This pattern addresses a critical enterprise requirement: **data governance at the model level** — ensuring that a model trained or inferencing on finance data cannot access healthcare data, and vice versa. The bulk of the customer's data (petabytes) remains securely on-premises; only the specific subsets required for cloud-based inference are replicated.
+This pattern addresses a critical enterprise requirement: **data governance at the model level**, ensuring that a model trained or inferencing on finance data cannot access healthcare data, and vice versa. The bulk of the customer's data (petabytes) remains securely on-premises; only the specific subsets required for cloud-based inference are replicated.
 
 ![data-segregation-architecture](/static/images/data-segregation-architecture.png)
 
@@ -37,7 +37,7 @@ This module is under active development and has not been validated yet. Content 
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
 CUSTOMER ON-PREMISES                             AWS CLOUD
-(NetApp ONTAP — Simulated via                   (Region A — e.g. us-west-2)
+(NetApp ONTAP - Simulated via                   (Region A - e.g. us-west-2)
  FSx ONTAP in Region B)
 ┌────────────────────────────────┐              ┌──────────────────────────────────────┐
 │  On-Prem NetApp ONTAP         │              │  EKS Cluster                         │
@@ -59,11 +59,11 @@ CUSTOMER ON-PREMISES                             AWS CLOUD
 :::
 
 **Key Design Principles:**
-- **On-premises data stays on-premises** — Only the specific subsets required by cloud models are replicated. Petabytes of unneeded data never leave the customer's data center.
-- **Selective replication (On-Prem → Cloud)** — SnapMirror replicates at the volume level, so you choose exactly which datasets move to the cloud.
-- **Volume-level isolation** — Each model gets its own PVC backed by a separate ONTAP volume. No shared access.
-- **Namespace isolation** — Kubernetes RBAC prevents cross-namespace PVC access.
-- **Export policy enforcement** — ONTAP export policies restrict NFS access at the storage layer.
+- **On-premises data stays on-premises**: Only the specific subsets required by cloud models are replicated. Petabytes of unneeded data never leave the customer's data center.
+- **Selective replication (On-Prem → Cloud)**: SnapMirror replicates at the volume level, so you choose exactly which datasets move to the cloud.
+- **Volume-level isolation**: Each model gets its own PVC backed by a separate ONTAP volume. No shared access.
+- **Namespace isolation**: Kubernetes RBAC prevents cross-namespace PVC access.
+- **Export policy enforcement**: ONTAP export policies restrict NFS access at the storage layer.
 
 ---
 
@@ -75,13 +75,13 @@ This module is under active development and has not been validated yet. Content 
 
 #### NetApp SnapMirror for On-Premises to Cloud Replication
 
-**SnapMirror** is NetApp ONTAP's native replication technology that efficiently mirrors data between ONTAP systems — whether on-premises or in AWS. Key characteristics:
+**SnapMirror** is NetApp ONTAP's native replication technology that efficiently mirrors data between ONTAP systems, whether on-premises or in AWS. Key characteristics:
 
-- **On-prem to cloud native** — SnapMirror works identically between physical on-premises NetApp ONTAP and Amazon FSx for NetApp ONTAP. No data transformation or middleware needed.
-- **Volume-level granularity** — You choose exactly which volumes to replicate. A customer with 500 volumes on-prem can replicate just 2 of them to the cloud.
-- **Block-level incremental** — After the initial baseline copy, only changed blocks are transferred, making ongoing replication bandwidth-efficient even over WAN links.
-- **Cross-region support** — FSx for ONTAP supports SnapMirror between file systems in different AWS regions, or between on-premises ONTAP and FSx for ONTAP (hybrid cloud).
-- **Read-only destination** — Replicated volumes on the destination are read-only (DP type), which is perfect for inference workloads that only need to read model/data files.
+- **On-prem to cloud native**: SnapMirror works identically between physical on-premises NetApp ONTAP and Amazon FSx for NetApp ONTAP. No data transformation or middleware needed.
+- **Volume-level granularity**: You choose exactly which volumes to replicate. A customer with 500 volumes on-prem can replicate just 2 of them to the cloud.
+- **Block-level incremental**: After the initial baseline copy, only changed blocks are transferred, making ongoing replication bandwidth-efficient even over WAN links.
+- **Cross-region support**: FSx for ONTAP supports SnapMirror between file systems in different AWS regions, or between on-premises ONTAP and FSx for ONTAP (hybrid cloud).
+- **Read-only destination**: Replicated volumes on the destination are read-only (DP type), which is perfect for inference workloads that only need to read model/data files.
 
 #### Why This Matters for Enterprise GenAI (On-Prem to Cloud)
 
