@@ -7,26 +7,33 @@ weight : 430
 
 In this section, you will deploy **three AI agents** built with the [AWS Strands Agents SDK](https://github.com/strands-agents/sdk-python). Each agent:
 
-- Uses the **LiteLLM AI Gateway** (`workshop-llm-tools` model), which routes to Amazon Bedrock Claude Haiku 4.5 for reliable tool-calling
-- Has the **same tool capabilities** (list files, read files, search documents)
-- Mounts the **same shared FSxN volume** via the `agent-shared-data` PVC
-- Runs with a specific **UID** that determines which subdirectory it can access
+---
+##### Step 1: Deploy All Three Agents
 
-The difference: **POSIX UID/GID permissions on FSxN** determine which data each agent can actually read: same volume, same tools, only the UID differs.
+All agents deploy into the **same Kubernetes namespace** (`agents`), and mount the **same PVC** (`agent-shared-data`). The only difference is the UID and the `DATA_DIR` subdirectory:
 
-:::alert{header="AI Gateway Model Routing" type="info"}
-In **Module 2: Deploy Generative AI Chat application**, you deployed the LiteLLM AI Gateway with two named models:
-- **`workshop-llm`** → self-hosted Mistral-7B (used by OpenWebUI for chat)
-- **`workshop-llm-tools`** → Bedrock Claude Haiku 4.5 (used by agents for tool-calling)
+| Agent | UID | DATA_DIR | Purpose |
+|-------|-----|----------|---------|
+| Finance Agent | 1001 | `/data/finance` | Access financial reports |
+| IT Ops Agent | 1002 | `/data/itops` | Access runbooks and logs |
+| Malicious Agent | 1099 | `/data` | Attempt to access everything |
 
-These agents request `workshop-llm-tools` because agentic workloads require reliable structured tool execution. The gateway routes this to Bedrock Claude Haiku 4.5, which excels at selecting and calling tools with properly formatted arguments.
+Each agent has its **own manifest file** (`finance-agent-deployment.yaml`, `itops-agent-deployment.yaml`, `malicious-agent-deployment.yaml`) so you can deploy, inspect, or delete them individually. Deploy all three:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+cd /home/participant/environment/eks/agentic-agents
+export AGENT_IMAGE="public.ecr.aws/parikshit/fsxn-strands-agent:latest"
+for manifest in finance-agent-deployment.yaml itops-agent-deployment.yaml malicious-agent-deployment.yaml; do
+  envsubst '$AGENT_IMAGE' < "$manifest" | kubectl apply -f -
+done
 :::
 
----
+:::alert{header="Tip" type="info"}
+Because each agent is a separate manifest, you can redeploy a single agent (e.g., after changing its role or UID) without touching the others. For example: `envsubst '$AGENT_IMAGE' < finance-agent-deployment.yaml | kubectl apply -f -`
+:::
 
-##### Step 1: Review the Agent Application Code
 
-::::expand{header="Click to review agent.py, the Strands AI Agent code"}
+::::expand{header="Click to here to review the Strands AI Agent code (agent.py)"}
 
 ::code[cat /home/participant/environment/eks/agentic-agents/agent-app/agent.py]{language=bash showLineNumbers=false showCopyAction=true}
 
@@ -65,32 +72,7 @@ def search_documents(query: str) -> str:
 :::
 
 ::::
-
-##### Step 2: Deploy All Three Agents
-
-All agents deploy into the **same namespace** (`agents`) and mount the **same PVC** (`agent-shared-data`). The only difference is the UID and the `DATA_DIR` subdirectory:
-
-| Agent | UID | DATA_DIR | Purpose |
-|-------|-----|----------|---------|
-| Finance Agent | 1001 | `/data/finance` | Access financial reports |
-| IT Ops Agent | 1002 | `/data/itops` | Access runbooks and logs |
-| Malicious Agent | 1099 | `/data` | Attempt to access everything |
-
-Each agent has its **own manifest file** (`finance-agent-deployment.yaml`, `itops-agent-deployment.yaml`, `malicious-agent-deployment.yaml`) so you can deploy, inspect, or delete them individually. Deploy all three:
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-cd /home/participant/environment/eks/agentic-agents
-export AGENT_IMAGE="public.ecr.aws/parikshit/fsxn-strands-agent:latest"
-for manifest in finance-agent-deployment.yaml itops-agent-deployment.yaml malicious-agent-deployment.yaml; do
-  envsubst '$AGENT_IMAGE' < "$manifest" | kubectl apply -f -
-done
-:::
-
-:::alert{header="Tip" type="info"}
-Because each agent is a separate manifest, you can redeploy a single agent (e.g., after changing its role or UID) without touching the others. For example: `envsubst '$AGENT_IMAGE' < finance-agent-deployment.yaml | kubectl apply -f -`
-:::
-
-##### Step 3: Verify All Agents Are Running
+##### Step 2: Verify All Agents Are Running
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 kubectl get pods -n agents
@@ -119,9 +101,9 @@ All three agents use the **same container image**, the **same LiteLLM AI Gateway
 FSxN's POSIX permissions enforce who can read what, whereas the Kubernetes deployment doesn't enforce any data boundary. This is storage-level security.
 :::
 
-##### Step 4: Confirm the Data Layer Permissions
+##### Step 3: Confirm the Data Layer Permissions
 
-Now that a pod is mounting the shared volume, you can check the ownership and modes that were set during workshop provisioning:
+Now that a pod is mounting the shared volume, you can check the data ownership & permissions that were set on the data stored within the FSx for NetApp volume (PVC) during workshop provisioning:
 
 ::code[kubectl exec -n agents deploy/finance-agent -- ls -la /data/]{language=bash showLineNumbers=false showCopyAction=true}
 
@@ -132,7 +114,7 @@ drwxr-x---    5 1001     1001          4096 Aug  5 09:40 finance
 drwxr-x---    5 1002     1002          4096 Aug  5 09:40 itops
 :::
 
-:::alert{header="What this output proves" type="info"}
+:::alert{header="What this output highlights" type="info"}
 Mode `750` means **owner** can read, write, and enter the directory; **group** can read and enter; **everyone else gets nothing**. Since each directory is owned by a different UID and the agents run as different UIDs, neither agent falls into the other's owner or group category.
 
 This is the boundary you will test in the next section. Note that the `finance-agent` pod can *list* both directories here, because `/data` itself is world-readable, but listing a directory name is not the same as reading the files inside it.

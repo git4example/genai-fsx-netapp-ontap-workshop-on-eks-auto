@@ -1,6 +1,7 @@
 ---
 title : "Module 6 (Optional): Multi-AZ Resiliency and Live Failover"
 weight : 600
+hidden : true
 ---
 
 :::alert{header="Optional Module" type="info"}

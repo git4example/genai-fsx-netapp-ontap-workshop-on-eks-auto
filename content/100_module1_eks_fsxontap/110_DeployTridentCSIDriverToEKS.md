@@ -5,13 +5,19 @@ weight : 110
 
 ## Overview
 
-Imagine the scenario where you need to host many AI models, or vast amounts of training data-sets, which will be accessed by hundreds of Pods in your workload. You can store this data in a operationally efficient and performant way on a single high-performant Persistent Volume (PV) backed by Amazon FSx for NetApp ONTAP, instead of each Pod using its own small local instance-based storage. FSx for ONTAP provides fully managed shared storage built on the NetApp ONTAP file system, offering NFS access, snapshots, cloning, and automatic data tiering between SSD and capacity pool storage. The NetApp Astra Trident CSI driver integrates FSx for ONTAP with Kubernetes, enabling dynamic volume provisioning so your Pods can mount high-performance shared storage without manual PV creation.
+Imagine the scenario:
+- You need to host many AI models, or vast amounts of training data-sets, which will be accessed by hundreds of Pods in your workload.
+- You can store this data in a operationally efficient and performant way on a single high-performant Persistent Volume (PV) backed by Amazon FSx for NetApp ONTAP, instead of each Pod using its own small local instance-based storage.
+- FSx for ONTAP provides fully managed shared storage built on the NetApp ONTAP file system, offering NFS access, snapshots, cloning, and automatic data tiering between SSD and capacity pool storage.
+- The NetApp Astra Trident CSI driver integrates FSx for ONTAP with Kubernetes, enabling dynamic volume provisioning so your Pods can mount high-performance shared storage without manual PV creation.
 
-In this module you will deploy the **NetApp Astra Trident CSI driver** within your Amazon EKS cluster, configure a **TridentBackendConfig** that connects Trident to the pre-provisioned FSx for ONTAP file system and SVM, create a **StorageClass**, and **import** the two existing ONTAP volumes as PersistentVolumeClaims. You will learn about Kubernetes storage concepts such as CSI drivers, StorageClasses, PersistentVolumeClaims, and the two ways Trident connects a PVC to ONTAP storage: **volume import** and **dynamic provisioning**. The infrastructure for this module comprises an Amazon EKS cluster with EC2 worker nodes, and an Amazon FSx for NetApp ONTAP file system.
+In this module you will:
+- Deploy the **NetApp Astra Trident CSI driver** within your Amazon EKS cluster
+- Configure a **TridentBackendConfig** that connects Trident to the pre-provisioned FSx for NetApp volume (using Kubernetes static-provisioing),
+- Create a **StorageClass**, and **import** the two existing ONTAP volumes as PersistentVolumeClaims.
+- You will learn about Kubernetes storage concepts such as CSI drivers, StorageClasses, PersistentVolumeClaims.
+- The infrastructure for this module comprises an Amazon EKS cluster with EC2 worker nodes, and an Amazon FSx for NetApp ONTAP file system.
 
-:::alert{header="The model data is already on FSx for ONTAP" type="info"}
-To save you a multi-gigabyte download, the Mistral-7B model and the AI-agent datasets were loaded onto their FSx for ONTAP volumes while your environment was being built. That data lives on the **storage side**, not in Kubernetes, so you will still install Trident and import those volumes yourself in this module, exactly as you would on a real cluster. When you do, the model will already be there.
-:::
 
 :::alert{header="Note" type="info"}
 For an AWS Sponsored Workshop, the FSx for ONTAP file system, SVM, and Security Group have been pre-created for you.
@@ -177,10 +183,6 @@ echo "SVM Name: $SVM_NAME"
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 envsubst '$SVM_MGMT_LIF $SVM_NAME' < trident-backend-config.yaml | kubectl apply -f -
-:::
-
-:::alert{header="Snapshot configuration" type="info"}
-The backend configuration includes `defaults` for snapshot management: `snapshotPolicy: "default"` enables automatic hourly/daily/weekly ONTAP snapshots, `snapshotReserve: "10"` reserves 10% of volume capacity for snapshot data, and `snapshotDir: "true"` makes the `.snapshot` directory accessible from within pods. These snapshot settings apply to volumes Trident provisions; the pre-provisioned `model` and `agent_shared_data` volumes carry the snapshot policy they were created with.
 :::
 
 11. Verify that the Trident backend has been registered successfully.

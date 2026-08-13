@@ -5,37 +5,25 @@ weight : 440
 
 ## Overview
 
-Now comes the most important part: **proving** that FSxN's POSIX permissions work. You will:
+In this module you will now validate FSx for NetApps's POSIX permissions work. You will perform the following:
 
-1. Query the **Finance Agent**, which successfully reads financial data
-2. Query the **IT Ops Agent**, which successfully reads operational data
-3. Attempt access with the **Malicious Agent**, which is **blocked** by POSIX permissions
-4. Instruct the Malicious Agent to call another agent, which is **blocked** by tool scoping
-
-All agents mount the **same volume**. Only UNIX UID/GID permissions differentiate their access.
+1. Query the **Finance Agent**, which successfully lists the financial data it has access to
+2. Query the **IT Ops Agent**, which successfully lists the IT operational data it has access to
+3. Instruct the **Malicious Agent** to access the Finance and IT Operational data, which is **blocked** by POSIX permissions
+4. Instruct the **Malicious Agent** to call another AI Agent to try to access data, which is **blocked** by tool scoping
 
 ---
 
 ## Querying the Agents
 
-Each agent runs as a FastAPI web server exposing an `/ask` endpoint. You can query all three agents from a single utility pod using `curl`.
+Each AI Agent runs as a FastAPI web server exposing an `/ask` endpoint. You can query all three AI Agents from a single utility pod. For the following steps we are going to use our **netshoot** pod to run our `curl` commands.
 
-You already started the `netshoot-fsxn` pod when you verified the model data, so confirm it is still running:
+Lets deploy the `netshoot-fsxn` pod (takes 1 minute)
 
-::code[kubectl get pod netshoot-fsxn]{language=bash showLineNumbers=false showCopyAction=true}
+::code[kubectl apply -f /home/participant/environment/eks/FSxONTAP/netshoot-fsxn.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+::code[kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=120s]{language=bash showLineNumbers=false showCopyAction=true}
 
-::::expand{header="Not running? Click to start it"}
-
-If the pod was deleted, or you skipped ahead to this module, start it again:
-
-:::code[]{language=bash showLineNumbers=true showCopyAction=true}
-kubectl apply -f /home/participant/environment/eks/FSxONTAP/netshoot-fsxn.yaml
-kubectl wait --for=condition=Ready pod/netshoot-fsxn --timeout=300s
-:::
-
-::::
-
-Now exec into the netshoot pod, from which you will run all agent tests. The pod has `curl` and `jq` pre-installed:
+Now let's log-in to the netshoot pod, and run all the following AI Agent tests. Note that the pod has `curl` and `jq` pre-installed:
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl exec -it netshoot-fsxn -- bash
@@ -46,6 +34,7 @@ kubectl exec -it netshoot-fsxn -- bash
 ## Part 1: Finance Agent (Authorized Access)
 
 ##### Test 1: Ask the Finance Agent to list available data
+Let's ask the Finance AI-Agent with a query of "*What files do you have access to? List everything in your data directory*" using the below commands.
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 curl -s http://finance-agent-svc.agents:8080/ask \
@@ -66,13 +55,14 @@ Here are the directories I have access to:
 - transactions
 :::
 
-The Finance Agent (UID 1001) successfully accessed the `/data/finance` subdirectory. FSxN POSIX permissions **allow** access because the UID matches the directory owner.
+The Finance AI-Agent (UID 1001) successfully accessed the `/data/finance` subdirectory. FSxN POSIX permissions **allow** access because the UID matches the directory owner.
 
 ---
 
 ## Part 2: IT Operations Agent (Authorized Access)
 
 ##### Test 2: Ask the IT Ops Agent to list available data
+Let's ask the IT Ops AI-Agent with a query of "*What files do you have access to? List everything in your data directory*" using the below commands.
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 curl -s http://itops-agent-svc.agents:8080/ask \
@@ -89,7 +79,7 @@ Here are the directories I have access to:
 - runbooks
 :::
 
-The IT Ops Agent (UID 1002) successfully accessed `/data/itops`. It sees completely different data than the Finance agent, even though they mount the **same volume**. There is no cross-contamination.
+The IT Ops AI-Agent (UID 1002) successfully accessed `/data/itops`. It sees completely different data than the Finance agent, even though they mount the **same volume**. There is no cross-contamination.
 
 ---
 
@@ -97,7 +87,7 @@ The IT Ops Agent (UID 1002) successfully accessed `/data/itops`. It sees complet
 
 ##### Test 3A: Malicious Agent Cannot Read Finance or IT Ops Data
 
-The malicious agent (UID 1099) mounts the same volume at `/data`, so it can see that subdirectories exist, but **cannot read their contents**:
+Let's see what happens when the Malicious AI-Agent (UID 1099) mounts the same volume at `/data` that the Finance and IT OPs agents have access to. Notice it can see the subdirectories, but **cannot read the contents of the folder data** and gets **Access Denied**:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 curl -s http://malicious-agent-svc.agents:8080/ask \
@@ -122,7 +112,7 @@ No LLM instruction, prompt injection, or tool manipulation can override this, be
 
 ##### Test 3B: Malicious Agent Calls Finance Agent (The Attack)
 
-Each agent has an `http_request` tool that allows it to call other services. What happens if the malicious agent uses it to call the finance agent's API?
+Each agent has an `http_request` tool that allows it to call other services and AI-Agents. What happens if the Malicious AI-Agent uses it to call the Finance AI-Agent's API to try to get it to perform an operation?
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 curl -s http://malicious-agent-svc.agents:8080/ask \
@@ -136,9 +126,9 @@ Without network controls, the malicious agent **successfully calls the finance a
 This demonstrates the real-world risk: if an agent has network access and another agent's API is reachable, data can be exfiltrated through **inter-agent proxy calls**, even though the malicious agent's own UID can't read the files directly.
 :::
 
-##### Test 3C: Apply NetworkPolicy to Block the Attack
+##### Test 3C: Let's Apply a NetworkPolicy to Block the Attack (as seen in Test 3B)
 
-Now apply a Kubernetes NetworkPolicy that blocks the malicious agent from reaching the finance and IT ops agent services. First leave the netshoot pod:
+Let's apply a Kubernetes NetworkPolicy that blocks the malicious agent from reaching the finance and IT ops agent services. First you need to exit the netshoot pod console, so you are back on the main IDE terminal to run Kubernetes operations.
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 exit
@@ -180,7 +170,7 @@ kubectl get policyendpoints -n agents
 
 ::::
 
-Re-enter the netshoot pod and retry the same attack:
+Now let's log back into the netshoot pod, and retry the same attack from Test-3B and see what happens this time:
 
 :::code[]{language=bash showLineNumbers=false showCopyAction=true}
 kubectl exec -it netshoot-fsxn -- bash
