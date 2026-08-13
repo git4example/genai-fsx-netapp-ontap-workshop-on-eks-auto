@@ -38,9 +38,9 @@ The script opens a `kubectl port-forward` tunnel to the vLLM service and probes 
 
 ##### Step 2: Locate the ENIs and the route table entry
 
-The FSx floating endpoint range (typically `198.19.255.0/24`, allocated outside the VPC CIDR for Multi-AZ floating LIFs) is routed to the **Preferred subnet's ENI** today. During the operation this pointer flips to the **Standby ENI**, then back. That flip is the failover you'll watch.
+The FSx for NetApp floating endpoint range (typically `198.19.255.0/24`, allocated outside the VPC CIDR for Multi-AZ floating LIFs) is routed to the **Preferred subnet's ENI** today. During the operation this pointer flips to the **Standby ENI**, then back. That flip is the failover you'll watch.
 
-1. In the [Amazon FSx console](https://console.aws.amazon.com/fsx/) (workshop region), open your file system → **Network & Security** tab.
+1. Navigate to the [Amazon FSx console](https://console.aws.amazon.com/fsx/) (ensure you select your workshop region). Then click on *File Systems* from the left hand menu, Click on your listed File System ID. Click on the **Network & Security** tab.
 2. Note the **Network interface** ID for the **Preferred subnet** and for the **Standby subnet** (jot both down).
 3. Click the **Route table** link on that tab. In the **Routes** tab, find the `198.19.255.0/24` entry, which currently targets the **Preferred ENI**.
 

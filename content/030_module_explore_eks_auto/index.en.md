@@ -8,7 +8,7 @@ weight : 30
 
 Amazon Elastic Kubernetes Service (Amazon EKS) Auto Mode is used in this workshop for Amazon EKS cluster provisioning and management.
 
-Workshop creation details: The Amazon Elastic Kubernetes Service (EKS) cluster in this workshop was created using [**Terraform**](https://www.terraform.io/), and the [**EKS Blueprints for Terraform**](https://github.com/aws-ia/terraform-aws-eks-blueprints). You can explore the blueprint by looking into the `~/environment/eksworkshop` folder which is located in your VSCode IDE, if you want to learn how to use it in your own environment.
+**Workshop creation details**: The Amazon Elastic Kubernetes Service (EKS) cluster in this workshop was created using [**Terraform**](https://www.terraform.io/), and the [**EKS Blueprints for Terraform**](https://github.com/aws-ia/terraform-aws-eks-blueprints). You can explore the blueprint by looking into the `~/environment/eksworkshop` folder which is located in your VSCode IDE, if you want to learn how to use it in your own environment.
 
 **Terraform** is an infrastructure-as-code tool that lets you build, change, and version infrastructure efficiently in AWS.
 

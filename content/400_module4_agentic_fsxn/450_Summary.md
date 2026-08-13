@@ -5,9 +5,10 @@ weight : 450
 
 ## What You Demonstrated
 
-In this module, you built a real-world scenario where **multiple AI agents** with different roles access a shared storage system, and proved that **FSx for NetApp ONTAP's native security** enforces strict data boundaries regardless of what the AI agent or LLM attempts.
+In this module, you built a real-world scenario where **multiple AI agents** with different roles access a shared storage system, and validated that **FSx for NetApp** native security enforces strict data boundaries regardless of what the AI Agent or LLM attempts.
 
 ![Defense in depth summary: Layer 1 is POSIX permissions (UID/GID and mode 750) enforced at the storage level by FSxN, Layer 2 is a Kubernetes NetworkPolicy blocking inter-agent traffic. The Finance agent (UID 1001) and IT Ops agent (UID 1002) each read their own directory as owner, while the Malicious agent (UID 1099) is denied on both because it owns neither](/static/images/SecuritySummary.png)
+
 ---
 
 ## Key Takeaways
@@ -16,110 +17,17 @@ In this module, you built a real-world scenario where **multiple AI agents** wit
 
 Unlike application-layer controls (API keys, prompt guardrails, output filters), **ONTAP storage security operates below the agent's execution layer**. The agent process literally cannot read bytes it's not authorized to access. No prompt injection, jailbreak, or tool manipulation can override filesystem-level permissions.
 
-### 2. Defense-in-Depth with FSxN Native Features
+### 2. Defense-in-Depth with FSx for NetApp Native Features
 
 | Security Layer | FSxN Feature | What It Controls |
 |---------------|-------------|-----------------|
-| **File Access (Primary)** | UNIX Permissions (UID/GID) | Which process UIDs can read/write files |
+| **File Access** | UNIX Permissions (UID/GID) | Which process UIDs can read/write files |
 | **Network Access** | Export Policies | Which host IPs can NFS-mount a volume |
-| **File Access** | UNIX Security Style | Which UIDs/GIDs can read/write files |
-| **Data Isolation** | Volumes / Qtrees | Separate filesystem namespaces per domain |
+| **Data Isolation** | Volumes | Separate filesystem namespaces per domain |
 | **Protocol** | Read-Only Mounts | Agents can read but never modify source data |
 | **Encryption** | In-transit + at-rest | Data encrypted with ONTAP native encryption |
 
-### 3. Same LLM, Different Access = Safe Multi-Tenancy
-
-All three agents used the **same Mistral-7B LLM endpoint**. The intelligence is shared; the data access is segregated. This pattern enables:
-- **Cost efficiency**: One LLM serving multiple teams
-- **Governance**: Each team's data stays within its boundary
-- **Auditability**: ONTAP audit logs track every file access per UID
-
----
-
-## Enterprise Architecture Patterns
-
-### Pattern A: Team-Based Agent Segregation (What You Built)
-
-```mermaid
-flowchart LR
-    FT["Finance Team"] --> FA["Finance Agent<br/>UID 1001"]
-    IT["IT Ops Team"] --> IA["IT Ops Agent<br/>UID 1002"]
-
-    subgraph VOL["agent_shared_data (one ONTAP volume)"]
-        FV["/data/finance<br/>owner 1001, mode 750"]
-        IV["/data/itops<br/>owner 1002, mode 750"]
-    end
-
-    FA --> FV
-    IA --> IV
-
-    style FT fill:#c8e6c9,stroke:#2e7d32
-    style FA fill:#c8e6c9,stroke:#2e7d32
-    style FV fill:#c8e6c9,stroke:#2e7d32
-    style IT fill:#bbdefb,stroke:#1565c0
-    style IA fill:#bbdefb,stroke:#1565c0
-    style IV fill:#bbdefb,stroke:#1565c0
-```
-
-**Use case:** Multiple departments share a Kubernetes cluster and LLM, each with private data. Note that both agents mount the **same** volume and the same PVC; the boundary between them is POSIX ownership on the subdirectories, not separate storage.
-
-::::expand{header="When would you use a volume per team instead?"}
-
-Separate volumes per team are also a valid pattern, and give you a coarser but simpler boundary: independent quotas, snapshot schedules, SnapMirror relationships, and export policies per team. The trade-off is more volumes to provision and manage.
-
-The shared-volume approach you built scales better when teams are numerous or fluid, since adding a team means creating a subdirectory rather than provisioning storage. It also demonstrates the stronger claim: even with no volume-level separation at all, ONTAP still enforces the boundary.
-
-::::
-
-### Pattern B: On-Prem to Cloud with Agent Access (SnapMirror + Agents)
-
-```mermaid
-flowchart LR
-    subgraph OnPrem["On-Prem ONTAP"]
-        F500["500TB Finance Data"]
-        I300["300TB IT Ops Data"]
-        O2P["2PB Other Data"]
-    end
-
-    subgraph Cloud["AWS Cloud (EKS + FSxN)"]
-        FV["finance_data (subset)"] --> FA["Finance Agent"]
-        IV["it_ops_data (subset)"] --> IA["IT Ops Agent"]
-    end
-
-    F500 -->|SnapMirror| FV
-    I300 -->|SnapMirror| IV
-    O2P -.-x|"stays on-prem"| O2P
-
-    style O2P fill:#eeeeee,stroke:#9e9e9e
-    style FA fill:#c8e6c9,stroke:#2e7d32
-    style FV fill:#c8e6c9,stroke:#2e7d32
-    style IA fill:#bbdefb,stroke:#1565c0
-    style IV fill:#bbdefb,stroke:#1565c0
-```
-
-**Use case:** Replicate only the data subsets each cloud-hosted agent needs. Bulk data stays on-prem.
-
-### Pattern C: Compliance-Driven Isolation (HIPAA / SOX / GDPR)
-
-```mermaid
-flowchart LR
-    V["patient_records\nvolume"] --> EP["Export Policy\nhealthcare-agent subnet only"]
-    V --> UX["UNIX Permissions\nUID 2001"]
-    V --> AU["FPolicy Audit\nevery file read logged"]
-    V --> WR["WORM / SnapLock\nimmutable retention"]
-
-    style V fill:#e1bee7,stroke:#6a1b9a
-    style EP fill:#fff9c4,stroke:#f9a825
-    style UX fill:#fff9c4,stroke:#f9a825
-    style AU fill:#fff9c4,stroke:#f9a825
-    style WR fill:#ffcdd2,stroke:#c62828
-```
-
-**Use case:** Regulated industries where AI agent access must be auditable, restricted, and tamper-proof.
-
----
-
-## FSxN Features That Enable This Pattern
+### 3. FSx for NetApp features - Role in Agentic AI workloads
 
 | Feature | Role in Agentic AI |
 |---------|-------------------|
@@ -127,12 +35,18 @@ flowchart LR
 | **UNIX Security** | UID/GID permissions, wrong agent process can't read files |
 | **Volumes** | Logical data isolation, each domain has its own volume |
 | **SnapMirror** | Replicate on-prem data to cloud for agent consumption |
-| **FlexClone** | Instantly clone a volume for agent testing without duplicating data |
 | **Snapshots** | Point-in-time recovery if an agent's action corrupts data |
 | **FPolicy** | Audit logging of all file access (which agent read what, when) |
 | **WORM / SnapLock** | Immutable data for compliance, agents can read but never delete |
-| **Storage Efficiency** | Dedup + compression reduce storage costs for multi-tenant agent data |
-| **Multi-AZ** | High availability, agents never lose access to their data |
+| **Multi-AZ** | High availability, agents dont lose access to data |
+
+
+### 4. Same LLM, Different Access = Safe Multi-Tenancy
+
+All three agents used the **same Mistral-7B LLM endpoint**. The intelligence is shared; the data access is segregated. This pattern enables:
+- **Cost efficiency**: One LLM serving multiple teams
+- **Governance**: Each team's data stays within its boundary
+- **Auditability**: ONTAP audit logs track every file access per UID
 
 ---
 
@@ -151,15 +65,10 @@ kubectl delete namespace agents
 
 ---
 
-## What's Next
+## Summary
 
-This module demonstrated AI agent data segregation on a **single FSx for ONTAP file system**. To extend this pattern:
+Application-layer guardrails (prompt engineering, output filtering) can be bypassed. Storage-layer controls cannot be bypassed (export policies, UNIX permissions, volume isolation).This module demonstrated AI agent data segregation on a **single FSx for ONTAP file system**, and highlighted FSx for NetApp provides enterprise-grade, multi-layered access control that keeps AI agents within their authorized data boundaries.
 
-- **On-Premises to Cloud Replication**: Replicate data from on-premises to cloud using SnapMirror, then apply the same agent access controls to the replicated volumes
-- **FlexClone for Agent Testing**: Clone a production data volume instantly (zero-copy) to create a sandbox for testing new agent tools without risking production data
-- **FPolicy Audit Logging**: Enable ONTAP FPolicy to capture every file access event per agent UID, feeding into your SIEM for compliance reporting
+You have now completed the workshop.
 
-:::alert{header="The Core Principle" type="info"}
-**AI agents are only as trustworthy as the security boundaries that constrain them.** Application-layer guardrails (prompt engineering, output filtering) can be bypassed. Storage-layer controls (export policies, UNIX permissions, volume isolation) cannot, because they are enforced by the ONTAP controller before any data reaches the agent process. FSx for NetApp ONTAP provides enterprise-grade, multi-layered access control that keeps AI agents within their authorized data boundaries.
-:::
-
+You can continue to the optional modules for this workshop.

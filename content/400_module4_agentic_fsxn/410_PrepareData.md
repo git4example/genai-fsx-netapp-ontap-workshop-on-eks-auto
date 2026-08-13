@@ -1,27 +1,27 @@
 ---
-title : "Understanding the Pre-Configured Data Layer"
+title : "Understand Pre-configured Items"
 weight : 410
 ---
 
 ## Overview
 
-The agent data environment was **pre-configured during workshop provisioning** so you can focus on deploying and testing agents rather than infrastructure setup. This page explains what was set up and why.
+The AI Agent data & permissions has been **pre-configured during workshop provisioning**, so you can focus on deploying and testing agents rather than infrastructure setup. This page explains what was setup, and why to give context.
 
 ---
 
-##### What Was Pre-Configured
+##### Workshop Pre-Configured Items
 
 During workshop provisioning, the following was automatically set up:
 
 1. **FSx for NetApp ONTAP Volume**: `agent_shared_data` (10 GiB) at junction path `/agent_data`
-2. **Kubernetes Namespace**: `agents` (all three agents deploy here)
+2. **Kubernetes Namespace**: `agents` (all three AI Agents were deployed into this namespace)
 3. **PVC**: `agent-shared-data` importing the volume via Trident
-4. **Data Population**: dummy finance and IT ops files written to the volume
+4. **Data Population on volume**: dummy data for finance and IT ops files
 5. **UNIX Permissions**: per-directory UID/GID ownership set
 
-##### Directory Layout on the Shared Volume
+##### Directory Layout On The Shared Volume
 
-All agents mount the **same volume** at `/data`. Access is controlled by **POSIX UID/GID** on subdirectories:
+All AI Agents mount the **same volume** at `/data`. Access is controlled by **POSIX UID/GID** on subdirectories:
 
 :::code{showCopyAction=false showLineNumbers=false language=bash}
 /data/                        (volume root, mounted by all agents)
@@ -56,11 +56,8 @@ All agents mount the **same volume** at `/data`. Access is controlled by **POSIX
 | IT Ops Agent | 1002 | `/data/itops` | No, not owner, not in group | Yes, UID matches owner |
 | Malicious Agent | 1099 | `/data` | No, permission denied | No, permission denied |
 
-:::alert{header="Key Insight" type="info"}
-All three agents mount the **exact same PVC**, so there is no volume-level or namespace-level separation. The **only** difference between them is the Linux UID they run as. FSx for NetApp ONTAP enforces standard POSIX permissions at the NFS protocol level, so the agent process literally cannot read bytes that its UID doesn't have permission for, regardless of what the LLM instructs it to do.
-:::
 
-##### Verify the Pre-Configured Setup
+##### Verify The Pre-Configured Setup
 
 You can verify everything is in place:
 

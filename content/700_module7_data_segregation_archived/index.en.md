@@ -1,7 +1,7 @@
 ---
 title : "Module 7: Multi-Model Data Segregation with On-Premises to Cloud Replication"
 weight : 700
-# hidden : true
+hidden : true
 ---
 
 
@@ -97,4 +97,3 @@ SnapMirror enables this by replicating only the specific volumes from on-prem to
 :::alert{header="Prerequisites" type="info"}
 This module assumes you have completed Modules 1-2 and have a working EKS cluster with the Trident CSI driver installed. The on-premises NetApp ONTAP environment is simulated using a pre-provisioned FSx for ONTAP file system in a secondary region (cross-region replication). In a real deployment, this would be the customer's physical on-prem NetApp ONTAP cluster connected to AWS via Direct Connect or VPN, with SnapMirror replicating over that link.
 :::
-
