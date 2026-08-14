@@ -22,3 +22,6 @@ AgentCore_and_AI_Agent_on_Self_Hosted_LLM_demo-*.md
 .kiro/
 .claude/
 Prompt.md
+# Holmes / Workshop Studio scan output (keep out of the scanned tree)
+scan-report.json
+scan-report*.json

@@ -42,13 +42,17 @@ Lets take a moment to understand each of these components.
 
 The Neuron device plugin exposes Neuron cores & devices to kubernetes as a resource, where `aws.amazon.com/neuroncore` and `aws.amazon.com/neuron` are the resources that the neuron device plugin registers with the kubernetes.
 
-For more information on this, please refer [Neuron Device Plugin](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/containers/kubernetes-getting-started.html#neuron-device-plugin)
+For more information on this, please refer to [Neuron Plugins for Containerized Environments](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/deploy/infrastructure/plugins.html)
 
 
 #### Neuron Scheduler
 The Neuron scheduler extension is required for scheduling pods that require more than one Neuron core or device resource.
 
-For more information on this, please refer [Neuron Scheduler Extension](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/containers/kubernetes-getting-started.html#neuron-scheduler-extension)
+For more information on this, please refer to the [Neuron scheduler extension](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/deploy/infrastructure/scheduler.html) documentation.
+
+:::alert{header="Why the vLLM pod sets schedulerName" type="info"}
+This helm chart deploys a secondary Kubernetes scheduler named **`my-scheduler`**, wired to the Neuron scheduler extender. The vLLM deployment you apply in the next section sets `schedulerName: my-scheduler` because it requests `aws.amazon.com/neuroncore: 2`, and the default scheduler cannot allocate contiguous NeuronCores. If that field were removed, the pod would never be scheduled.
+:::
 
 #### Neuron Node Problem Detector and Recovery
 
@@ -56,7 +60,7 @@ This component combines a Neuron-specific Node Problem Detector (NPD) with a Nod
 
 CloudWatch metrics for Neuron hardware utilization and errors are published by a separate component, the **Neuron Monitor**, which you will install in **Module 3: Observability dashboard for LLM Inference**.
 
-For more information on this, please refer to the [Neuron Node Problem Detector and Recovery](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/containers/tutorials/k8s-neuron-problem-detector-and-recovery.html) documentation.
+For more information on this, please refer to the [AWS Neuron Helm Chart components for Amazon EKS](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/deploy/eks/helm-chart.html) documentation.
 
 ###  Step 2: Create EKS Auto Mode NodePool and EC2 NodeClass for AWS Inferentia Accelerators
 
