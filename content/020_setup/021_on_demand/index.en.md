@@ -83,12 +83,19 @@ The below workshop automated deployment script handles setup tasks including:
 The Mistral-7B model is **not** staged to S3 by this script. It is pulled directly from HuggingFace (`Hello2pariksit/Mistral-7B-Instruct-v0.3-neuron`) into the FSx for NetApp ONTAP volume by a Kubernetes Job that runs automatically **during workshop provisioning** (so participants don't wait for it). This is a one-time download (~30 GB, ~3 minutes) that persists across pod restarts.
 :::
 
-1. Run the below commands to start the automated workshop environment deployment script:
+1. Set `WORKSHOP_REPO_ORG` to the GitHub organisation or user hosting this workshop, which is the location you obtained it from or your own fork. Then clone the repository and run the deployment script from it:
 
-:::code[]{language=bash showLineNumbers=false showCopyAction=true}
-curl -O https://raw.githubusercontent.com/git4example/genai-fsx-netapp-ontap-workshop-on-eks-auto/mainline/static/scripts/quick-deploy-on-demand.sh
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+export WORKSHOP_REPO_ORG=<github-org-or-user-hosting-this-workshop>
+
+git clone https://github.com/${WORKSHOP_REPO_ORG}/genai-fsx-netapp-ontap-workshop-on-eks-auto.git
+cd genai-fsx-netapp-ontap-workshop-on-eks-auto/static/scripts
 chmod +x quick-deploy-on-demand.sh
 ./quick-deploy-on-demand.sh
+:::
+
+:::alert{header="Why the repository location is a variable" type="info"}
+The workshop source location is supplied rather than hard-coded because the repository has not yet been published under an AWS-owned GitHub organisation. If you are running this on-demand deployment, you will have been given the repository location along with these instructions. The script exits with a clear message if `WORKSHOP_REPO_ORG` is unset, rather than guessing.
 :::
 
 **Deployment time will take approx:** ~45 minutes (complete infrastructure deployment)

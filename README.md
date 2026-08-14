@@ -160,11 +160,20 @@ Alternative for simplicity, you may like to use AWS managed policies: `ReadOnlyA
 Run the automated deployment script :
 
 ```bash
-# Download and run the deployment script
-curl -O https://raw.githubusercontent.com/git4example/genai-fsx-netapp-ontap-workshop-on-eks-auto/mainline/static/scripts/quick-deploy-on-demand.sh
+# Point WORKSHOP_REPO_ORG at the GitHub org/user hosting this workshop
+# (or your own fork), then clone and run the deployment script.
+export WORKSHOP_REPO_ORG=<github-org-or-user-hosting-this-workshop>
+
+git clone https://github.com/${WORKSHOP_REPO_ORG}/genai-fsx-netapp-ontap-workshop-on-eks-auto.git
+cd genai-fsx-netapp-ontap-workshop-on-eks-auto/static/scripts
 chmod +x quick-deploy-on-demand.sh
 ./quick-deploy-on-demand.sh
 ```
+
+> The repository location is a variable, not a fixed URL, because the workshop
+> is not yet published under an AWS-owned GitHub organisation. Once it is, set
+> that org as the default in `quick-deploy-on-demand.sh` and this becomes a
+> plain copy-paste again.
 
 **Time**: ~45-60 minutes (complete infrastructure deployment)
 

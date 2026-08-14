@@ -312,14 +312,31 @@ fi
 
 # Workshop source repository.
 #
-# PRE-PUBLICATION ACTION: this must be an Amazon-owned GitHub organisation
-# (aws-samples or awslabs) before the workshop is published. Workshop Studio
-# content review rejects having participants download and execute a script
-# from a personal account. Changing WORKSHOP_REPO_ORG here covers this
-# script; the same URL also appears in README.md and in
-# content/020_setup/021_on_demand/index.en.md and must be changed there too.
-WORKSHOP_REPO_ORG="${WORKSHOP_REPO_ORG:-git4example}"
+# No organisation is hard-coded here on purpose. The workshop is not yet
+# published under an Amazon-owned GitHub org, and Workshop Studio content
+# review rejects instructing participants to download and execute code from
+# a personal account. Supply the location you obtained the workshop from,
+# or your own fork:
+#
+#   export WORKSHOP_REPO_ORG=<github-org-or-user>
+#
+# When the workshop moves to an Amazon-owned org (aws-samples / awslabs),
+# set that as the default below and the on-demand path becomes copy-paste
+# again. README.md and content/020_setup/021_on_demand/index.en.md describe
+# the same variable.
+WORKSHOP_REPO_ORG="${WORKSHOP_REPO_ORG:-}"
 WORKSHOP_REPO_NAME="${WORKSHOP_REPO_NAME:-genai-fsx-netapp-ontap-workshop-on-eks-auto}"
+
+if [[ -z "$WORKSHOP_REPO_ORG" ]]; then
+    log_error "WORKSHOP_REPO_ORG is not set, so the workshop source cannot be located."
+    log_error "Set it to the GitHub organisation or user hosting this workshop, then re-run:"
+    log_error "    export WORKSHOP_REPO_ORG=<github-org-or-user>"
+    log_error "    ./quick-deploy-on-demand.sh"
+    log_error "If you already have the repository checked out, run this script from"
+    log_error "inside it and it will reuse the existing checkout."
+    exit 1
+fi
+
 WORKSHOP_REPO_URL="https://github.com/${WORKSHOP_REPO_ORG}/${WORKSHOP_REPO_NAME}.git"
 
 # Clone repository if not already present
