@@ -1,6 +1,6 @@
 ---
 title : "Module 6 (Optional): Dynamic Provisioning of PVCs using FSx for NetApp"
-weight : 800
+weight : 600
 ---
 
 ## Module Overview

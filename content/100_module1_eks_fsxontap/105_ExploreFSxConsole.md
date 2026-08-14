@@ -38,7 +38,7 @@ In this module you will explore the pre-provisioned FSx for ONTAP file system fo
    - **Standby subnet**: The AZ where the standby file server is ready for automatic failover
 
 :::alert{header="" type="info"}
-FSx for NetApp ONTAP Multi-AZ file systems provide **zero RPO** (Recovery Point Objective) and automatic failover between Availability Zones. Data is synchronously replicated between the preferred and standby subnets. The failover is transparent to NFS clients, and Kubernetes pods continue to access the volume without interruption because the DNS endpoints automatically resolve to the active file server. You will explore this failover capability in a later module.
+FSx for NetApp ONTAP Multi-AZ file systems provide **zero RPO** (Recovery Point Objective) and automatic failover between Availability Zones. Data is synchronously replicated between the preferred and standby subnets. The failover is transparent to NFS clients, and Kubernetes pods continue to access the volume without interruption because the DNS endpoints automatically resolve to the active file server.
 :::
 
 ##### View the Storage Virtual Machine (SVM)

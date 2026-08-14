@@ -1,6 +1,6 @@
 ---
 title : "Dynamic Provisioning of PVCs using FSx for NetApp"
-weight : 810
+weight : 610
 ---
 -------------------------------------------------------------
 
