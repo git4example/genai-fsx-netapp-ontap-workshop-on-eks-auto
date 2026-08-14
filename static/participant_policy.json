@@ -25,6 +25,7 @@
                 "fsx:CreateVolume",
                 "fsx:DeleteVolume",
                 "fsx:UpdateVolume",
+                "fsx:UpdateFileSystem",
                 "fsx:TagResource",
                 "fsx:UntagResource"
             ],

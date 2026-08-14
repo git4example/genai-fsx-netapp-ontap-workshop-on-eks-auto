@@ -1,11 +1,10 @@
 ---
-title : "Module 6 (Optional): Multi-AZ Resiliency and Live Failover"
-weight : 600
-hidden : true
+title : "Module 7 (Optional): Multi-AZ Resiliency and Live Failover"
+weight : 700
 ---
 
 :::alert{header="Optional Module" type="info"}
-This module is optional. You can skip it and proceed directly to the next module if time is limited.
+This module is optional and can be skipped if time is limited. It also takes the longest to run, because the failover is driven by a real file system update that FSx performs online over several minutes.
 :::
 
 ## Module Overview

@@ -38,8 +38,8 @@ Learn how to build your own self-hosted Generative-AI  application for performan
 │   ├── 030_module_explore_eks_auto
 │   │   └── index.en.md
 │   ├── 100_module1_eks_fsxontap
+│   │   ├── 105_ExploreFSxConsole.md
 │   │   ├── 110_DeployTridentCSIDriverToEKS.md
-│   │   ├── 120_DynamicProvisioning.md
 │   │   └── index.en.md
 │   ├── 200_module2_genai
 │   │   ├── 210_Deploy.md
@@ -62,11 +62,16 @@ Learn how to build your own self-hosted Generative-AI  application for performan
 │   │   ├── 510_InspectModelandNeuron.md
 │   │   ├── 520_FSxNSnapshots.md
 │   │   └── index.en.md
-│   ├── 600_module6_maz_failover        # (Optional)
-│   │   ├── 610_ObserveMAZState.md
-│   │   ├── 620_TriggerFailover.md
+│   ├── 600_module6_dynamic_prov        # (Optional)
+│   │   ├── 610_dynamic_prov.md
+│   │   └── index.en.md
+│   ├── 700_module7_maz_failover        # (Optional)
+│   │   ├── 710_ObserveMAZState.md
+│   │   ├── 720_TriggerFailover.md
 │   │   └── index.en.md
 │   └── index.en.md
+├── archive                             # Not built by Workshop Studio
+│   └── 800_module8_data_segregation_archived
 └── static
     ├── GenAIFSXWorkshopOnEKS.yaml
     ├── download

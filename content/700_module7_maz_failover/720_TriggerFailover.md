@@ -1,6 +1,6 @@
 ---
 title : "Trigger Live Failover"
-weight : 620
+weight : 720
 ---
 
 ## Overview
@@ -49,7 +49,7 @@ The FSx for NetApp floating endpoint range (typically `198.19.255.0/24`, allocat
 ##### Step 3: Trigger the failover by updating Throughput Capacity
 
 1. On the file system **Summary** tab, find **Throughput capacity** and click **Update**.
-2. Pick any value **different from the current one** (e.g. 128 → 256 MB/s). The absolute value doesn't matter, since any change forces the internal takeover/failback. Click **Update**.
+2. Pick any value **different from the current one**. Your file system is provisioned at **512 MB/s**, so select **256 MB/s** to step it down. The absolute value doesn't matter, since any change forces the internal takeover/failback, and stepping down avoids raising the cost of the lab environment. Click **Update**.
 
 ![Update Throughput Capacity dialog](/static/images/update_throughput_capacity.png)
 
