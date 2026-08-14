@@ -60,7 +60,7 @@ This component combines a Neuron-specific Node Problem Detector (NPD) with a Nod
 
 CloudWatch metrics for Neuron hardware utilization and errors are published by a separate component, the **Neuron Monitor**, which you will install in **Module 3: Observability dashboard for LLM Inference**.
 
-For more information on this, please refer to the [AWS Neuron Helm Chart components for Amazon EKS](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/deploy/eks/helm-chart.html) documentation.
+For a walkthrough of how detection and recovery behave on Neuron nodes in an EKS cluster, see [Node problem detection and recovery for AWS Neuron nodes within Amazon EKS clusters](https://aws.amazon.com/blogs/machine-learning/node-problem-detection-and-recovery-for-aws-neuron-nodes-within-amazon-eks-clusters/). The components this chart installs are listed in the [AWS Neuron Helm Chart documentation](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/deploy/eks/helm-chart.html).
 
 ###  Step 2: Create EKS Auto Mode NodePool and EC2 NodeClass for AWS Inferentia Accelerators
 
