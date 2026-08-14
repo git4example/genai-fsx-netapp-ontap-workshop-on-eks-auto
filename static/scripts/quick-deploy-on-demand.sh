@@ -310,10 +310,22 @@ else
     log_info "Git already configured"
 fi
 
+# Workshop source repository.
+#
+# PRE-PUBLICATION ACTION: this must be an Amazon-owned GitHub organisation
+# (aws-samples or awslabs) before the workshop is published. Workshop Studio
+# content review rejects having participants download and execute a script
+# from a personal account. Changing WORKSHOP_REPO_ORG here covers this
+# script; the same URL also appears in README.md and in
+# content/020_setup/021_on_demand/index.en.md and must be changed there too.
+WORKSHOP_REPO_ORG="${WORKSHOP_REPO_ORG:-git4example}"
+WORKSHOP_REPO_NAME="${WORKSHOP_REPO_NAME:-genai-fsx-netapp-ontap-workshop-on-eks-auto}"
+WORKSHOP_REPO_URL="https://github.com/${WORKSHOP_REPO_ORG}/${WORKSHOP_REPO_NAME}.git"
+
 # Clone repository if not already present
-if [[ ! -d "genai-fsx-netapp-ontap-workshop-on-eks-auto" ]]; then
-    log_info "Cloning workshop repository..."
-    git clone https://github.com/git4example/genai-fsx-netapp-ontap-workshop-on-eks-auto.git
+if [[ ! -d "$WORKSHOP_REPO_NAME" ]]; then
+    log_info "Cloning workshop repository from ${WORKSHOP_REPO_URL}..."
+    git clone "$WORKSHOP_REPO_URL"
 else
     log_info "Workshop repository already exists"
 fi

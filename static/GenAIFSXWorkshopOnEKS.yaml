@@ -3,7 +3,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: AWS CloudFormation template to create a VSCode environment, EKS Cluster, FSx for NetApp ONTAP setup with eksctl,kubectl and Terraform.
 Metadata:
   Author:
-    Description: Parikshit Patel <ppariksh@amazon.com>
+    Description: GenAI on EKS with FSx for NetApp ONTAP workshop maintainers
   License:
     Description: 'Copyright 2023 Amazon.com, Inc. and its affiliates. All Rights Reserved.
 

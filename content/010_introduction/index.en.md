@@ -5,7 +5,7 @@ weight: 10
 
 Copyright Amazon Web Services, Inc. and its affiliates. All rights reserved. This sample code is made available under the MIT-0 license. See the [LICENSE](./LICENSE.en.md) file.
 
-Errors or corrections? Contact ppariksh@amazon.com, akbariw@amazon.com
+Errors or corrections? Please raise an issue in the workshop repository so the maintainers can pick it up.
 
 -------------------------------------------------------------
 
