@@ -10,7 +10,7 @@ weight: 22
 ::alert[If you are currently logged in to an AWS Account, you can logout using this [link](https://console.aws.amazon.com/console/logout!doLogout).]{type="warning"}
 
 
-1. From your local workstation,  open a web browser to the lab access URL that has been provided for the workshop. Alternatively click on the [link](https://https://catalog.workshops.aws/join) and enter the Event access code provided.
+1. From your local workstation,  open a web browser to the lab access URL that has been provided for the workshop. Alternatively click on the [link](https://catalog.workshops.aws/join) and enter the Event access code provided.
 
     - Click on the Email one-time password(OTP) and enter your email address to receive the OTP
 
