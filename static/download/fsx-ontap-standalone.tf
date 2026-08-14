@@ -314,9 +314,13 @@ output "next_steps" {
        - managementLIF: ${aws_fsx_ontap_storage_virtual_machine.this.endpoints[0].management[0].dns_name}
        - svm: ${aws_fsx_ontap_storage_virtual_machine.this.name}
 
-    4. Apply Trident backend, StorageClass, and PVC:
+    4. Apply Trident backend, StorageClass, and PVC. The StorageClass lists your
+       region's availability zones, so substitute them in rather than applying
+       the manifest as-is:
        kubectl apply -f trident-backend-config.yaml
-       kubectl apply -f ontap-storage-class.yaml
+       export AZ_LIST_JSON=$(aws ec2 describe-availability-zones --region $AWS_REGION \
+         --query "AvailabilityZones[?State=='available'].ZoneName" --output json | tr -d ' \n')
+       envsubst '$AZ_LIST_JSON' < ontap-storage-class.yaml | kubectl apply -f -
        kubectl apply -f ontap-pvc.yaml
 
     5. Run the model loading Job, then deploy vLLM.

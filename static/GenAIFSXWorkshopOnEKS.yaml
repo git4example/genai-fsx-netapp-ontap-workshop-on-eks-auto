@@ -383,7 +383,7 @@ Resources:
             inputs:
               runCommand:
                 - '#!/bin/bash'
-                - dnf install -y --allowerasing whois argon2 unzip nginx curl gnupg openssl 
+                - dnf install -y --allowerasing whois argon2 unzip nginx curl gnupg openssl gettext
           - action: aws:runShellScript
             name: InstallBasePackagesApt
             precondition:
@@ -393,7 +393,7 @@ Resources:
             inputs:
               runCommand:
                 - '#!/bin/bash'
-                - apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -y -q curl gnupg whois argon2 openssl locales locales-all unzip apt-transport-https ca-certificates software-properties-common nginx
+                - apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -y -q curl gnupg whois argon2 openssl locales locales-all unzip apt-transport-https ca-certificates software-properties-common nginx gettext-base
           - action: aws:runShellScript
             name: AddUserDnf
             precondition:
@@ -2851,33 +2851,23 @@ Resources:
                   # and fails with "error generating accessibility requirements: no available
                   # topology found". We keep Immediate (WaitForFirstConsumer would leave the
                   # no-pod import PVCs Pending forever) and supply the region's zones so the
-                  # provisioner has resolvable topology. Zones are enumerated dynamically so
-                  # this works in any region. The manifest is built in a temp file with
-                  # printf to keep YAML indentation independent of this script's indentation.
+                  # provisioner has resolvable topology.
+                  #
+                  # Zones are enumerated from the deployment region and substituted into the
+                  # SAME manifest the participant applies in Module 1, so the preload path and
+                  # the participant path cannot drift apart. Step 6 below deletes this
+                  # StorageClass; the participant then recreates it from that manifest.
                   echo "Building StorageClass with region AZ topology..."
                   SC_FILE=/tmp/ontap-nas-sc.yaml
-                  printf '%s\n' \
-                    'apiVersion: storage.k8s.io/v1' \
-                    'kind: StorageClass' \
-                    'metadata:' \
-                    '  name: ontap-nas-sc' \
-                    'provisioner: csi.trident.netapp.io' \
-                    'reclaimPolicy: Retain' \
-                    'parameters:' \
-                    '  backendType: "ontap-nas"' \
-                    '  provisioningType: "thin"' \
-                    '  snapshots: "true"' \
-                    'allowVolumeExpansion: true' \
-                    'volumeBindingMode: Immediate' \
-                    'allowedTopologies:' \
-                    '  - matchLabelExpressions:' \
-                    '      - key: topology.kubernetes.io/zone' \
-                    '        values:' > "$SC_FILE"
-                  for z in $(aws ec2 describe-availability-zones --region $AWS_REGION \
-                    --query "AvailabilityZones[?State=='available'].ZoneName" --output text); do
-                    printf '          - %s\n' "$z" >> "$SC_FILE"
-                  done
-                  printf '%s\n' 'mountOptions:' '  - nfsvers=4.1' >> "$SC_FILE"
+                  export AZ_LIST_JSON=$(aws ec2 describe-availability-zones --region $AWS_REGION \
+                    --query "AvailabilityZones[?State=='available'].ZoneName" --output json | tr -d ' \n')
+                  if [ -z "$AZ_LIST_JSON" ] || [ "$AZ_LIST_JSON" = "[]" ]; then
+                    echo "FATAL: could not enumerate availability zones in $AWS_REGION."; exit 1
+                  fi
+                  echo "AZ_LIST_JSON: $AZ_LIST_JSON"
+                  envsubst '$AZ_LIST_JSON' \
+                    < /home/${VSCodeUser}/environment/eks/FSxONTAP/ontap-storage-class.yaml \
+                    > "$SC_FILE"
                   echo "--- generated StorageClass ---"; cat "$SC_FILE"
                   kubectl apply -f "$SC_FILE"
 

@@ -271,8 +271,16 @@ echo "============================================================"
 
 cd "$EKS_ONTAP_DIR"
 
-# Apply StorageClass
-kubectl apply -f ontap-storage-class.yaml
+# Apply StorageClass. allowedTopologies must list the zones of the region we are
+# actually deployed in, so they are enumerated here rather than hard-coded.
+export AZ_LIST_JSON=$(aws ec2 describe-availability-zones --region "$AWS_REGION" \
+  --query "AvailabilityZones[?State=='available'].ZoneName" --output json | tr -d ' \n')
+if [ -z "$AZ_LIST_JSON" ] || [ "$AZ_LIST_JSON" = "[]" ]; then
+  echo "FATAL: could not enumerate availability zones in $AWS_REGION."
+  exit 1
+fi
+echo "AZ_LIST_JSON: $AZ_LIST_JSON"
+envsubst '$AZ_LIST_JSON' < ontap-storage-class.yaml | kubectl apply -f -
 kubectl get storageclass ontap-nas-sc
 
 # Apply PVC (imports the pre-provisioned "model" volume) and wait for it to bind.

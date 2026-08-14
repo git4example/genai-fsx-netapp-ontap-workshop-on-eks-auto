@@ -52,11 +52,7 @@ volumeBindingMode: Immediate
 allowedTopologies:
   - matchLabelExpressions:
       - key: topology.kubernetes.io/zone
-        values:
-          - us-west-2a
-          - us-west-2b
-          - us-west-2c
-          - us-west-2d
+        values: ${AZ_LIST_JSON}
 mountOptions:
   - nfsvers=4.1
 :::
@@ -71,11 +67,15 @@ Key points about this StorageClass:
 - **snapshots**: `true`, which enables snapshot support for volumes created by this class
 - **allowVolumeExpansion**: `true`, which allows you to resize volumes after creation
 - **nfsvers=4.1**: uses NFS version 4.1 for improved performance and security
-- **volumeBindingMode + allowedTopologies**: FSx for ONTAP's NFS endpoint is reachable from every Availability Zone, so Trident advertises no zone topology. With `Immediate` binding the CSI provisioner needs an explicit zone list to satisfy its accessibility requirement; without it, PVCs fail with *"no available topology found"*. The zones listed below are those of `us-west-2`, the workshop's default region.
+- **volumeBindingMode + allowedTopologies**: FSx for ONTAP's NFS endpoint is reachable from every Availability Zone, so Trident advertises no zone topology. With `Immediate` binding the CSI provisioner needs an explicit zone list to satisfy its accessibility requirement; without it, PVCs fail with *"no available topology found"*. The `${AZ_LIST_JSON}` placeholder is filled in from your deployment region at apply time, since the workshop can run in more than one region.
 
-2. Apply the StorageClass manifest. You already created this in Module 1, so `kubectl apply` is a no-op here, and is repeated so this module stands on its own:
+2. Apply the StorageClass manifest. You already created this in Module 1, so this is a no-op here, and is repeated so this module stands on its own:
 
-::code[kubectl apply -f ontap-storage-class.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+export AZ_LIST_JSON=$(aws ec2 describe-availability-zones --region $AWS_REGION \
+  --query "AvailabilityZones[?State=='available'].ZoneName" --output json | tr -d ' \n')
+envsubst '$AZ_LIST_JSON' < ontap-storage-class.yaml | kubectl apply -f -
+:::
 
 3. Verify the StorageClass has been created:
 

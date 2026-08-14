@@ -3,14 +3,19 @@
 # FSx for NetApp ONTAP's NFS endpoint is reachable from every Availability Zone,
 # so Trident advertises no zone topology (topologyKeys: null). With
 # volumeBindingMode: Immediate the CSI external-provisioner needs an explicit
-# zone list to satisfy its accessibility requirement — without allowedTopologies
+# zone list to satisfy its accessibility requirement. Without allowedTopologies
 # it fails with "error generating accessibility requirements: no available
-# topology found". We keep Immediate (WaitForFirstConsumer would leave no-pod
-# import PVCs Pending forever) and list the region's AZs below.
+# topology found". We keep Immediate (WaitForFirstConsumer would leave the
+# no-pod import PVCs Pending forever) and supply the zone list below.
 #
-# NOTE: the values below are for us-west-2 (the workshop's default region). If
-# you deploy in a different region, replace them with that region's AZs. The
-# automated provisioning path generates this list dynamically per region.
+# AZ_LIST_JSON is substituted at apply time from the region the workshop was
+# actually deployed into, so this manifest is region-agnostic:
+#
+#   export AZ_LIST_JSON=$(aws ec2 describe-availability-zones --region $AWS_REGION \
+#     --query "AvailabilityZones[?State=='available'].ZoneName" --output json | tr -d ' \n')
+#   envsubst '$AZ_LIST_JSON' < ontap-storage-class.yaml | kubectl apply -f -
+#
+# It expands to a YAML flow sequence, e.g. values: ["us-west-2a","us-west-2b"].
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -26,10 +31,6 @@ volumeBindingMode: Immediate
 allowedTopologies:
   - matchLabelExpressions:
       - key: topology.kubernetes.io/zone
-        values:
-          - us-west-2a
-          - us-west-2b
-          - us-west-2c
-          - us-west-2d
+        values: ${AZ_LIST_JSON}
 mountOptions:
   - nfsvers=4.1

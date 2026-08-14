@@ -217,10 +217,20 @@ If the Phase shows anything other than `Bound` or the Status is not `Success`, c
 
 A `StorageClass` tells Kubernetes which provisioner to use for a PersistentVolumeClaim. This one points at the Trident CSI driver and the ONTAP backend you just registered.
 
-12. Apply the StorageClass:
+12. The StorageClass needs the list of Availability Zones in your region, so collect them first. This workshop can be deployed to several regions, so the list is read from the region you are actually running in rather than hard-coded:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-kubectl apply -f ontap-storage-class.yaml
+export AZ_LIST_JSON=$(aws ec2 describe-availability-zones --region $AWS_REGION \
+  --query "AvailabilityZones[?State=='available'].ZoneName" --output json | tr -d ' \n')
+echo "AZ_LIST_JSON: $AZ_LIST_JSON"
+:::
+
+You should see a compact list of the zones in your region, for example `["us-west-2a","us-west-2b","us-west-2c","us-west-2d"]`.
+
+13. Apply the StorageClass, substituting that list:
+
+:::code[]{language=bash showLineNumbers=true showCopyAction=true}
+envsubst '$AZ_LIST_JSON' < ontap-storage-class.yaml | kubectl apply -f -
 kubectl get storageclass ontap-nas-sc
 :::
 
@@ -234,13 +244,15 @@ error generating accessibility requirements: no available topology found
 
 The `allowedTopologies` block supplies the region's zones so the provisioner has something to resolve. `Immediate` is deliberate, because `WaitForFirstConsumer` would leave a PVC that has no pod yet `Pending` forever, which matters because the volumes below are imported before any pod mounts them.
 
+The zones have to match the region you are deployed in. A StorageClass listing zones from some other region gives the provisioner topology it can never satisfy, and every PVC against it stays `Pending`. That is why the manifest ships with an `${AZ_LIST_JSON}` placeholder instead of a fixed list.
+
 ::::
 
 ##### Step 8: Import the pre-provisioned ONTAP volumes
 
 Rather than creating new storage, you will **import** the two ONTAP volumes that already exist: `model` (holding the Mistral-7B model) and `agent_shared_data` (holding the AI agent datasets). Trident builds a PersistentVolume around an existing volume instead of allocating new capacity.
 
-13. Trident identifies the backend by **UUID**, which is generated when the backend registers. Retrieve it:
+14. Trident identifies the backend by **UUID**, which is generated when the backend registers. Retrieve it:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 export BACKEND_UUID=$(kubectl get tbe -n trident \
@@ -248,7 +260,7 @@ export BACKEND_UUID=$(kubectl get tbe -n trident \
 echo "BACKEND_UUID: $BACKEND_UUID"
 :::
 
-14. Apply both import PVCs, substituting the UUID:
+15. Apply both import PVCs, substituting the UUID:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 kubectl create namespace agents 2>/dev/null || true
@@ -269,14 +281,14 @@ Without `importNoRename`, a managed import renames the ONTAP volume to `trident_
 
 ::::
 
-15. Confirm both PVCs are **Bound**:
+16. Confirm both PVCs are **Bound**:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 kubectl get pvc ontap-model-claim
 kubectl get pvc -n agents agent-shared-data
 :::
 
-16. Verify the volumes were genuinely **imported** rather than newly created:
+17. Verify the volumes were genuinely **imported** rather than newly created:
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 kubectl get pv -o custom-columns='PV:.metadata.name,CLAIM:.spec.claimRef.name,ONTAP_VOLUME:.spec.csi.volumeAttributes.internalName'

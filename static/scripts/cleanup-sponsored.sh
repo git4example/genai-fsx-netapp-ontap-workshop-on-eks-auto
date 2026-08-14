@@ -175,7 +175,9 @@ kubectl delete -f ontap-pvc.yaml --ignore-not-found 2>/dev/null || true
 
 # Delete StorageClass
 echo "Deleting StorageClass..."
-kubectl delete -f ontap-storage-class.yaml --ignore-not-found 2>/dev/null || true
+# Deleted by name, not by manifest: ontap-storage-class.yaml carries an
+# ${AZ_LIST_JSON} placeholder and is only valid YAML once substituted.
+kubectl delete storageclass ontap-nas-sc --ignore-not-found 2>/dev/null || true
 
 # Delete TridentBackendConfig (must happen while Trident operator is still running)
 echo "Deleting TridentBackendConfig..."
