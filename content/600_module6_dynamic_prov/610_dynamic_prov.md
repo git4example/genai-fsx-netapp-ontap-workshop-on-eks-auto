@@ -19,13 +19,13 @@ In this section you will:
 The **Mistral-7B model volume** was **pre-provisioned and pre-loaded during workshop setup**, which is why the vLLM pod back in Module 2 began serving without waiting on a multi-gigabyte download. In this section you'll use a small **throwaway demo volume** to learn how Trident dynamic provisioning works, without touching the model volume. See the callout at the end of this page for details on how the model volume is wired.
 :::
 
-##### Step 1: Navigate to the working directory
+### Step 1: Navigate to the working directory
 
 1. Run the below command to change to the correct working directory for the FSx for ONTAP manifests.
 
 ::code[cd /home/participant/environment/eks/FSxONTAP]{language=bash showLineNumbers=false showCopyAction=true}
 
-##### Step 2: Create the StorageClass
+### Step 2: Create the StorageClass
 
 The StorageClass defines how Trident provisions new ONTAP volumes. Let's review the StorageClass manifest:
 
@@ -90,7 +90,7 @@ ontap-nas-sc   csi.trident.netapp.io      Retain          Immediate           tr
 
 ::::
 
-##### Step 3: Create a demo PersistentVolumeClaim (dynamic provisioning)
+### Step 3: Create a demo PersistentVolumeClaim (dynamic provisioning)
 
 Now create a small PersistentVolumeClaim (PVC) that references the StorageClass. When you apply this PVC, Trident **dynamically provisions** a brand-new ONTAP volume and creates the corresponding PV automatically, with no manual PV creation needed. This is the core pattern you'll use for any application storage on FSx for ONTAP.
 
@@ -148,7 +148,7 @@ Notice that the **VOLUME** column shows a PV name that was automatically generat
 
 ::code[kubectl delete pvc demo-claim]{language=bash showLineNumbers=false showCopyAction=true}
 
-##### Step 4: Verify the Trident backend is healthy
+### Step 4: Verify the Trident backend is healthy
 
 As a final check, confirm that the Trident backend is still registered and healthy after provisioning the volume.
 

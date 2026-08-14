@@ -7,7 +7,7 @@ weight : 700
 This module is optional and can be skipped if time is limited. It also takes the longest to run, because the failover is driven by a real file system update that FSx performs online over several minutes.
 :::
 
-## Module Overview
+## Module overview
 
 In this module you will explore one of the most powerful capabilities of Amazon FSx for NetApp ONTAP: **Multi-AZ high availability with zero RPO (Recovery Point Objective)**. Your FSx for ONTAP file system is deployed in a Multi-AZ configuration, meaning it maintains an active file server in one Availability Zone and a standby file server in a second AZ, with synchronous data replication between them.
 
@@ -19,13 +19,13 @@ You will:
 
 This demonstrates how FSx for ONTAP provides **storage layer resiliency** for your GenAI workloads. The compute layer (EKS pods) is unaffected during a storage failover because the NFS endpoints automatically resolve to the active file server.
 
-![maz-architecture](/static/images/maz-failover.png)
+![FSx for ONTAP Multi-AZ architecture. A preferred Availability Zone holds the EKS Auto Mode cluster, an inf2.xlarge node, the vLLM Mistral-7B-Instruct pod, the preferred file server and its ENI; a standby Availability Zone holds the standby file server and ENI, kept current by synchronous replication at zero RPO. The pod's NFS request over Trident CSI resolves to a floating endpoint in 198.19.255.0/24, and the EKS private route table points at the preferred ENI under normal conditions (solid green) and is re-pointed to the standby ENI after failover (dashed red)](/static/images/maz-failover.png)
 
 ---
 
 ::::expand{header="Click here to learn more about FSx for ONTAP Multi-AZ architecture"}
 
-#### How Multi-AZ Works
+### How Multi-AZ works
 
 FSx for ONTAP Multi-AZ file systems deploy an active/standby pair of file servers across two Availability Zones:
 
@@ -37,11 +37,11 @@ FSx for ONTAP Multi-AZ file systems deploy an active/standby pair of file server
 - **Automatic takeover on AZ failure**: If the active AZ experiences an issue, the standby takes over within seconds; clients see a brief NFS pause and continue
 - **Transparent to NFS clients**: The management LIF, intercluster LIF, and NFS data LIF are *floating endpoints*. Their IPs are stable; on takeover, FSx updates the registered VPC route tables so those IPs forward to the ENIs of the new active node. DNS records do not change.
 
-#### Why route table registration matters
+### Why route table registration matters
 
 This is why the Terraform configuration registers the file system with the **EKS private subnet route tables** (the same ones the worker nodes use). Without that, FSx would update the VPC main route table on takeover, which the EKS worker nodes do not consult, and pods would lose connectivity to the file system after a failover even though everything looks healthy from the FSx side.
 
-#### Why this matters for GenAI workloads
+### Why this matters for GenAI workloads
 
 For inference workloads like vLLM serving the Mistral-7B model:
 - The model data on the FSx for ONTAP volume is always available, even during an AZ failure

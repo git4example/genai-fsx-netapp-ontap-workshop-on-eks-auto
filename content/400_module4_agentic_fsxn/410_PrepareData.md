@@ -9,7 +9,7 @@ The AI Agent data & permissions has been **pre-configured during workshop provis
 
 ---
 
-##### Workshop Pre-Configured Items
+### Workshop pre-configured items
 
 During workshop provisioning, the following was automatically set up:
 
@@ -19,7 +19,7 @@ During workshop provisioning, the following was automatically set up:
 4. **Data Population on volume**: dummy data for finance and IT ops files
 5. **UNIX Permissions**: per-directory UID/GID ownership set
 
-##### Directory Layout On The Shared Volume
+### Directory layout on the shared volume
 
 All AI Agents mount the **same volume** at `/data`. Access is controlled by **POSIX UID/GID** on subdirectories:
 
@@ -48,7 +48,7 @@ All AI Agents mount the **same volume** at `/data`. Access is controlled by **PO
         └── deployment_checklist.txt
 :::
 
-##### How Access Control Works
+### How access control works
 
 | Agent | UID | DATA_DIR | Can Read `/data/finance/` | Can Read `/data/itops/` |
 |-------|-----|----------|--------------------------|------------------------|
@@ -57,7 +57,7 @@ All AI Agents mount the **same volume** at `/data`. Access is controlled by **PO
 | Malicious Agent | 1099 | `/data` | No, permission denied | No, permission denied |
 
 
-##### Verify The Pre-Configured Setup
+### Verify the pre-configured setup
 
 You can verify everything is in place:
 
@@ -74,6 +74,6 @@ The namespace should exist and the PVC should show `Bound`.
 
 ---
 
-### Summary
+## Summary
 
 The shared volume is ready with team data pre-loaded and POSIX permissions set. In the next section, you'll deploy three AI agents that mount this volume, and prove that only the correct UID can access each team's data.

@@ -9,7 +9,7 @@ weight : 510
 In this section, you will log-in to the vLLM Pod, inspect the Mistral-7B  model, Inspect Neuron cores and use Neuron tools to monitor performance.
 
 
-##### Step 1: Login to vLLM Pod, Inspect LLM model data
+### Step 1: Login to vLLM Pod, Inspect LLM model data
 
 1. Navigate to back to your VSCode IDE terminal and change to your working directory.
 
@@ -21,7 +21,7 @@ In this section, you will log-in to the vLLM Pod, inspect the Mistral-7B  model,
 
 From the output, copy the name shown in your environment that starts with **vllm**
 
-![vllm_name](/static/images/vllm_name.png)
+![Terminal output of kubectl get pods showing two pods Running with 1/1 ready, open-webui-deployment and vllm-mistral-inf2-deployment, with the vLLM pod name highlighted](/static/images/vllm_name.png)
 
 3. Log into your vLLM pod by running the below command, by replacing the value of **YOUR-vLLM-POD-NAME** with the value you just copied.
 
@@ -35,7 +35,7 @@ From the output, copy the name shown in your environment that starts with **vllm
 ::code[df -h]{showCopyAction=true showLineNumbers=false language=bash}
 
 
-![vllm_02](/static/images/vllm_02.png)
+![Output of df -h inside the vLLM pod, with the highlighted row showing the NFS mount 198.19.128.194:/model at 95 GiB total, 28 GiB used and 68 GiB available, 29 percent full, mounted on /work-dir](/static/images/vllm_02.png)
 
 5. Lets inspect what's stored on this Persistent Volume which is mounted as */work-dir*
 
@@ -130,7 +130,7 @@ For more information, see the [Neuron Compiler documentation](https://awsdocs-ne
 
 
 
-##### Step 2: Inspect Neuron cores config and performance
+### Step 2: Inspect Neuron cores config and performance
 
 Run the below command to view the number of AWS Inferentia2 devices on your instance.
 
@@ -151,7 +151,7 @@ Let's view the performance of your AWS Inferentia2 node by running the **neuron-
 
 ::code[neuron-top]{showCopyAction=true showLineNumbers=false language=bash}
 
-![neuron-top](/static/images/neuron-top.png)
+![The neuron-top terminal interface showing NeuronCore v2 Utilization at 0 percent across cores NC0 and NC1 while idle, vCPU utilization, a Memory Usage Summary reporting 18.8 GB of device memory with 15.5 GB of tensors and 1.4 GB of constants, and a Memory Usage Details tree listing the compiled text_encoding_model and en_generation_model NEFF modules with their per-module device memory](/static/images/neuron-top.png)
 
 Now re-size the neuron-top browser window and also the existing WebUI browser session to your Chatbot, so they are side-by-side on your monitor.
 

@@ -25,11 +25,11 @@ Unlike traditional backup methods that copy all data, ONTAP snapshots use a **re
 
 ---
 
-## Part 1: Create an On-Demand Kubernetes VolumeSnapshot
+## Part 1: Create an on-demand Kubernetes VolumeSnapshot
 
 Kubernetes VolumeSnapshots let you create point-in-time snapshots on demand, for example before fine-tuning a model or modifying training data. These snapshots are fully Kubernetes-native, managed through `kubectl`, and are visible immediately after creation.
 
-##### Step 1: Install the VolumeSnapshot CRDs
+### Step 1: Install the VolumeSnapshot CRDs
 
 Kubernetes VolumeSnapshots require the **external-snapshotter** Custom Resource Definitions (CRDs) to be installed on the cluster. These CRDs define the `VolumeSnapshotClass`, `VolumeSnapshot`, and `VolumeSnapshotContent` resources. EKS Auto Mode does not install these by default.
 
@@ -57,7 +57,7 @@ volumesnapshotcontents.snapshot.storage.k8s.io   2026-04-30T00:00:00Z
 volumesnapshots.snapshot.storage.k8s.io          2026-04-30T00:00:00Z
 :::
 
-##### Step 2: Install the snapshot-controller Deployment
+### Step 2: Install the snapshot-controller Deployment
 
 The CRDs alone do not process snapshot requests; they only define the resource types. The **standalone snapshot-controller** is a cluster-wide Deployment that watches `VolumeSnapshot` objects and creates the corresponding `VolumeSnapshotContent` objects, which Trident's `csi-snapshotter` sidecar then turns into real ONTAP snapshots. Both pieces are required.
 
@@ -91,7 +91,7 @@ snapshot-controller-XXXXXXXXXX-XXXXX   1/1     Running   0          30s
 If a `VolumeSnapshot` you create later in this module stays with empty `READYTOUSE` and `SNAPSHOTCONTENT` columns and `kubectl describe volumesnapshot <name>` shows no `Events` and no `Status` block, the snapshot-controller is the first thing to check. Run `kubectl -n kube-system logs deploy/snapshot-controller --tail=200` and look for either RBAC errors or `the server could not find the requested resource` errors against `volumesnapshotcontents` (which would indicate a missing CRD from Step 1).
 :::
 
-##### Step 3: Create a VolumeSnapshotClass
+### Step 3: Create a VolumeSnapshotClass
 
 The `VolumeSnapshotClass` tells Kubernetes which CSI driver to use for snapshots. This is analogous to a `StorageClass` for volumes.
 
@@ -133,7 +133,7 @@ Key points:
 
 ::code[kubectl get volumesnapshotclass]{language=bash showLineNumbers=false showCopyAction=true}
 
-##### Step 4: Create an on-demand VolumeSnapshot
+### Step 4: Create an on-demand VolumeSnapshot
 
 Now create a snapshot of the `ontap-model-claim` PVC. Trident will create an ONTAP snapshot on the underlying volume via the CSI interface.
 
@@ -171,7 +171,7 @@ When `READYTOUSE` shows `true`, the snapshot has been created successfully on th
 
 ::code[kubectl describe volumesnapshot model-snapshot]{language=bash showLineNumbers=false showCopyAction=true}
 
-##### Step 5: Verify snapshots from within a pod
+### Step 5: Verify snapshots from within a pod
 
 To confirm that both automatic ONTAP snapshots and the Kubernetes VolumeSnapshot are visible on the volume, inspect the `.snapshot` directory from a pod that mounts it.
 
@@ -213,7 +213,7 @@ The `hourly.<date>_<time>` snapshots are created by the ONTAP `default` snapshot
 
 ::code[kubectl exec -it netshoot-fsxn -- sh -c 'ls /work-dir/.snapshot/snapshot-*/Mistral-7B-Instruct-v0.3/']{language=bash showLineNumbers=false showCopyAction=true}
 
-##### Step 6: Create a PVC from the snapshot (clone)
+### Step 6: Create a PVC from the snapshot (clone)
 
 One of the most powerful features of VolumeSnapshots is the ability to create a new PVC from a snapshot. This creates a **space-efficient clone** of the data, ideal for experimentation, A/B testing, or creating isolated environments.
 
@@ -242,7 +242,7 @@ With Kubernetes VolumeSnapshots, you can take on-demand snapshots before any exp
 
 ---
 
-## Part 2: Automatic ONTAP Snapshots
+## Part 2: Automatic ONTAP snapshots
 
 In addition to on-demand Kubernetes VolumeSnapshots, FSx for ONTAP also provides **automatic scheduled snapshots** via the ONTAP snapshot policy. When you configured the Trident backend in **Module 1**, the `TridentBackendConfig` included these snapshot defaults:
 
@@ -264,7 +264,7 @@ The `defaults` block above only applies to volumes Trident **creates**. The mode
 That difference is worth noticing: when you import existing storage, the storage team's settings win. It is one of the practical trade-offs between importing pre-provisioned volumes and letting Trident provision them.
 :::
 
-##### Step 7: Verify the snapshot policy on your volume
+### Step 7: Verify the snapshot policy on your volume
 
 1. Get the ONTAP volume name from the PersistentVolume:
 
@@ -285,7 +285,7 @@ You should see `SnapshotPolicy: default`, confirming that automatic snapshots ar
 
 ---
 
-## Part 3: Check Snapshot policy config in the FSx Console
+## Part 3: Check the snapshot policy config in the FSx console
 
 1. Navigate to the [Amazon FSx console](https://console.aws.amazon.com/fsx).
 
@@ -299,11 +299,11 @@ You should see `SnapshotPolicy: default`, confirming that automatic snapshots ar
 
 ---
 
-## Part 4: (Optional) Managing Snapshots via AWS CLI
+## Part 4: (Optional) Managing snapshots via the AWS CLI
 
 You can also view and manage the snapshot policy on Trident-provisioned volumes using the AWS CLI. While the Kubernetes-native approach (Parts 1–2) is preferred for on-demand snapshots, the AWS CLI is useful for administrative tasks like changing the snapshot policy.
 
-##### View the current snapshot policy
+### View the current snapshot policy
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 ONTAP_VOL_NAME=$(kubectl get pv -o jsonpath='{.items[?(@.spec.claimRef.name=="ontap-model-claim")].spec.csi.volumeAttributes.internalName}')
@@ -315,7 +315,7 @@ aws fsx describe-volumes --volume-ids $VOLUME_ID \
   --output table
 :::
 
-##### Change the snapshot policy
+### Change the snapshot policy
 
 If you need to change the snapshot policy (for example, to disable automatic snapshots or switch to a different schedule), you can update the volume:
 
@@ -339,7 +339,7 @@ Modifying a Trident-managed volume's snapshot policy via the FSx API is safe and
 
 ---
 
-##### Clean up
+### Clean up
 
 No later module needs the `netshoot-fsxn` utility pod, so you can delete it now that the snapshot exercises are complete:
 

@@ -19,7 +19,7 @@ Follow these steps to open your IDE:
 2. Select the **Outputs** tab (see image below).
 3. Copy the temporary **Password** value, then click the **URL** value to launch the VSCode IDE in a new browser tab.
 
-![CFN-Output](/static/images/cfn-output.png)
+![CloudFormation console showing the genaifsxworkshoponeks stack in CREATE_COMPLETE, with the Outputs tab selected and two rows listed: Password (VSCode-Server Password) and URL (VSCode-Server URL), the URL value being a cloudfront.net link ending in ?folder=/home/participant/environment](/static/images/cfn-output.png)
 
 4. In the VSCode login page that opens, paste the **Password** you copied and click **Submit**.
 
@@ -27,11 +27,11 @@ Follow these steps to open your IDE:
 
 ![Get started with VS Code](/static/images/get-started-with-vs-code.png)
 
-![Select Theme](/static/images/select-theme.png)
+![VS Code for the Web "Get Started" page with the "Choose your theme" step expanded, showing a Browse Color Themes button on the left and four theme previews on the right: Dark Modern, Light Modern, Dark High Contrast, and Light High Contrast](/static/images/select-theme.png)
 
 6. Open a terminal: from the top menu choose **Terminal → New Terminal** (or click the **TERMINAL** tab if one is already open), then maximize the terminal panel so you have room to work.
 
-![maximize](/static/images/maximize.png)
+![The VS Code bottom panel with the TERMINAL tab selected next to PROBLEMS, OUTPUT, DEBUG CONSOLE, PORTS and CODE REFERENCE LOG, showing a bash prompt reading participant:~/environment$, and the maximize-panel icon highlighted at the far right of the toolbar](/static/images/maximize.png)
 
 :::alert{header="This terminal is your workspace for the whole workshop" type="info"}
 Every command in the following modules is run from this VSCode terminal. The workshop files live under `/home/participant/environment/`, and you can browse them in the IDE's file explorer on the left, and open any YAML or script to inspect it as you go.
@@ -46,7 +46,7 @@ Before you can start running all the Kubernetes commands included in this worksh
 :::alert{header="Note" type="info"}
 The first time you copy-paste a command in the VSCode IDE, your browser may ask permission to read the clipboard. Please select **"Allow"**.
 
-![allow-clipboard](/static/images/allow-clipboard.png)
+![Browser permission prompt titled "Share clipboard?" asking whether the cloudfront.net site may see text and images copied to the clipboard, with Block and Allow buttons and Allow highlighted](/static/images/allow-clipboard.png)
 :::
 
 - Check if region and cluster names are set correctly
@@ -66,6 +66,6 @@ Run the command below just to see the connectivity to EKS Auto Cluster:
 
 You should see one node provisioned which was provisioned by EKS Auto to run some of the core components required for the workshop.
 
-![get-nodes](/static/images/get-nodes.png)
+![Terminal output of kubectl get nodes listing a single node in Ready status with no assigned roles, aged 35 minutes, running Kubernetes version v1.33.1-eks-b9364f6](/static/images/get-nodes.png)
 
 You now have a VSCode IDE Server environment set-up ready to use your Amazon EKS Cluster! You may now proceed with the next step.

@@ -7,7 +7,7 @@ weight : 105
 
 In this module you will explore the pre-provisioned FSx for ONTAP file system for the workshop. If you are new to NetApp ONTAP, this will help you understand the key concepts such as; **file systems**, **Storage Virtual Machines (SVMs)**, **volumes**, **NFS access**, **snapshots**, and **data tiering**. You will also see the storage layer that Trident will connect your Kubernetes workloads to.
 
-##### Understanding FSx for ONTAP architecture
+### Understanding FSx for ONTAP architecture
 
 - **File system**: The top-level resource. It defines the SSD storage capacity, throughput, and deployment type (Single-AZ or Multi-AZ). Think of it as the physical storage cluster.
 - **Storage Virtual Machine (SVM)**: A logical storage server within the file system. Each SVM has its own NFS/SMB endpoints and credentials. A single file system can host multiple SVMs for multi-tenant isolation.
@@ -17,13 +17,13 @@ In this module you will explore the pre-provisioned FSx for ONTAP file system fo
 - **Data tiering**: FSx for NetApp can automatically tier infrequently accessed data from high-performance SSD storage to lower-cost capacity pool storage, reducing costs while keeping data accessible.
 
 
-##### View your FSx for ONTAP file system in the console
+### View your FSx for ONTAP file system in the console
 
 1. Navigate to the [Amazon FSx console](https://console.aws.amazon.com/fsx/).
 
 2. From the top right hand corner, select the **AWS region** that was provided to you for this lab (i.e. us-west-2), before continuing.
 
-![aws_region](/static/images/aws_region.png)
+![The AWS console region selector open in the top navigation bar, listing regions grouped by geography with their codes, and Oregon us-west-2 highlighted under United States](/static/images/aws_region.png)
 
 3. In the FSx console you will see a list of your file systems. You should see the FSx for NetApp ONTAP file system that was pre-provisioned for you as part of the lab. The **File system type** column will show **ONTAP**.
 
@@ -41,7 +41,7 @@ In this module you will explore the pre-provisioned FSx for ONTAP file system fo
 FSx for NetApp ONTAP Multi-AZ file systems provide **zero RPO** (Recovery Point Objective) and automatic failover between Availability Zones. Data is synchronously replicated between the preferred and standby subnets. The failover is transparent to NFS clients, and Kubernetes pods continue to access the volume without interruption because the DNS endpoints automatically resolve to the active file server. You will trigger a live failover and watch this for yourself in **Module 7**.
 :::
 
-##### View the Storage Virtual Machine (SVM)
+### View the Storage Virtual Machine (SVM)
 
 6. On the file system details page, click on the **Storage virtual machines** tab.
 
@@ -64,7 +64,7 @@ The SVM acts as a logical storage server. It has its own DNS endpoints, credenti
 
 :::
 
-##### View the existing ONTAP volumes
+### View the existing ONTAP volumes
 
 10. From the SVM details page, click on the **Volumes** tab. You should see three volumes, all pre-created for you before the workshop began:
 
@@ -84,7 +84,7 @@ Because these FSx volumes already exist, we dont need to use the Trident CSI dri
 If you use **Dynamic Provisioning** to create the PVC, the FSx volume names will appear with a machine-generated (i.e. `trident_pvc_8603f702_54b7_4096_b18f_29b82ac2f698`), which are created by Trident CSI driver on demand in response to a PersistentVolumeClaim.
 :::
 
-##### View FSx for ONTAP monitoring and performance
+### View FSx for ONTAP monitoring and performance
 
 11. Navigate back to the file system details page by clicking on the **File system ID** in the breadcrumb navigation at the top.
 

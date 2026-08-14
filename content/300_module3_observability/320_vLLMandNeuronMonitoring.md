@@ -3,12 +3,12 @@ title : "Deploy Observability dashboards"
 weight : 320
 ---
 
-### Overview
+## Overview
 
 In this section you will setup & deploy Grafana based dashboards that will provide observability into inference workload, vLLM & Neuron (AWS Inferentina) performance metrics.
 
 
-#### vLLM Inference engine Monitoring Setup
+### vLLM inference engine monitoring setup
 
 Run the below commands to deploy a Service Monitor configuration so that prometheus can scrape metrics from the vLLM service endpoint.
 
@@ -17,7 +17,7 @@ cd /home/participant/environment/eks/genai/observability/
 kubectl apply -f vllm-servicemonitor.yaml
 :::
 
-#### Neuron Monitoring Setup
+### Neuron monitoring setup
 
 Neuron monitor collects and exposes hardware metrics (utilization, memory usage, and temperature) from AWS Inferentia and Trainium chips through a Prometheus-compatible.
 
@@ -33,7 +33,7 @@ kubectl apply -f neuron-monitor.yaml
 kubectl apply -f neuron-servicemonitor.yaml
 :::
 
-#### Deploy a combined vLLM Inference + Neuron Monitoring Dashboard
+### Deploy a combined vLLM inference and Neuron monitoring dashboard
 
 3. Now that we have our vLLM and Neuron metrics collectors setup, run the below command to deploy our custom "**vLLM + Neuron monitoring**" Grafana based dashboard. This custom dashboard combines specific Inference metrics along with Neuron metrics into a single dashboard view.
 
@@ -42,7 +42,7 @@ kubectl apply -f vllm-neuron-dashboard-configmap.yaml
 :::
 
 
-#### Log into Grafana dashboard
+### Log into the Grafana dashboard
 
 1. Run the following command to get the Grafana dashboard URL, and logon credentials.
 
@@ -56,7 +56,7 @@ echo "Username: admin"
 echo "Password: $GRAFANA_PASSWORD"
 :::
 
-![grafana_url](/static/images/grafana_url.png)
+![Terminal output of the three echo commands, printing the Grafana URL as an elb.us-west-2.amazonaws.com load balancer address, the username admin, and a redacted password](/static/images/grafana_url.png)
 
 2. You will need to wait for 2 minutes for the Grafana URL load balancer to become online. Then open the Grafana URL (shown in the output) in your browser, and use the credentials shown to log-in.
 
@@ -68,7 +68,7 @@ echo "Password: $GRAFANA_PASSWORD"
 
 5. Click on the name that it returns to open the Grafana dashboard. **DO NOT CLOSE** this dashboard as you will revisit it in the below steps.
 
-![mistral_vllm_dash_1](/static/images/mistral_vllm_dash_1.png)
+![Grafana Dashboards page with Dashboards selected in the left navigation, "vLLM + Neuron Monitoring Dashboard" typed into the search box, and a single matching result of type Dashboard listed below](/static/images/mistral_vllm_dash_1.png)
 
 6. Now navigate back to your **Open WebUI Chatbot session**. If you accidently closed the web session, run the below command to get the URL and then open it (remember its a HTTP URL not a HTTPS).
 
@@ -78,7 +78,7 @@ kubectl get ing
 
 7. From the left hand window pane of the Open WebUI client, **right-click** on your **previous chat session** and select **Delete**.
 
-![new_chat](/static/images/new_chat.png)
+![Open WebUI with the mistralai/Mistral-7B-Instruct-v0.2-neuron model selected, a saved chat highlighted under Today in the left sidebar, and its context menu open showing Share, Download, Rename, Pin, Clone, Move, Archive and Delete, with Delete highlighted](/static/images/new_chat.png)
 
 8. From the left hand window pane of the Open WebUI client, right-click on **New Chat**
 
@@ -86,14 +86,14 @@ kubectl get ing
 
 10. Navigate back to your **vLLM + Neuron monitoring** dashboard to see the inference metrics related to your input prompts. Firstly click on the time range button and select *5min* or *15min* and select *Refresh*
 
-![refresh_dash](/static/images/refresh_dash.png)
+![Top of the vLLM + Neuron Monitoring Dashboard showing the datasource and model_name selectors on the left, and on the right the time-range picker set to "Last 5 minutes" next to the Refresh button, with the NeuronCore & System CPU Utilization and Neuron Device & System Memory Usage panels beginning below](/static/images/refresh_dash.png)
 
 11. You will now see Inference metrics (such as below) related to inference query load, input prompt tokens, output generated tokens, Neuron compute performance etc, based on your previous prompt query.
 
-![vLLMNeuronMonitoringDashboard](/static/images/vLLMNeuronMonitoringDashboard.png)
+![The full vLLM + Neuron Monitoring Dashboard with six populated time-series panels: NeuronCore & System CPU Utilization peaking near 100 percent during inference, Neuron Device & System Memory Usage flat at roughly 24 GiB, vLLM Token Throughput rising to about 50 tokens per second, vLLM Request Token Distribution percentiles, vLLM Time to First Token around 5 seconds, and vLLM End-to-End Request Latency](/static/images/vLLMNeuronMonitoringDashboard.png)
 
 
-### Summary
+## Summary
 
 In this section, you have deployed a Grafana dashboard that provides observability across vLLM, Inference workload, and Neuron compute performance metrics.
 
@@ -104,7 +104,7 @@ In this section, you have deployed a Grafana dashboard that provides observabili
 
 
 
-#### Optional: Additional metrics dashboards available for deployment.
+### Optional: Additional metrics dashboards available for deployment
 
 You can deploy any of the optional dashboards below to view different metrics. Once you deploy one of the below dashboards, simply search for them in Grafana dashboards to view them (as per the above step).
 

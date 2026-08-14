@@ -7,7 +7,7 @@ weight : 210
 
 In this section you will configure an AWS Inferentia nodepool (AI Compute) on the EKS cluster, and install the required AWS Neuron plugins that are required for using AWS Inferentia with Amazon EKS.
 
-##### Step 1: Install Neuron Device Plugin, Scheduler & Node Problem Detector
+### Step 1: Install Neuron Device Plugin, Scheduler & Node Problem Detector
 
 In order to use the AWS Inferentia accelerated compute nodes with the Mistral LLM, we need to install the Neuron Device Plugin, Neuron Scheduler, and Neuron Node Problem Detector & Recovery on the EKS Cluster using a helm chart. Click on this link to learn more about the [AWS Neuron Helm Chart](https://aws.amazon.com/blogs/containers/announcing-aws-neuron-helm-chart/).
 
@@ -38,19 +38,19 @@ REVISION: 1
 
 Lets take a moment to understand each of these components.
 
-###### Neuron Device plugin
+#### Neuron device plugin
 
 The Neuron device plugin exposes Neuron cores & devices to kubernetes as a resource, where `aws.amazon.com/neuroncore` and `aws.amazon.com/neuron` are the resources that the neuron device plugin registers with the kubernetes.
 
 For more information on this, please refer [Neuron Device Plugin](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/containers/kubernetes-getting-started.html#neuron-device-plugin)
 
 
-###### Neuron Scheduler
+#### Neuron Scheduler
 The Neuron scheduler extension is required for scheduling pods that require more than one Neuron core or device resource.
 
 For more information on this, please refer [Neuron Scheduler Extension](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/containers/kubernetes-getting-started.html#neuron-scheduler-extension)
 
-###### Neuron Node Problem Detector and Recovery
+#### Neuron Node Problem Detector and Recovery
 
 This component combines a Neuron-specific Node Problem Detector (NPD) with a Node Recovery controller. NPD watches kernel logs on each Neuron node for hardware errors (uncorrectable SRAM, HBM, and NeuronCore errors, as well as DMA errors) and surfaces them as Kubernetes node conditions. Node Recovery (enabled in this workshop via `npd.nodeRecovery.enabled`) reacts to those conditions by cordoning and replacing unhealthy nodes so that workloads reschedule onto healthy Neuron hardware.
 
@@ -58,7 +58,7 @@ CloudWatch metrics for Neuron hardware utilization and errors are published by a
 
 For more information on this, please refer to the [Neuron Node Problem Detector and Recovery](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/containers/tutorials/k8s-neuron-problem-detector-and-recovery.html) documentation.
 
-#####  Step 2: Create EKS Auto Mode NodePool and EC2 NodeClass for AWS Inferentia Accelerators
+###  Step 2: Create EKS Auto Mode NodePool and EC2 NodeClass for AWS Inferentia Accelerators
 
 The EKS Auto Mode configuration comes in the form of a NodePool Custom Resource (CR). The NodePool sets constraints on the EC2 nodes that can be used by EKS Auto Mode, the pods that can run on those EC2 nodes, where a NodePool can handle many different pod shapes. EKS Auto Mode makes scheduling and provisioning decisions based on pod attributes such as labels and affinity. An EKS cluster can have more than one NodePool, and in this workshop we will declare an additional inferentia NodePool.
 
@@ -108,7 +108,7 @@ nodeclass.eks.amazonaws.com/inferentia   eksworkshop-eks-auto-202501030632263297
 
 
 
-##### Step 3: Verify the Mistral-7B Model is Present on the FSx for ONTAP Volume
+### Step 3: Verify the Mistral-7B model is present on the FSx for ONTAP volume
 
 :::alert{header="The model is already pre-loaded" type="success"}
 To save you a multi-gigabyte download, the **pre-compiled Mistral-7B-Instruct-v0.3 model (with Neuron compiled artifacts) was already loaded onto an FSx for NetApp ONTAP volume during workshop provisioning**. The volume named `model` was imported into Kubernetes as the `ontap-model-claim` PVC (see the "How the model volume is wired" callout in the optional **Dynamic Provisioning** module). You do **not** need to download anything here; you will simply confirm the model is present and then deploy vLLM against it.
@@ -154,5 +154,5 @@ The `df` output shows the NFS export path, which is the name of the ONTAP volume
 
 Leave this pod running, since later modules reuse it.
 
-### Summary
+## Summary
 You have configured the EKS NodePool for AWS Inferentia accelerators and confirmed the pre-loaded Mistral-7B model is present on the FSx for NetApp ONTAP volume, ready for the vLLM deployment in the next section.

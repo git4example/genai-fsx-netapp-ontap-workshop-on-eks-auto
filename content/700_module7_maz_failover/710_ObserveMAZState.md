@@ -7,7 +7,7 @@ weight : 710
 
 Before triggering a failover, let's first observe the current state of your Multi-AZ FSx for ONTAP file system: which AZ is active, which is standby, and confirm that your vLLM pod is actively serving inference requests.
 
-##### Step 1: Discover the file system and both subnets
+### Step 1: Discover the file system and both subnets
 
 1. Capture the file system ID and its two subnet IDs into shell variables:
 
@@ -49,7 +49,7 @@ aws fsx describe-file-systems \
 
 You should see `DeploymentType: MULTI_AZ_1` and `Lifecycle: AVAILABLE`.
 
-##### Step 2: Map subnets to Availability Zones
+### Step 2: Map subnets to Availability Zones
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 PREFERRED_AZ=$(aws ec2 describe-subnets --subnet-ids $PREFERRED_SUBNET \
@@ -65,7 +65,7 @@ echo "Standby AZ (takes over on failover):           $STANDBY_AZ"
 The **preferred subnet** is where the active file server runs *when both nodes are healthy*. It is a **configuration preference**, not a live indicator of which side is currently serving traffic. To determine the currently-active side after a takeover, you need to inspect the file system's endpoint ENIs, which we will do in Step 3.
 :::
 
-##### Step 3: Confirm vLLM is healthy and serving inference
+### Step 3: Confirm vLLM is healthy and serving inference
 
 1. Check the vLLM pod status and confirm the model is responding:
 

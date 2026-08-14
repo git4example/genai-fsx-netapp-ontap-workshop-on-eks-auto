@@ -27,7 +27,7 @@ For more information about networking requirements for FSx for ONTAP, please ref
 
 
 
-##### Step 1: Create an IAM policy that allows the Trident CSI driver to make AWS API calls on your behalf
+### Step 1: Create an IAM policy that allows the Trident CSI driver to make AWS API calls on your behalf
 
 1. Copy and run the below command in your **VSCode IDE** to create the trident-csi-driver.json file.
 
@@ -74,7 +74,7 @@ cat << EOF > trident-csi-driver.json
 EOF
 :::
 
-##### Step 2: Create the IAM policy
+### Step 2: Create the IAM policy
 
 2. Copy and run the following command to create the IAM policy.
 
@@ -84,7 +84,7 @@ aws iam create-policy \
         --policy-document file://trident-csi-driver.json
 :::
 
-##### Step 3: Create a Kubernetes service account for the Trident driver and attach the policy
+### Step 3: Create a Kubernetes service account for the Trident driver and attach the policy
 
 3. Copy and run the below command to create the service account and attach the IAM policy created in Step 2.
 
@@ -102,7 +102,7 @@ eksctl create iamserviceaccount \
 
 ::alert[ You need to wait for approx. 60 seconds for the above command to complete]
 
-##### Step 4: Save the Role ARN that was created into a variable
+### Step 4: Save the Role ARN that was created into a variable
 
 4. Copy and run the below command, which will save the role ARN into the ROLE_ARN variable.
 
@@ -112,7 +112,7 @@ eksctl create iamserviceaccount \
 ::code[echo $ROLE_ARN]{language=bash showLineNumbers=false showCopyAction=true}
 
 
-##### Step 5: Deploy the Trident CSI driver for FSx for NetApp ONTAP
+### Step 5: Deploy the Trident CSI driver for FSx for NetApp ONTAP
 
 6. Copy and run the following commands to deploy the Trident CSI driver.
 
@@ -148,7 +148,7 @@ trident-operator-7c94b5f9cf-x9z2k    1/1     Running   0          50s
 
 ::::
 
-##### Step 6: Create the Trident backend configuration for FSx for ONTAP
+### Step 6: Create the Trident backend configuration for FSx for ONTAP
 
 Now that the Trident CSI driver is running, you need to configure it to connect to your pre-provisioned FSx for ONTAP file system and SVM. This is done by creating a Kubernetes Secret with the SVM credentials and a TridentBackendConfig resource.
 
@@ -213,7 +213,7 @@ In the output of the `describe` command, verify the following key fields:
 If the Phase shows anything other than `Bound` or the Status is not `Success`, check the Trident controller logs with `kubectl logs -n trident -l app=controller.csi.trident.netapp.io`.
 :::
 
-##### Step 7: Create the StorageClass
+### Step 7: Create the StorageClass
 
 A `StorageClass` tells Kubernetes which provisioner to use for a PersistentVolumeClaim. This one points at the Trident CSI driver and the ONTAP backend you just registered.
 
@@ -248,7 +248,7 @@ The zones have to match the region you are deployed in. A StorageClass listing z
 
 ::::
 
-##### Step 8: Import the pre-provisioned ONTAP volumes
+### Step 8: Import the pre-provisioned ONTAP volumes
 
 Rather than creating new storage, you will **import** the two ONTAP volumes that already exist: `model` (holding the Mistral-7B model) and `agent_shared_data` (holding the AI agent datasets). Trident builds a PersistentVolume around an existing volume instead of allocating new capacity.
 

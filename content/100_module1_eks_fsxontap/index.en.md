@@ -3,7 +3,7 @@ title : "Module 1: Configure FSx for NetApp storage for model hosting"
 weight : 100
 ---
 
-## Module Overview
+## Module overview
 
 In this workshop:
 - The open-source **Mistral-7B-Instruct** AI model (LLM) is stored on an Amazon FSx for NetApp ONTAP volume.
@@ -18,13 +18,13 @@ In this module you will **import** ONTAP volumes that were pre-provisioned for y
 
 ---
 
-# Additional Reading
+## Additional reading
 
 This section covers Kubernetes storage concepts and how they integrate with FSx for NetApp ONTAP through the Trident CSI driver. Expand below to learn more.
 
 ::::expand{header="Click here to read about Kubernetes storage concepts and FSx for ONTAP integration"}
 
-#### Kubernetes storage concepts, and integration with FSx for NetApp ONTAP
+### Kubernetes storage concepts, and integration with FSx for NetApp ONTAP
 
 **CSI driver** - The Container Storage Interface (CSI) is a standard for exposing block and file storage systems to Container Orchestration Systems like Kubernetes, allowing Kubernetes to natively manage persistent storage for containerized applications.
 

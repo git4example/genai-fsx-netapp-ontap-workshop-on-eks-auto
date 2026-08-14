@@ -14,7 +14,7 @@ In this module you will now validate FSx for NetApps's POSIX permissions work. Y
 
 ---
 
-## Querying the Agents
+## Querying the agents
 
 Each AI Agent runs as a FastAPI web server exposing an `/ask` endpoint. You can query all three AI Agents from a single utility pod. For the following steps we are going to use our **netshoot** pod to run our `curl` commands.
 
@@ -31,9 +31,9 @@ kubectl exec -it netshoot-fsxn -- bash
 
 ---
 
-## Part 1: Finance Agent (Authorized Access)
+## Part 1: Finance agent (authorized access)
 
-##### Test 1: Ask the Finance Agent to list available data
+### Test 1: Ask the Finance agent to list available data
 Let's ask the Finance AI-Agent with a query of "*What files do you have access to? List everything in your data directory*" using the below commands.
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
@@ -59,9 +59,9 @@ The Finance AI-Agent (UID 1001) successfully accessed the `/data/finance` subdir
 
 ---
 
-## Part 2: IT Operations Agent (Authorized Access)
+## Part 2: IT Operations agent (authorized access)
 
-##### Test 2: Ask the IT Ops Agent to list available data
+### Test 2: Ask the IT Ops agent to list available data
 Let's ask the IT Ops AI-Agent with a query of "*What files do you have access to? List everything in your data directory*" using the below commands.
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
@@ -83,9 +83,9 @@ The IT Ops AI-Agent (UID 1002) successfully accessed `/data/itops`. It sees comp
 
 ---
 
-## Part 3: Malicious Agent (Access BLOCKED)
+## Part 3: Malicious agent (access blocked)
 
-##### Test 3A: Malicious Agent Cannot Read Finance or IT Ops Data
+### Test 3A: Malicious agent cannot read finance or IT Ops data
 
 Let's see what happens when the Malicious AI-Agent (UID 1099) mounts the same volume at `/data` that the Finance and IT OPs agents have access to. Notice it can see the subdirectories, but **cannot read the contents of the folder data** and gets **Access Denied**:
 
@@ -110,7 +110,7 @@ The malicious agent has the **same LLM**, the **same tools**, and mounts the **s
 No LLM instruction, prompt injection, or tool manipulation can override this, because the storage controller rejects the read before it reaches the filesystem.
 :::
 
-##### Test 3B: Malicious Agent Calls Finance Agent (The Attack)
+### Test 3B: Malicious agent calls the Finance agent (the attack)
 
 Each agent has an `http_request` tool that allows it to call other services and AI-Agents. What happens if the Malicious AI-Agent uses it to call the Finance AI-Agent's API to try to get it to perform an operation?
 
@@ -126,7 +126,7 @@ Without network controls, the malicious agent **successfully calls the finance a
 This demonstrates the real-world risk: if an agent has network access and another agent's API is reachable, data can be exfiltrated through **inter-agent proxy calls**, even though the malicious agent's own UID can't read the files directly.
 :::
 
-##### Test 3C: Let's Apply a NetworkPolicy to Block the Attack (as seen in Test 3B)
+### Test 3C: Apply a NetworkPolicy to block the attack seen in Test 3B
 
 Let's apply a Kubernetes NetworkPolicy that blocks the malicious agent from reaching the finance and IT ops agent services. First you need to exit the netshoot pod console, so you are back on the main IDE terminal to run Kubernetes operations.
 
@@ -206,7 +206,7 @@ exit
 
 ---
 
-## Isolation Summary
+## Isolation summary
 
 | Test | Scenario | Result | Security Layer |
 |------|----------|--------|----------------|
@@ -230,7 +230,7 @@ This is the same architectural pattern used by production AI platforms to enable
 
 ---
 
-### Summary
+## Summary
 
 You have demonstrated **defense-in-depth** for AI agent data isolation:
 

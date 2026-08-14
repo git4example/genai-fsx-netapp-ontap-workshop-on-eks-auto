@@ -22,7 +22,7 @@ What you will observe:
 
 ---
 
-##### Step 1: Start the continuous inference probe (background)
+### Step 1: Start the continuous inference probe (background)
 
 Before triggering the change, start the prober in a second terminal so you can watch the data plane in real time.
 
@@ -36,7 +36,7 @@ chmod +x failover-test.sh
 
 The script opens a `kubectl port-forward` tunnel to the vLLM service and probes `/v1/models` every 5 seconds, logging the status code **and per-call latency** in milliseconds. Keep this running, and you'll watch it stay at `HTTP 200` throughout the failover.
 
-##### Step 2: Locate the ENIs and the route table entry
+### Step 2: Locate the ENIs and the route table entry
 
 The FSx for NetApp floating endpoint range (typically `198.19.255.0/24`, allocated outside the VPC CIDR for Multi-AZ floating LIFs) is routed to the **Preferred subnet's ENI** today. During the operation this pointer flips to the **Standby ENI**, then back. That flip is the failover you'll watch.
 
@@ -46,16 +46,16 @@ The FSx for NetApp floating endpoint range (typically `198.19.255.0/24`, allocat
 
 ![Route table before failover](/static/images/routes.png)
 
-##### Step 3: Trigger the failover by updating Throughput Capacity
+### Step 3: Trigger the failover by updating throughput capacity
 
 1. On the file system **Summary** tab, find **Throughput capacity** and click **Update**.
 2. Pick any value **different from the current one**. Your file system is provisioned at **512 MB/s**, so select **256 MB/s** to step it down. The absolute value doesn't matter, since any change forces the internal takeover/failback, and stepping down avoids raising the cost of the lab environment. Click **Update**.
 
-![Update Throughput Capacity dialog](/static/images/update_throughput_capacity.png)
+![The FSx "Update throughput capacity" dialog showing the current capacity of 512 MB/s and a lower value selected under Desired throughput capacity, with a note that the file system will fail over and fail back as Amazon FSx switches out the file servers](/static/images/update_throughput_capacity.png)
 
 The file system enters `Updating` and the operation begins.
 
-##### Step 4: Watch the route table flip (takeover, then failback)
+### Step 4: Watch the route table flip (takeover, then failback)
 
 Refresh the route table view every 30-60 seconds. You'll see **two flips** over the next several minutes:
 
@@ -76,7 +76,7 @@ In the prober you may occasionally see one or two `HTTP 000` entries (rather tha
 
 ::::
 
-##### Step 5: Verify zero data loss and end-to-end inference
+### Step 5: Verify zero data loss and end-to-end inference
 
 1. Confirm the model files are still present on the volume:
 

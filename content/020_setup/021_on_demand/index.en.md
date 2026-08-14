@@ -12,7 +12,7 @@ If you are at an AWS event, please **SKIP** this section and go straight to the 
 :::
 
 
-### Part 1 : Identify an Amazon EC2 instance that you can use for the initial workshop provisioning
+## Part 1: Identify an Amazon EC2 instance that you can use for the initial workshop provisioning
 
 To deploy the workshop script (in part 2 of this module), you will need access to a Linux based Amazon Linux 2023 Amazon EC2 instance, with an Amazon EBS GP3 volume with at least 100GB free capacity (to download the LLM model data and other items required for the workshop)
 
@@ -68,7 +68,7 @@ The VSCode jumpbox role that the CloudFormation stack creates inside the worksho
 :::
 
 
-### Part 2 : Automated workshop deployment script
+## Part 2: Automated workshop deployment script
 
 The below workshop automated deployment script handles setup tasks including:
 - Tool installation (AWS CLI, Docker, Git, jq)
@@ -93,20 +93,20 @@ chmod +x quick-deploy-on-demand.sh
 
 **Deployment time will take approx:** ~45 minutes (complete infrastructure deployment)
 
-2. Wait until you see the following output on your screen before progressing to the next step of **Part 3 : Use VScode IDE to access workshop**
+2. Wait until you see the following output on your screen before progressing to **Part 3: Use the VS Code IDE to access the workshop**
 
-![ondemand_setup_complete](/static/images/ondemand_setup_complete.png)
+![Final line of terminal output reading "[INFO] Setup completed successfully! Ready for workshop learning experience."](/static/images/ondemand_setup_complete.png)
 
 
 
-### Part 3 : Use VScode IDE to access workshop
+## Part 3: Use the VS Code IDE to access the workshop
 
 You have now completed the workshop deployment and its components.
 
 Click on the following link to access your **[Open source VSCode IDE](/023_vs_code)** and begin the workshop.
 
 
-### Part 4 : Workshop Cleanup - Once you have finished with the workshop.
+## Part 4: Workshop cleanup, once you have finished
 
 When you're finished with the workshop, use the cleanup script to remove all resources:
 

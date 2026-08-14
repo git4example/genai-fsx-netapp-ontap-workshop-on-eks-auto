@@ -6,13 +6,13 @@ weight : 220
 
 In this section you will deploy the Open WebUI (chatbot UI client), and run through example prompts and view Generative-AI output.
 
-### How to consume an Inference endpoint from an Inference engine.
+### How to consume an inference endpoint from an inference engine
 A chatbot UI can interact with an Inference engine by accessing the Inference engine endpoint. The **"Open WebUI"** application is designed to consume any OpenAI-compatible endpoint. In this workshop, Open WebUI connects to the **LiteLLM AI Gateway** deployed in the previous step, which intelligently routes chat requests to the self-hosted Mistral-7B model on Inferentia. The Open WebUI application allows users to interact with the LLM model through a chat-based interface. To use the Open WebUI application, you need to deploy the application container and configure it to point at the **LiteLLM AI Gateway** AI Gateway endpoint, then you simply connect to the Open WebUI URL address, and start chatting with the LLM model.
 
 <br></br>
 
 -------------------------
-## Step 1: Deploy the Open WebUI pod.
+## Step 1: Deploy the Open WebUI pod
 -------------------------
 
 We will deploy Open WebUI using its official Helm chart. The chart values are defined in `open-webui-helm/values.yaml` and pre-configured to connect to the vLLM Mistral service deployed in the previous step.
@@ -62,7 +62,7 @@ If your IP changes later, re-run the same command to refresh the restriction.
 
 ::code[kubectl get ing]{language=bash showLineNumbers=false showCopyAction=true}
 
-![WebUI_url](/static/images/WebUI_url.png)
+![Terminal output of kubectl get ing showing the open-webui-ingress of class alb, with its highlighted ADDRESS being an elb.amazonaws.com load balancer hostname on port 80](/static/images/WebUI_url.png)
 
 4. The Open WebUI and load balancer will take up-to **2 minutes to come online**. Once you have waited 2 minutes, copy above the URL ADDRESS into a web browser as "*http://<-URL-ADDRESS->*". This will open a Open WebUI chat client interface.
 
@@ -79,14 +79,14 @@ The model name shown in OpenWebUI is the **virtual model name** defined in the L
 
 If you don't see the model in the dropdown, please refresh the WebUI page. (Remember from the previous lab module, that the vLLM Pod and the model load into memory will take approx. 7 minutes)
 
-![Open WebUI](/static/images/OpenWebUI.png)
+![The Open WebUI chat interface with the model selector at the top left set to workshop-llm, the same name shown as the greeting in the centre of the page, and an empty prompt box reading "How can I help you today?"](/static/images/OpenWebUI.png)
 
 
 6. You have now successfully deployed a Generative AI Chatbot as a containerized application running on Amazon EKS, with the cached Mistral-7B model hosted on Amazon FSx for NetApp ONTAP, and the compute powered by AWS Inferentia Accelerators.
 
 -------------------------
 
-## Step 2: Run example input prompt queries and view Generative-AI output.
+## Step 2: Run example input prompt queries and view the generative AI output
 
 ---
 ---

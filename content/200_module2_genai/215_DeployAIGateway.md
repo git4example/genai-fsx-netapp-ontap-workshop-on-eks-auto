@@ -38,7 +38,7 @@ The vLLM pod from the previous section is still warming up (~5-7 minutes), but *
 ### Deploy the AI Gateway (LiteLLM)
 
 
-##### Step 1: Deploy the LiteLLM ConfigMap
+#### Step 1: Deploy the LiteLLM ConfigMap
 
 
 
@@ -70,7 +70,7 @@ model_list:
 
 ::::
 
-##### Step 2: Deploy the LiteLLM Gateway
+#### Step 2: Deploy the LiteLLM Gateway
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/genai
@@ -82,7 +82,7 @@ envsubst '$AWS_REGION' < litellm-deployment.yaml | kubectl apply -f -
 The Terraform script that provisioned this EKS cluster also created an **EKS Pod Identity Association** linking the `litellm` ServiceAccount to an IAM role with `bedrock:InvokeModel` permissions. When the LiteLLM pod starts, EKS automatically injects temporary AWS credentials, with no access keys or IRSA annotations needed.
 :::
 
-##### Step 3: Verify the gateway is ready
+#### Step 3: Verify the gateway is ready
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 kubectl rollout status deployment/litellm-gateway --timeout=120s
@@ -103,6 +103,6 @@ litellm-service   ClusterIP   172.20.45.123   <none>        4000/TCP   45s
 
 ---
 
-### Summary
+## Summary
 
 You have deployed the LiteLLM AI Gateway. It provides a single service endpoint (`litellm-service:4000`) that routes requests to the appropriate LLM backend based on model name. Continue to the next section to deploy the OpenWebUI chat interface, which connects through this gateway.

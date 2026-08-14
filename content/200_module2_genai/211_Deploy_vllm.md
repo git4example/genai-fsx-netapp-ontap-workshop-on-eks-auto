@@ -6,7 +6,7 @@ weight : 211
 ## Overview
 In this module you will deploy the vLLM inference engine as a container pod on the Amazon EKS cluster. This vLLM pod will serve the Mistral-7B model to your Chatbot interface (Open WebUI). Once the vLLM Pod is online, it will load a pre-compiled Mistral-7B model from the FSx for NetApp volume. Because the model includes pre-compiled Neuron artifacts, vLLM skips the compilation step and starts serving in approximately 3-5 minutes (compared to 15+ minutes without pre-compiled artifacts).
 
-#### Deploy the vLLM application Pod
+### Deploy the vLLM application Pod
 
 1. Run the below commands to update the mistral-ontap.yaml with your AWS environment variables.
 
@@ -116,7 +116,7 @@ spec:
 
 ::code[kubectl get pod]{language=bash showLineNumbers=false showCopyAction=true}
 
-![vllm_pod](/static/images/vllm_pod_1.png)
+![Terminal output of kubectl get pod with the vllm-mistral-inf2-deployment pod highlighted, showing 0/1 ready and status ContainerCreating at 104 seconds old, while the kube-ops-view pod above it is 1/1 and Running](/static/images/vllm_pod_1.png)
 
 You can also see when vLLM Pod has loaded the Mistral model into memory by running below command, and seeing "*Application startup complete*" in the output.
 
@@ -131,7 +131,7 @@ You can also see when vLLM Pod has loaded the Mistral model into memory by runni
 
 9. Click on the **Node name**, where it will show you the capacity allocation and Pod details relating to the inf2.xlarge compute node
 
-![inf2_node](/static/images/inf2_node.png)
+![EKS console Compute tab listing two Auto Mode nodes, both Ready: a c6a.large managed by the general-purpose node pool, and a highlighted inf2.xlarge managed by the inferentia node pool](/static/images/inf2_node.png)
 
-### Summary
+## Summary
 You have deployed the vLLM inference engine with the Mistral-7B model on AWS Inferentia. Continue to the next section to deploy the AI Gateway (LiteLLM), which will sit in front of vLLM and provide model routing capabilities. The AI Gateway now starts independently of vLLM, and only needs the vLLM Service to exist (which it already does). Both will be ready by the time you open the Open WebUI Chat interface

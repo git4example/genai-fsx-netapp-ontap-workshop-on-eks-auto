@@ -3,7 +3,7 @@ title : "Module 4: Agentic AI with FSxN Native Access Control"
 weight : 400
 ---
 
-## Module Overview
+## Module overview
 
 Within enterprise environments, **multiple AI agents** could be accessing a shared data layer (such as a FSx for Netapp based file share), where each AI Agent requires access to **only its designated data or folders**. This module demonstrates how FSx for NetApp ONTAP's **native POSIX permissions** (UID/GID ownership + file mode) enforces data boundaries for AI agents, even when all agents share the same volume, same namespace, and same LLM backend.
 
@@ -34,7 +34,7 @@ As organizations deploy autonomous AI agents that can read, analyze, and act on 
 
 ::::expand{header="Click here to learn about AWS Strands Agents SDK"}
 
-#### AWS Strands Agents SDK
+### AWS Strands Agents SDK
 
 **Strands Agents** is an open-source Python SDK by AWS for building AI agents with tool-use capabilities. Key features:
 

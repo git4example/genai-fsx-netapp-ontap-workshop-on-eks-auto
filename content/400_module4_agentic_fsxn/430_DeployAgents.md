@@ -8,7 +8,7 @@ weight : 430
 In this section, you will deploy **three AI agents** built with the [AWS Strands Agents SDK](https://github.com/strands-agents/sdk-python). Each agent:
 
 ---
-##### Step 1: Deploy All Three Agents
+### Step 1: Deploy all three agents
 
 All agents deploy into the **same Kubernetes namespace** (`agents`), and mount the **same PVC** (`agent-shared-data`). The only difference is the UID and the `DATA_DIR` subdirectory:
 
@@ -72,7 +72,7 @@ def search_documents(query: str) -> str:
 :::
 
 ::::
-##### Step 2: Verify All Agents Are Running
+### Step 2: Verify all agents are running
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 kubectl get pods -n agents
@@ -101,7 +101,7 @@ All three agents use the **same container image**, the **same LiteLLM AI Gateway
 FSxN's POSIX permissions enforce who can read what, whereas the Kubernetes deployment doesn't enforce any data boundary. This is storage-level security.
 :::
 
-##### Step 3: Confirm the Data Layer Permissions
+### Step 3: Confirm the data layer permissions
 
 Now that a pod is mounting the shared volume, you can check the data ownership & permissions that were set on the data stored within the FSx for NetApp volume (PVC) during workshop provisioning:
 
@@ -122,6 +122,6 @@ This is the boundary you will test in the next section. Note that the `finance-a
 
 ---
 
-### Summary
+## Summary
 
 You have deployed three AI agents with identical capabilities but different UIDs into a single namespace. They all mount the same shared FSxN volume. In the next section, you will query each agent and prove that POSIX permissions on FSxN enforce data boundaries: the Finance agent reads finance data, IT Ops reads its data, and the Malicious agent is denied access to both.

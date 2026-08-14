@@ -3,7 +3,7 @@ title : "Security Summary & Enterprise Patterns"
 weight : 450
 ---
 
-## What You Demonstrated
+## What you demonstrated
 
 In this module, you built a real-world scenario where **multiple AI agents** with different roles access a shared storage system, and validated that **FSx for NetApp** native security enforces strict data boundaries regardless of what the AI Agent or LLM attempts.
 
@@ -11,13 +11,13 @@ In this module, you built a real-world scenario where **multiple AI agents** wit
 
 ---
 
-## Key Takeaways
+## Key takeaways
 
-### 1. Storage-Level Security is Non-Bypassable by AI Agents
+### 1. Storage-level security is non-bypassable by AI agents
 
 Unlike application-layer controls (API keys, prompt guardrails, output filters), **ONTAP storage security operates below the agent's execution layer**. The agent process literally cannot read bytes it's not authorized to access. No prompt injection, jailbreak, or tool manipulation can override filesystem-level permissions.
 
-### 2. Defense-in-Depth with FSx for NetApp Native Features
+### 2. Defense-in-depth with FSx for NetApp native features
 
 | Security Layer | FSxN Feature | What It Controls |
 |---------------|-------------|-----------------|
@@ -27,7 +27,7 @@ Unlike application-layer controls (API keys, prompt guardrails, output filters),
 | **Protocol** | Read-Only Mounts | Agents can read but never modify source data |
 | **Encryption** | In-transit + at-rest | Data encrypted with ONTAP native encryption |
 
-### 3. FSx for NetApp features - Role in Agentic AI workloads
+### 3. The role of FSx for NetApp features in agentic AI workloads
 
 | Feature | Role in Agentic AI |
 |---------|-------------------|
@@ -41,7 +41,7 @@ Unlike application-layer controls (API keys, prompt guardrails, output filters),
 | **Multi-AZ** | High availability, agents dont lose access to data |
 
 
-### 4. Same LLM, Different Access = Safe Multi-Tenancy
+### 4. Same LLM, different access, safe multi-tenancy
 
 All three agents used the **same Mistral-7B LLM endpoint**. The intelligence is shared; the data access is segregated. This pattern enables:
 - **Cost efficiency**: One LLM serving multiple teams
@@ -50,7 +50,7 @@ All three agents used the **same Mistral-7B LLM endpoint**. The intelligence is 
 
 ---
 
-## Clean Up (Optional)
+## Clean up (optional)
 
 If you want to remove the resources created in this module:
 
