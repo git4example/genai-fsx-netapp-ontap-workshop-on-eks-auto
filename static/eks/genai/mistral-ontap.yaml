@@ -57,6 +57,16 @@ spec:
       labels:
         app: vllm-mistral-inf2-server
     spec:
+      # Routed to the Neuron scheduler, not default-scheduler. The
+      # neuron-helm-chart installed in Module 2 Step 1 deploys a secondary
+      # kube-scheduler named "my-scheduler" (values.yaml:
+      # scheduler.customScheduler.fullnameOverride) wired to the
+      # k8s-neuron-scheduler extender, which manages the
+      # aws.amazon.com/neuron and aws.amazon.com/neuroncore resources.
+      # That extender is required for any pod requesting more than one
+      # NeuronCore, as this one does (tensor-parallel-size 2). Do NOT remove
+      # this field: default-scheduler cannot allocate contiguous NeuronCores.
+      schedulerName: my-scheduler
       securityContext:
         seccompProfile:
           type: RuntimeDefault
