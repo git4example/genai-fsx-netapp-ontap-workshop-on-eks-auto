@@ -93,11 +93,11 @@ When reviewing the output, pay attention to these key fields:
 These constraints ensure that only pods requesting Neuron resources get scheduled onto the expensive accelerated compute nodes.
 :::
 
-4. Let's deploy the inferentia NodePool, substituting the `$NODE_ROLE` placeholder with the IAM role name retrieved above.
+3. Let's deploy the inferentia NodePool, substituting the `$NODE_ROLE` placeholder with the IAM role name retrieved above.
 
 ::code[envsubst '$NODE_ROLE' < inferentia_nodepool.yaml | kubectl apply -f -]{language=bash showLineNumbers=false showCopyAction=true}
 
-5. Verify NodePool and NodeClass:
+4. Verify NodePool and NodeClass:
 ::code[kubectl get nodepool,nodeclass inferentia]{language=bash showLineNumbers=false showCopyAction=true}
 
 You should see an output similar to the one below. **Note** that you will initially see 0 nodes in the pool, that's because we haven't deployed any pods that need this accelerated compute node.

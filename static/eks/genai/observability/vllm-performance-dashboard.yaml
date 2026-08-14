@@ -769,7 +769,8 @@ data:
             "colorMode": "value",
             "graphMode": "area",
             "justifyMode": "auto",
-            "orietitletChangeColorMode": "standard",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
             "reduceOptions": {
               "calcs": [
                 "lastNotNull"

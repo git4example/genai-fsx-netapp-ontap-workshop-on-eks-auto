@@ -4,7 +4,7 @@ weight : 211
 ---
 
 ## Overview
-In this module you will deploy the vLLM inference engine as a container pod on the Amazon EKS cluster. This vLLM pod will serve the Mistral-7B model to your Chatbot interface (Open WebUI). Once the vLLM Pod is online, it will load a pre-compiled Mistral-7B model from the FSx for NetApp volume. Because the model includes pre-compiled Neuron artifacts, vLLM skips the compilation step and starts serving in approximately 3-5 minutes (compared to 15+ minutes without pre-compiled artifacts).
+In this module you will deploy the vLLM inference engine as a container pod on the Amazon EKS cluster. This vLLM pod will serve the Mistral-7B model to your Chatbot interface (Open WebUI). Once the vLLM Pod is online, it will load a pre-compiled Mistral-7B model from the FSx for NetApp volume. Because the model includes pre-compiled Neuron artifacts, vLLM skips the compilation step and starts serving in approximately 5-7 minutes (compared to 15+ minutes without pre-compiled artifacts).
 
 ### Deploy the vLLM application Pod
 

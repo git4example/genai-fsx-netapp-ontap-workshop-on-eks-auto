@@ -25,7 +25,7 @@ Follow these steps to open your IDE:
 
 5. When prompted, select a **VSCode UI theme** (either option is fine).
 
-![Get started with VS Code](/static/images/get-started-with-vs-code.png)
+![The code-server welcome page, headed "code-server: Editing evolved", with Start actions (New File, Open File, Clone Git Repository) on the left and a Walkthroughs section at the bottom right where the "Get Started with VS Code for the Web" entry is highlighted](/static/images/get-started-with-vs-code.png)
 
 ![VS Code for the Web "Get Started" page with the "Choose your theme" step expanded, showing a Browse Color Themes button on the left and four theme previews on the right: Dark Modern, Light Modern, Dark High Contrast, and Light High Contrast](/static/images/select-theme.png)
 

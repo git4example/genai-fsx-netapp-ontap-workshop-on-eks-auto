@@ -28,11 +28,35 @@ Learn how to build your own self-hosted Generative-AI  application for performan
 
 ---
 
+### Learning outcomes
+
+By the end of this workshop you will be able to:
+
+- **Provision accelerated inference capacity on EKS Auto Mode**, using a NodePool and NodeClass that constrain scheduling to AWS Inferentia instances, and explain why the Neuron device plugin and scheduler extension are required
+- **Serve an open-weight LLM from shared storage**, deploying vLLM against a Mistral-7B model held on FSx for NetApp ONTAP and mounted over NFS by the Trident CSI driver
+- **Choose between volume import and dynamic provisioning**, and verify which one Trident actually performed rather than trusting a `Bound` PVC
+- **Front multiple model backends with a single endpoint**, routing self-hosted and Amazon Bedrock models through one AI gateway
+- **Interpret inference telemetry**, reading token throughput, time to first token, and NeuronCore utilisation from Grafana to judge whether a deployment is healthy
+- **Enforce data boundaries between AI agents** using FSx for NetApp ONTAP POSIX ownership and Kubernetes NetworkPolicies, and demonstrate that neither can be talked around by prompting
+- **Use ONTAP snapshots for recovery and cloning** of model and application data
+
+---
+
 ****Target Audience****: DevOps engineers, Machine Learning Scientists/Engineers, Platform engineers, Container & Storage engineers, Cloud Architects
 
 ****Prerequisites****: Recommended to have an fundamental understanding of AWS Cloud and Kubernetes
 
 ****Duration****: Approximately take 2 hours.
+
+---
+
+:::alert{header="Costs and cleanup" type="warning"}
+**At an AWS-hosted event**, the lab account is provided for you and is deleted afterwards, so you incur no charges and no cleanup is required.
+
+**Running this in your own account**, you pay for everything the workshop provisions. The significant items are the `inf2.xlarge` Inferentia instance that serves the model, the Multi-AZ FSx for NetApp ONTAP file system (1024 GiB SSD at 512 MB/s throughput), the EKS cluster, the Application Load Balancer, and the EC2 instance hosting the IDE. Expect single-digit US dollars per hour while everything is running, so a completed 2 hour run is modest, but an environment left running is not.
+
+FSx for NetApp ONTAP and the Inferentia instance bill for as long as they exist, whether or not you are using them. Run the cleanup steps in the on-demand setup module as soon as you finish. Current pricing is on the [Amazon FSx for NetApp ONTAP](https://aws.amazon.com/fsx/netapp-ontap/pricing/), [Amazon EC2 Inf2](https://aws.amazon.com/ec2/instance-types/inf2/), and [Amazon EKS](https://aws.amazon.com/eks/pricing/) pricing pages.
+:::
 
 ---
 

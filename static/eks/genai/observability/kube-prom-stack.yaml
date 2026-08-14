@@ -1,6 +1,8 @@
 ## Create default rules for monitoring the cluster
 #
-# Disable `etcd` and `kubeScheduler` rules (managed by DOKS, so metrics are not accessible)
+# Disable the `etcd` and `kubeScheduler` rules. On Amazon EKS the control plane
+# is managed by AWS, so these components are not reachable for scraping and the
+# rules would only ever fire as "no data".
 defaultRules:
   create: true
   rules:
@@ -9,13 +11,15 @@ defaultRules:
 
 ## Component scraping kube scheduler
 ##
-# Disabled because it's being managed by DOKS, so it's not accessible
+# Disabled: the scheduler runs on the AWS-managed EKS control plane and is not
+# exposed to cluster workloads.
 kubeScheduler:
   enabled: false
 
 ## Component scraping etcd
 ##
-# Disabled because it's being managed by DOKS, so it's not accessible
+# Disabled: etcd runs on the AWS-managed EKS control plane and is not exposed to
+# cluster workloads.
 kubeEtcd:
   enabled: false
 

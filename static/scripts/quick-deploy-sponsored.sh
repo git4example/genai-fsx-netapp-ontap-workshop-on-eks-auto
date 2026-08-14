@@ -336,7 +336,7 @@ else
     kubectl delete job model-download --ignore-not-found 2>/dev/null || true
     kubectl apply -f model-loading-job.yaml
 
-    echo "Waiting for model-download Job to complete (timeout: 1800s)..."./c
+    echo "Waiting for model-download Job to complete (timeout: 1800s)..."
     echo "Tip: In another terminal, run: kubectl logs -f job/model-download"
     kubectl wait --for=condition=complete job/model-download --timeout=1800s
 fi

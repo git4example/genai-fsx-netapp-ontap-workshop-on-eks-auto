@@ -77,7 +77,7 @@ Make sure your URL is "**http:**//<-URL-ADDRESS->" and **doesn't start** with "*
 The model name shown in OpenWebUI is the **virtual model name** defined in the LiteLLM AI Gateway config. Behind the scenes, your chat requests are routed to the self-hosted Mistral-7B model on Inferentia. The gateway abstracts the backend, so consumers see a logical model name, not the physical deployment details. This is a common enterprise pattern for managing multiple LLM backends through a single gateway.
 :::
 
-If you don't see the model in the dropdown, please refresh the WebUI page. (Remember from the previous lab module, that the vLLM Pod and the model load into memory will take approx. 7 minutes)
+If you don't see the model in the dropdown, please refresh the WebUI page. (Remember from the previous lab module, that the vLLM Pod and the model load into memory will take approx. 5-7 minutes)
 
 ![The Open WebUI chat interface with the model selector at the top left set to workshop-llm, the same name shown as the greeting in the centre of the page, and an empty prompt box reading "How can I help you today?"](/static/images/OpenWebUI.png)
 
@@ -111,7 +111,7 @@ Task 2  | Language translation task
 
 
 
-![AWS Summit Tokyo session](/static/images/aws_summit_tokyo_session.jpg)
+![A Japanese-language session panel from the AWS Summit Japan expo guide, titled "AWS シリコンイノベーション" with session codes I-10C, I-11A, I-12A and I-13C, and a paragraph of Japanese body text describing AWS custom silicon including Nitro, Graviton, Trainium and Inferentia. This is the kind of text block you will copy and ask the chatbot to translate](/static/images/aws_summit_tokyo_session.jpg)
 
 
 

@@ -44,7 +44,7 @@ The FSx for NetApp floating endpoint range (typically `198.19.255.0/24`, allocat
 2. Note the **Network interface** ID for the **Preferred subnet** and for the **Standby subnet** (jot both down).
 3. Click the **Route table** link on that tab. In the **Routes** tab, find the `198.19.255.0/24` entry, which currently targets the **Preferred ENI**.
 
-![Route table before failover](/static/images/routes.png)
+![The EKS private route table before failover, listing four Active routes: 0.0.0.0/0 to a NAT gateway, 10.0.0.0/16 local, and the two highlighted floating-endpoint routes 198.19.255.2/32 and 198.19.255.231/32 both pointing at the same preferred-AZ ENI](/static/images/routes.png)
 
 ### Step 3: Trigger the failover by updating throughput capacity
 
