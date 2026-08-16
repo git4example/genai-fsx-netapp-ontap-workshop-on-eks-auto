@@ -544,7 +544,6 @@ Resources:
                 - systemctl restart nginx
                 - systemctl enable --now nginx
                 - !Sub sudo -u ${VSCodeUser} --login code-server --install-extension AmazonWebServices.aws-toolkit-vscode --force
-                - !Sub sudo -u ${VSCodeUser} --login code-server --install-extension AmazonWebServices.amazon-q-vscode --force
                 - !Sub sudo -u ${VSCodeUser} --login code-server --install-extension synedra.auto-run-command --force
                 - !Sub sudo -u ${VSCodeUser} --login code-server --install-extension vscjava.vscode-java-pack --force
                 - !Sub sudo -u ${VSCodeUser} --login code-server --install-extension ms-vscode.live-server --force
@@ -979,7 +978,6 @@ Resources:
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
         - !Sub arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonQDeveloperAccess
         - !Sub arn:${AWS::Partition}:iam::aws:policy/ReadOnlyAccess
         - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonVPCFullAccess
         - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
