@@ -64,7 +64,7 @@ Below is an EXAMPLE of a broad IAM policy that you could use, which includes all
 :::
 
 :::alert{header="Note" type="info"}
-The VSCode jumpbox role that the CloudFormation stack creates inside the workshop uses a tighter, scoped least-privilege policy. See `static/vscode_instance_role_policy.json` in the repo for the exact policy applied to the in-workshop jumpbox.
+The broad policy above is only for the EC2 instance you run the deployment script from. The jumpbox that the CloudFormation stack creates inside the workshop uses a much narrower policy. To read it, open `static/GenAIFSXWorkshopOnEKS.yaml` and look at the `VSCodeInstanceRole` resource, specifically its `WorkshopLeastPrivilege` inline policy. That template is the single source of truth, and it is the same template used for both on-demand and AWS-sponsored deployments.
 :::
 
 
