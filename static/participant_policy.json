@@ -54,18 +54,32 @@
             "Resource": "*"
         },
         {
-            "Sid": "IAMForEksctl",
+            "Sid": "IAMRoleForEksctl",
             "Effect": "Allow",
             "Action": [
-                "iam:CreatePolicy",
-                "iam:GetPolicy",
                 "iam:CreateRole",
                 "iam:GetRole",
                 "iam:AttachRolePolicy",
                 "iam:PutRolePolicy",
                 "iam:TagRole"
             ],
-            "Resource": "*"
+            "Resource": [
+                "arn:aws:iam::*:role/trident-*",
+                "arn:aws:iam::*:role/eksctl-*",
+                "arn:aws:iam::*:role/AmazonEKS*"
+            ]
+        },
+        {
+            "Sid": "IAMPolicyForEksctl",
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreatePolicy",
+                "iam:GetPolicy"
+            ],
+            "Resource": [
+                "arn:aws:iam::*:policy/Amazon_FSx_ONTAP_*",
+                "arn:aws:iam::*:policy/eksctl-*"
+            ]
         },
         {
             "Sid": "IAMPassRole",
@@ -93,15 +107,24 @@
             }
         },
         {
-            "Sid": "CloudFormationForEksctl",
+            "Sid": "CloudFormationReadForEksctl",
             "Effect": "Allow",
             "Action": [
                 "cloudformation:DescribeStacks",
-                "cloudformation:ListStacks",
+                "cloudformation:ListStacks"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "CloudFormationWriteForEksctl",
+            "Effect": "Allow",
+            "Action": [
                 "cloudformation:CreateStack",
                 "cloudformation:DeleteStack"
             ],
-            "Resource": "*"
+            "Resource": [
+                "arn:aws:cloudformation:*:*:stack/eksctl-*"
+            ]
         },
         {
             "Sid": "SecretsManagerForTrident",
@@ -112,10 +135,9 @@
             "Resource": "arn:aws:secretsmanager:*:*:secret:trident-fsx-*"
         },
         {
-            "Sid": "STSAccess",
+            "Sid": "STSCallerIdentity",
             "Effect": "Allow",
             "Action": [
-                "sts:AssumeRole",
                 "sts:GetCallerIdentity"
             ],
             "Resource": "*"
