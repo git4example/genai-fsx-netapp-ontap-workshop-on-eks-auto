@@ -102,7 +102,7 @@ eksctl create iamserviceaccount \
 
 ::alert[ You need to wait for approx. 60 seconds for the above command to complete]
 
-### Step 4: Save the Role ARN that was created into a variable
+### Step 4: Save the role ARN that was created into a variable
 
 4. Copy and run the below command, which will save the role ARN into the ROLE_ARN variable.
 

@@ -148,7 +148,7 @@ data:
                 "mode": "absolute",
                 "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 80 }]
               },
-              "unit": "ms"
+              "unit": "s"
             },
             "overrides": []
           },
@@ -190,7 +190,7 @@ data:
                 "mode": "absolute",
                 "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 80 }]
               },
-              "unit": "ms"
+              "unit": "s"
             },
             "overrides": []
           },
@@ -232,7 +232,7 @@ data:
                 "mode": "absolute",
                 "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 80 }]
               },
-              "unit": "ms"
+              "unit": "s"
             },
             "overrides": []
           },

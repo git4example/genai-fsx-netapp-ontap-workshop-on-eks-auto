@@ -331,8 +331,6 @@
           "s3:ListBucketMultipartUploads"
         ],
         "Resource": [
-          "arn:aws:s3:::cloudtrail-policy-gen-*",
-          "arn:aws:s3:::cloudtrail-policy-gen-*/*",
           "arn:aws:s3:::*workshop*",
           "arn:aws:s3:::*workshop*/*",
           "arn:aws:s3:::eksworkshop*",

@@ -104,7 +104,7 @@ In this section, you have deployed a Grafana dashboard that provides observabili
 
 
 
-### Optional: Additional metrics dashboards available for deployment
+### Optional: additional metrics dashboards available for deployment
 
 You can deploy any of the optional dashboards below to view different metrics. Once you deploy one of the below dashboards, simply search for them in Grafana dashboards to view them (as per the above step).
 
