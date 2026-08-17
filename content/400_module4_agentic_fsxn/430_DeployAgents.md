@@ -5,7 +5,7 @@ weight : 430
 
 ## Overview
 
-In this section, you will deploy **three AI agents** built with the [AWS Strands Agents SDK](https://github.com/strands-agents/sdk-python). Each agent:
+In this section, you will deploy **three AI agents** built with the [AWS Strands Agents SDK](https://github.com/strands-agents/harness-sdk). Each agent:
 
 ---
 ### Step 1: Deploy all three agents

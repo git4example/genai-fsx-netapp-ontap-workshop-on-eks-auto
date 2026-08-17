@@ -1,7 +1,7 @@
 
 # Flexible AI on AWS + FSx NetApp - Self hosted Agentic-AI
 
-## Workshop Objective
+## Workshop objective
 Learn how to build your own self-hosted Generative-AI  application for performance, scale, and observability using an AWS AI stack of;
 
 * **AWS Inferentia** - Accelerated Compute to power your Generative-AI application.
@@ -10,7 +10,7 @@ Learn how to build your own self-hosted Generative-AI  application for performan
 
 ---
 
-#### In this workshop you will build the following:
+### In this workshop you will build the following:
 
 **1 - A Generative AI application & observability dashboards:** You will deploy a Generative-AI chatbot using; an Open WebUI chatbot interface, a vLLM (model serving engine), and an open-source Large Language Model (LLM), all hosted on an AWS based AI stack of:
 
@@ -70,13 +70,10 @@ Learn how to build your own self-hosted Generative-AI  application for performan
 │   │   ├── 720_TriggerFailover.md
 │   │   └── index.en.md
 │   └── index.en.md
-├── archive                             # Not built by Workshop Studio
-│   └── 800_module8_data_segregation_archived
 └── static
     ├── GenAIFSXWorkshopOnEKS.yaml
     ├── download
-    │   ├── fsx-ontap-standalone.tf
-    │   └── vllm-mistral-hf-test.yaml
+    │   └── fsx-ontap-standalone.tf
     ├── eks
     │   ├── FSxONTAP
     │   │   ├── fsx-ontap-secret.yaml
@@ -110,7 +107,7 @@ Learn how to build your own self-hosted Generative-AI  application for performan
 ```
 
 
-### Part 1 : Prerequisite of setting up an On-demand Workshop (using your own AWS account)
+### Part 1: Prerequisite for setting up an on-demand workshop (using your own AWS account)
 Follow the below instructions to complete the required steps before you can launch the AWS CloudFormation Stack that will provision this workshop.
 
 :::alert{header="Note" type="info"}
@@ -154,7 +151,7 @@ Here's a broad IAM policy that you may includes all the required permissions for
 Alternative for simplicity, you may like to use AWS managed policies: `ReadOnlyAccess`, `AmazonEKSClusterPolicy`, and the scoped inline policy defined in `contentspec.yaml`
 
 
-### Part 2 : Automated Workshop Deployment
+### Part 2: Automated workshop deployment
 
 
 Run the automated deployment script :
@@ -203,15 +200,15 @@ You will be using an Open source VSCode IDE terminal to copy and paste the requi
 4. Enter the password you copied into the VSCode IDE interface
 
 
-![CFN-Output](/static/images/cfn-output.png)
+![CloudFormation console showing the genaifsxworkshoponeks stack in CREATE_COMPLETE, with the Outputs tab selected and two rows listed: Password (VSCode-Server Password) and URL (VSCode-Server URL), the URL value being a cloudfront.net link ending in ?folder=/home/participant/environment](/static/images/cfn-output.png)
 
 5. Select your VSCode UI theme
 
-![Select Theme](/static/images/select-theme.png)
+![VS Code for the Web "Get Started" page with the "Choose your theme" step expanded, showing a Browse Color Themes button on the left and four theme previews on the right: Dark Modern, Light Modern, Dark High Contrast, and Light High Contrast](/static/images/select-theme.png)
 
 6. Click the top right hand icon to maximize terminal window.
 
-![maximize](/static/images/maximize.png)
+![The VS Code bottom panel with the TERMINAL tab selected next to PROBLEMS, OUTPUT, DEBUG CONSOLE, PORTS and CODE REFERENCE LOG, showing a bash prompt reading participant:~/environment$, and the maximize-panel icon highlighted at the far right of the toolbar](/static/images/maximize.png)
 
 
 ## Update the kube-config file for Amazon EKS cluster:
@@ -222,7 +219,7 @@ Before you can start running all the Kubernetes commands included in this worksh
 :::alert{header="Note" type="info"}
 When you first time copy-paste a command on VSCode IDE, your browser may ask you to allow permission to see informaiton on clipboard. Please select **"Allow"**.
 
-![allow-clipboard](/static/images/allow-clipboard.png)
+![Browser permission prompt titled "Share clipboard?" asking whether the cloudfront.net site may see text and images copied to the clipboard, with Block and Allow buttons and Allow highlighted](/static/images/allow-clipboard.png)
 :::
 
 
@@ -243,13 +240,13 @@ Run the command below just to see the connectivity to EKS Auto Cluster:
 ::code[kubectl get nodes]{language=bash showLineNumbers=false showCopyAction=true}
 
 You should see one node provisioned which was provisioned by EKS Auto to run some of the core components required for the workshop.
-![get-nodes](/static/images/get-nodes.png)
+![Terminal output of kubectl get nodes listing a single node in Ready status with no assigned roles, aged 35 minutes, running Kubernetes version v1.33.1-eks-b9364f6](/static/images/get-nodes.png)
 
 You now now completed the workshop deployment and have a VSCode IDE Server environment ready to use with your Amazon EKS Cluster! Please proceed to the first module of the workshop **[Explore EKS Auto](/030_module_explore_eks_auto)**.
 
 **Note:** Once you have completed the workshop, navigate back to this page, and the below section to perform the **Clean up** tasks.
 
-### Part 3 : Workshop Cleanup
+### Part 4: Workshop cleanup
 
 When you're finished with the workshop, use the cleanup script to remove all resources:
 

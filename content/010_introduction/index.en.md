@@ -12,7 +12,7 @@ Errors or corrections? Please raise an issue in the workshop repository so the m
 ## Workshop objective
 Learn how to build your own self-hosted Generative-AI  application for performance, scale, and observability using an AWS AI stack that is comprised of;
 
-* **Compute layer:** *AWS Trainium/Inferentia* - Accelerated Compute to power your Generative-AI application.
+* **Compute layer:** *AWS Inferentia2* - Accelerated compute to power your Generative-AI application, using `inf2.xlarge` instances.
 * **Workload hosting & Orchestration:** *Amazon Elastic Kubernetes Service (EKS)* - Host your Generative-AI & Agentic-AI applications.
 * **Data layer:** *Amazon FSx for NetApp ONTAP* - Highly Available, High-performance shared storage used to host LLM models and unstructured data.
 

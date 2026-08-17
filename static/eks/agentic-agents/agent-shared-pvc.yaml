@@ -20,7 +20,8 @@ metadata:
     trident.netapp.io/importOriginalName: "agent_shared_data"
     # Backend UUID (not the backend name) — substituted at deploy time.
     trident.netapp.io/importBackendUUID: "$BACKEND_UUID"
-    # Keep the ONTAP volume named "agent_shared_data" (Trident 25.10+).
+    # Keep the ONTAP volume named "agent_shared_data". Supported by the Trident
+    # release this workshop deploys (26.06).
     trident.netapp.io/importNoRename: "true"
 spec:
   accessModes:

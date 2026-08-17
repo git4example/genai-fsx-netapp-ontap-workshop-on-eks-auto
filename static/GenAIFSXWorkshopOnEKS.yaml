@@ -655,7 +655,7 @@ Resources:
                 - !Sub echo 'alias pytest=pytest-3' >> /home/${VSCodeUser}/.bashrc
                 - !Sub echo 'alias python3=python3.11' >> /home/${VSCodeUser}/.bashrc
                 - !Sub echo 'alias pip3=pip3.11' >> /home/${VSCodeUser}/.bashrc
-                - echo 'alias=python3=python3.11' >> ~/.bashrc
+                - echo 'alias python3=python3.11' >> ~/.bashrc
                 - echo 'alias pip3=pip3.11' >> ~/.bashrc
                 - python3.11 -m pip install --upgrade pip 2>&1
                 - echo "Python and Pip installed. Checking configuration"

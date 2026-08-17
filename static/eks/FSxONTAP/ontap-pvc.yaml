@@ -25,7 +25,10 @@ metadata:
     trident.netapp.io/importBackendUUID: "$BACKEND_UUID"
     # Keep the ONTAP volume named "model". Without this, a managed import renames
     # it to trident_pvc_<uuid>, which defeats using a known, pre-provisioned name.
-    # Requires Trident 25.10+ (this workshop deploys 26.06).
+    # Supported by the Trident release this workshop deploys (26.06). If you reuse
+    # this manifest against an older Trident, confirm the annotation is recognised
+    # there first: as noted above, an unknown annotation fails open, so the volume
+    # would be renamed with no error to tell you.
     trident.netapp.io/importNoRename: "true"
 spec:
   accessModes:

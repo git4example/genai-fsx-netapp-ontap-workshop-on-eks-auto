@@ -9,7 +9,7 @@ weight : 510
 In this section, you will log-in to the vLLM Pod, inspect the Mistral-7B  model, Inspect Neuron cores and use Neuron tools to monitor performance.
 
 
-### Step 1: Login to vLLM Pod, Inspect LLM model data
+### Step 1: Log in to the vLLM pod and inspect the LLM model data
 
 1. Navigate to back to your VSCode IDE terminal and change to your working directory.
 

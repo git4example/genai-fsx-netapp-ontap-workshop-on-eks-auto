@@ -1,7 +1,7 @@
 # vLLM + Neuron Monitoring Dashboard
 # This dashboard includes all requested metrics:
 # - Neuron CPU usage
-# - GPU memory usage
+# - Neuron device memory usage (neuron_runtime_memory_used_bytes) and system memory
 # - All vLLM metrics (prompt_tokens_total, generation_tokens_total, etc.)
 
 apiVersion: v1
