@@ -288,14 +288,20 @@ Resources:
                 logger.info('Getting secret from %s', secret_name)
                 secret_value = secret['SecretString']
                 logger.debug('secret_value: %s', secret_value)
+                # cfnresponse.send needs a dict, so both branches must produce
+                # one. Previously the JSON branch assigned the raw string and
+                # the caller did json.loads() on it, which meant the non-JSON
+                # branch passed a dict into json.loads() and raised
+                # "TypeError: the JSON object must be str, bytes or bytearray,
+                # not dict", failing the custom resource and blocking the stack.
                 responseData = {}
                 if is_valid_json(secret_value):
-                  responseData = secret_value
+                  responseData = json.loads(secret_value)
                 else:
                   responseData = {'secret': secret_value}
                 logger.debug('responseData: %s', responseData)
                 logger.debug('type(responseData): %s', type(responseData))
-                cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData=json.loads(responseData), reason='OK', noEcho=True)
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData=responseData, reason='OK', noEcho=True)
             except Exception as e:
                 logger.error(e)
                 cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason=str(e))
@@ -1587,8 +1593,11 @@ Resources:
                   logger.info(f'URL invalid and/or endpoint not ready yet: {str(e)}')
                   return False
 
-              except json.decoder.JSONDecodeError:
-                  # The response we got was not a properly formatted JSON
+              except json.decoder.JSONDecodeError as e:
+                  # The response we got was not a properly formatted JSON.
+                  # 'as e' is required: Python unbinds the exception name at the
+                  # end of each except block, so without it the str(e) below
+                  # raises NameError and hides the real decode failure.
                   logger.error(f"Did not get JSON object from URL as expected: {str(e)}")
                   return False
 
