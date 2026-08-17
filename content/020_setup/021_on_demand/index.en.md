@@ -21,7 +21,7 @@ This Linux based EC2 instance also needs to have the required AWS account access
 The workshop deploys the following AWS services via CloudFormation and Terraform:
 
 * Amazon EKS (cluster, nodegroups, access entries, addons)
-* Amazon EC2 + VPC (networking, security groups, launch templates, jumpbox instance)
+* Amazon EC2 + VPC (networking, security groups, launch templates, VSCode server instance)
 * Amazon FSx for NetApp ONTAP (file system, SVM, volumes)
 * AWS IAM (roles, policies, OIDC provider for IRSA, service-linked roles)
 * AWS KMS (customer-managed keys for EKS secrets and FSx encryption)
@@ -29,9 +29,9 @@ The workshop deploys the following AWS services via CloudFormation and Terraform
 * Amazon S3 (workshop asset bucket; the Mistral model is NOT staged in S3)
 * Amazon CloudWatch Logs (EKS control-plane logs)
 * Elastic Load Balancing (for the Open WebUI front-end)
-* AWS Systems Manager (agent on the jumpbox)
+* AWS Systems Manager (agent on the VSCode server)
 
-Below is an EXAMPLE policy for the EC2 instance you run the deployment script from. It is deliberately broad, because this instance creates the CloudFormation stack, and CloudFormation then acts with these same permissions to create everything the stack contains: Lambda functions, a CloudFront distribution, an SQS queue, SSM documents, IAM roles, secrets, security groups and the in-workshop jumpbox. The `eks`, `fsx`, `kms` and `elasticloadbalancing` entries cover the Terraform stage that follows.
+Below is an EXAMPLE policy for the EC2 instance you run the deployment script from. It is deliberately broad, because this instance creates the CloudFormation stack, and CloudFormation then acts with these same permissions to create everything the stack contains: Lambda functions, a CloudFront distribution, an SQS queue, SSM documents, IAM roles, secrets, security groups and the in-workshop VSCode server. The `eks`, `fsx`, `kms` and `elasticloadbalancing` entries cover the Terraform stage that follows.
 
 :::code{showCopyAction=false showLineNumbers=true language=json}
 {
@@ -68,7 +68,7 @@ The stack creates an SQS queue that every provisioning step reports progress to.
 :::
 
 :::alert{header="Note" type="info"}
-The broad policy above is only for the EC2 instance you run the deployment script from. The jumpbox that the CloudFormation stack creates inside the workshop uses a much narrower policy. To read it, open `static/GenAIFSXWorkshopOnEKS.yaml` and look at the `VSCodeInstanceRole` resource, specifically its `WorkshopLeastPrivilege` inline policy. That template is the single source of truth, and it is the same template used for both on-demand and AWS-sponsored deployments.
+The broad policy above is only for the EC2 instance you run the deployment script from. The VSCode server that the CloudFormation stack creates inside the workshop uses a much narrower policy. To read it, open `static/GenAIFSXWorkshopOnEKS.yaml` and look at the `VSCodeInstanceRole` resource, specifically its `WorkshopLeastPrivilege` inline policy. That template is the single source of truth, and it is the same template used for both on-demand and AWS-sponsored deployments.
 :::
 
 

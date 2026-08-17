@@ -156,9 +156,10 @@ Here's a broad IAM policy that you may includes all the required permissions for
 progress to, so stack creation fails without it. `kms`, `eks`, `fsx` and
 `elasticloadbalancing` cover the Terraform stage.
 
-This breadth applies only to the instance you deploy *from*. The jumpbox created
-*inside* the workshop uses a much narrower policy, the `WorkshopLeastPrivilege`
-inline policy on `VSCodeInstanceRole` in `static/GenAIFSXWorkshopOnEKS.yaml`.
+This breadth applies only to the instance you deploy *from*. The VSCode server
+created *inside* the workshop uses a much narrower policy, the
+`WorkshopLeastPrivilege` inline policy on `VSCodeInstanceRole` in
+`static/GenAIFSXWorkshopOnEKS.yaml`.
 
 
 ### Part 2: Automated workshop deployment
