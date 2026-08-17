@@ -130,17 +130,21 @@ Here's a broad IAM policy that you may includes all the required permissions for
             "Effect": "Allow",
             "Action": [
                 "sts:GetCallerIdentity",
-                "s3:*",
                 "cloudformation:*",
+                "cloudfront:*",
                 "ec2:*",
                 "eks:*",
                 "iam:*",
                 "fsx:*",
-                "cloudfront:*",
+                "kms:*",
                 "lambda:*",
-                "ssm:*",
                 "logs:*",
-                "secretsmanager:*"
+                "s3:*",
+                "secretsmanager:*",
+                "sqs:*",
+                "ssm:*",
+                "elasticloadbalancing:*",
+                "ecr-public:GetAuthorizationToken"
             ],
             "Resource": "*"
         }
@@ -148,7 +152,13 @@ Here's a broad IAM policy that you may includes all the required permissions for
 }
 ```
 
-Alternative for simplicity, you may like to use AWS managed policies: `ReadOnlyAccess`, `AmazonEKSClusterPolicy`, and the scoped inline policy defined in `contentspec.yaml`
+`sqs` is required: the stack creates a queue that every provisioning step reports
+progress to, so stack creation fails without it. `kms`, `eks`, `fsx` and
+`elasticloadbalancing` cover the Terraform stage.
+
+This breadth applies only to the instance you deploy *from*. The jumpbox created
+*inside* the workshop uses a much narrower policy, the `WorkshopLeastPrivilege`
+inline policy on `VSCodeInstanceRole` in `static/GenAIFSXWorkshopOnEKS.yaml`.
 
 
 ### Part 2: Automated workshop deployment

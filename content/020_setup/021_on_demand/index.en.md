@@ -31,7 +31,7 @@ The workshop deploys the following AWS services via CloudFormation and Terraform
 * Elastic Load Balancing (for the Open WebUI front-end)
 * AWS Systems Manager (agent on the jumpbox)
 
-Below is an EXAMPLE of a broad IAM policy that you could use, which includes all the required permissions for both CloudFormation and Terraform deployments. This is suitable for the EC2 jumpbox role that runs the deployment script:
+Below is an EXAMPLE policy for the EC2 instance you run the deployment script from. It is deliberately broad, because this instance creates the CloudFormation stack, and CloudFormation then acts with these same permissions to create everything the stack contains: Lambda functions, a CloudFront distribution, an SQS queue, SSM documents, IAM roles, secrets, security groups and the in-workshop jumpbox. The `eks`, `fsx`, `kms` and `elasticloadbalancing` entries cover the Terraform stage that follows.
 
 :::code{showCopyAction=false showLineNumbers=true language=json}
 {
@@ -41,7 +41,6 @@ Below is an EXAMPLE of a broad IAM policy that you could use, which includes all
             "Effect": "Allow",
             "Action": [
                 "sts:GetCallerIdentity",
-                "sts:AssumeRole",
                 "cloudformation:*",
                 "cloudfront:*",
                 "ec2:*",
@@ -53,6 +52,7 @@ Below is an EXAMPLE of a broad IAM policy that you could use, which includes all
                 "logs:*",
                 "s3:*",
                 "secretsmanager:*",
+                "sqs:*",
                 "ssm:*",
                 "elasticloadbalancing:*",
                 "ecr-public:GetAuthorizationToken"
@@ -61,6 +61,10 @@ Below is an EXAMPLE of a broad IAM policy that you could use, which includes all
         }
     ]
 }
+:::
+
+:::alert{header="Do not remove sqs" type="warning"}
+The stack creates an SQS queue that every provisioning step reports progress to. Without `sqs` permissions, stack creation fails partway through and leaves resources behind.
 :::
 
 :::alert{header="Note" type="info"}
