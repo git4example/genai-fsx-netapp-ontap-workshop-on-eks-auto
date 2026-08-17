@@ -2,34 +2,55 @@
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Sid": "EKSAccess",
+            "Sid": "EKSListClusters",
             "Effect": "Allow",
             "Action": [
-                "eks:DescribeCluster",
-                "eks:ListClusters",
-                "eks:AccessKubernetesApi",
-                "eks:ListNodegroups",
-                "eks:DescribeNodegroup"
+                "eks:ListClusters"
             ],
             "Resource": "*"
         },
         {
-            "Sid": "FSxONTAPAccess",
+            "Sid": "EKSWorkshopClusterAccess",
+            "Effect": "Allow",
+            "Action": [
+                "eks:DescribeCluster",
+                "eks:AccessKubernetesApi",
+                "eks:ListNodegroups"
+            ],
+            "Resource": [
+                "arn:aws:eks:*:*:cluster/eksworkshop*"
+            ]
+        },
+        {
+            "Sid": "EKSWorkshopNodegroupRead",
+            "Effect": "Allow",
+            "Action": [
+                "eks:DescribeNodegroup"
+            ],
+            "Resource": [
+                "arn:aws:eks:*:*:nodegroup/eksworkshop*/*/*"
+            ]
+        },
+        {
+            "Sid": "FSxONTAPRead",
             "Effect": "Allow",
             "Action": [
                 "fsx:DescribeFileSystems",
                 "fsx:DescribeVolumes",
                 "fsx:DescribeStorageVirtualMachines",
-                "fsx:DescribeSnapshots",
-                "fsx:CreateSnapshot",
-                "fsx:CreateVolume",
-                "fsx:DeleteVolume",
-                "fsx:UpdateVolume",
-                "fsx:UpdateFileSystem",
-                "fsx:TagResource",
-                "fsx:UntagResource"
+                "fsx:DescribeSnapshots"
             ],
             "Resource": "*"
+        },
+        {
+            "Sid": "FSxUpdateThroughputForFailoverModule",
+            "Effect": "Allow",
+            "Action": [
+                "fsx:UpdateFileSystem"
+            ],
+            "Resource": [
+                "arn:aws:fsx:*:*:file-system/*"
+            ]
         },
         {
             "Sid": "EC2Describe",
@@ -45,11 +66,10 @@
             "Resource": "*"
         },
         {
-            "Sid": "EC2ManagedResourceVisibility",
+            "Sid": "EC2ManagedResourceVisibilityRead",
             "Effect": "Allow",
             "Action": [
-                "ec2:GetManagedResourceVisibility",
-                "ec2:ModifyManagedResourceVisibility"
+                "ec2:GetManagedResourceVisibility"
             ],
             "Resource": "*"
         },
