@@ -2,7 +2,7 @@
 # Mistral-7B-Instruct-v0.3 — Deployment on inf2.xlarge with Pre-compiled Artifacts
 # =============================================================================
 #
-# This manifest deploys Mistral-7B-Instruct-v0.3 on AWS Inferentia2 inf2.xlarge
+# This manifest deploys Mistral-7B-Instruct-v0.3 on AWS Inferentia inf2.xlarge
 # (16GB RAM, 2 NeuronCores) using pre-compiled Neuron artifacts stored on
 # FSx for NetApp ONTAP. No on-the-fly compilation occurs at startup.
 #

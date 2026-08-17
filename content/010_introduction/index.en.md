@@ -12,7 +12,7 @@ Errors or corrections? Please raise an issue in the workshop repository so the m
 ## Workshop objective
 Learn how to build your own self-hosted Generative-AI  application for performance, scale, and observability using an AWS AI stack that is comprised of;
 
-* **Compute layer:** *AWS Inferentia2* - Accelerated compute to power your Generative-AI application, using `inf2.xlarge` instances.
+* **Compute layer:** *AWS Inferentia* - Accelerated compute to power your Generative-AI application, using `inf2.xlarge` instances.
 * **Workload hosting & Orchestration:** *Amazon Elastic Kubernetes Service (EKS)* - Host your Generative-AI & Agentic-AI applications.
 * **Data layer:** *Amazon FSx for NetApp ONTAP* - Highly Available, High-performance shared storage used to host LLM models and unstructured data.
 
@@ -126,7 +126,7 @@ In this workshop the **Mistral-7B-Instruct** LLM model data is loaded onto an [*
 
 
 ### What are AWS Inferentia accelerators
-[**AWS Inferentia accelerators**](https://aws.amazon.com/machine-learning/inferentia/) are custom built machine learning chips designed by Amazon Web Services (AWS) to accelerate the inference phase of machine learning. Inference involves using a trained model to make predictions or decisions based on new data. This phase is critical for real-time applications and services that require low latency and high throughput. AWS Inferentia2 is designed to deliver high throughput and low latency for a variety of inference workloads. AWS Inferentia accelerators deliver high performance at the lowest cost in Amazon EC2, where it supports popular machine learning frameworks such as TensorFlow, PyTorch, and MXNet. AWS Inferentia2 based Amazon EC2 Inf2 instances are optimized to deploy increasingly complex models, such as large language models (LLM) and latent diffusion models.
+[**AWS Inferentia accelerators**](https://aws.amazon.com/machine-learning/inferentia/) are custom built machine learning chips designed by Amazon Web Services (AWS) to accelerate the inference phase of machine learning. Inference involves using a trained model to make predictions or decisions based on new data. This phase is critical for real-time applications and services that require low latency and high throughput. AWS Inferentia is designed to deliver high throughput and low latency for a variety of inference workloads. AWS Inferentia accelerators deliver high performance at the lowest cost in Amazon EC2, where it supports popular machine learning frameworks such as TensorFlow, PyTorch, and MXNet. AWS Inferentia-based Amazon EC2 Inf2 instances are optimized to deploy increasingly complex models, such as large language models (LLM) and latent diffusion models.
 
 
 ### AWS Neuron SDK, native support for ML frameworks

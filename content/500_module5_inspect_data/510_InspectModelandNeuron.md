@@ -132,7 +132,7 @@ For more information, see the [Neuron Compiler documentation](https://awsdocs-ne
 
 ### Step 2: Inspect Neuron cores config and performance
 
-Run the below command to view the number of AWS Inferentia2 devices on your instance.
+Run the below command to view the number of AWS Inferentia devices on your instance.
 
 ::code[neuron-ls]{showCopyAction=true showLineNumbers=false language=bash}
 
@@ -147,7 +147,7 @@ instance-id: i-123456abcd00
 +--------+--------+----------+--------+--------------+------+----------+------+---------+
 :::
 
-Let's view the performance of your AWS Inferentia2 node by running the **neuron-top** command. The neuron-top command provides information about NeuronCore and vCPU utilization, memory usage, loaded models, and Neuron applications.
+Let's view the performance of your AWS Inferentia node by running the **neuron-top** command. The neuron-top command provides information about NeuronCore and vCPU utilization, memory usage, loaded models, and Neuron applications.
 
 ::code[neuron-top]{showCopyAction=true showLineNumbers=false language=bash}
 
@@ -155,7 +155,7 @@ Let's view the performance of your AWS Inferentia2 node by running the **neuron-
 
 Now re-size the neuron-top browser window and also the existing WebUI browser session to your Chatbot, so they are side-by-side on your monitor.
 
-Ask the Chatbot a question, and then pay close attention to the **NeuronCores V2 utilization section** as your Chatbot processes your input/output tokens. Notice the optimized performance of AWS Inferentia2, which is designed to use all available Neuron core utilization capacity to process a request.
+Ask the Chatbot a question, and then pay close attention to the **NeuronCores V2 utilization section** as your Chatbot processes your input/output tokens. Notice the optimized performance of AWS Inferentia, which is designed to use all available Neuron core utilization capacity to process a request.
 
 Press `q` to exit from `neuron-top` screen and return back to pod exec shell.
 

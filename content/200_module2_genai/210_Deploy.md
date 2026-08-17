@@ -85,7 +85,7 @@ export NODE_ROLE
 
 :::alert{header="What to observe in the NodePool definition" type="info"}
 When reviewing the output, pay attention to these key fields:
-- **instance-family: ["inf2"]**: constrains EKS Auto Mode to only provision AWS Inferentia2 instances for this NodePool
+- **instance-family: ["inf2"]**: constrains EKS Auto Mode to only provision AWS Inferentia instances for this NodePool
 - **instance-size: ["xlarge"]**: pins to `inf2.xlarge` (1 Inferentia2 chip with 2 NeuronCores)
 - **nodeSelector / tolerations**: pods must explicitly request this NodePool via matching labels and tolerations
 - **disruption policy**: controls how EKS Auto Mode handles node consolidation and expiry
