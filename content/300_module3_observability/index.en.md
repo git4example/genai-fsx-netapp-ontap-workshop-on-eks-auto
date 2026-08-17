@@ -4,7 +4,7 @@ weight : 300
 ---
 
 
-## Module Overview
+## Module overview
 
 It is important to have observability into Inference workloads so you can optimize accordingly. In this section, you will create Grafana based dashboards that provide detailed observability across inference workload metrics, tokens usage, AI stack performance, and system health.
 

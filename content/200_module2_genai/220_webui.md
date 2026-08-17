@@ -15,7 +15,7 @@ A chatbot UI can interact with an Inference engine by accessing the Inference en
 ## Step 1: Deploy the Open WebUI pod
 -------------------------
 
-We will deploy Open WebUI using its official Helm chart. The chart values are defined in `open-webui-helm/values.yaml` and pre-configured to connect to the vLLM Mistral service deployed in the previous step.
+We will deploy Open WebUI using its official Helm chart. The chart values are defined in `open-webui-helm/values.yaml`, where `openaiBaseApiUrls` is pre-configured to `http://litellm-service:4000/v1`, so Open WebUI talks to the LiteLLM AI Gateway rather than to vLLM directly. The gateway is what routes the request on to the self-hosted Mistral-7B model.
 
 1. Add the Open WebUI Helm repository:
 

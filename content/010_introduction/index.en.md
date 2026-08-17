@@ -122,7 +122,7 @@ In this workshop the **Mistral-7B-Instruct** LLM model data is loaded onto an [*
 
 
 ### Accelerating your compute
-[**AWS Inferentia accelerators**](https://aws.amazon.com/machine-learning/inferentia/) are designed by AWS to deliver high performance at the lowest cost in Amazon EC2 for your deep learning (DL) and generative AI inference applications, where Inferentia2-based Amazon EC2 Inf2 instances are optimized to deploy increasingly complex models, such as large language models (LLM).
+[**AWS Inferentia accelerators**](https://aws.amazon.com/machine-learning/inferentia/) are designed by AWS to deliver high performance at the lowest cost in Amazon EC2 for your deep learning (DL) and generative AI inference applications, where Inferentia 2 based Amazon EC2 Inf2 instances are optimized to deploy increasingly complex models, such as large language models (LLM).
 
 
 ### What are AWS Inferentia accelerators

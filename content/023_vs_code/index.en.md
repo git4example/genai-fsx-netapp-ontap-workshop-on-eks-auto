@@ -4,7 +4,7 @@ chapter: false
 weight: 23
 ---
 
-## Connect to the Open-Source VSCode IDE for access to the AWS lab environment
+## Connect to the open-source VS Code IDE for access to the AWS lab environment
 Ref : [code-server](https://github.com/coder/code-server)
 
 Throughout this workshop you will run commands from a browser-based **VSCode IDE** (code-server) that has already been provisioned for you, pre-loaded with all the workshop files, the AWS CLI, `kubectl`, `eksctl`, Terraform, and Helm. You do not install anything locally; you simply open the IDE in your browser and use its built-in terminal to copy-paste the commands provided in each module.

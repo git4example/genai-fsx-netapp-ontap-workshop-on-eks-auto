@@ -62,7 +62,7 @@ CloudWatch metrics for Neuron hardware utilization and errors are published by a
 
 For a walkthrough of how detection and recovery behave on Neuron nodes in an EKS cluster, see [Node problem detection and recovery for AWS Neuron nodes within Amazon EKS clusters](https://aws.amazon.com/blogs/machine-learning/node-problem-detection-and-recovery-for-aws-neuron-nodes-within-amazon-eks-clusters/). The components this chart installs are listed in the [AWS Neuron Helm Chart documentation](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/deploy/eks/helm-chart.html).
 
-###  Step 2: Create EKS Auto Mode NodePool and EC2 NodeClass for AWS Inferentia Accelerators
+### Step 2: Create the EKS Auto Mode NodePool and EC2 NodeClass for AWS Inferentia accelerators
 
 The EKS Auto Mode configuration comes in the form of a NodePool Custom Resource (CR). The NodePool sets constraints on the EC2 nodes that can be used by EKS Auto Mode, the pods that can run on those EC2 nodes, where a NodePool can handle many different pod shapes. EKS Auto Mode makes scheduling and provisioning decisions based on pod attributes such as labels and affinity. An EKS cluster can have more than one NodePool, and in this workshop we will declare an additional inferentia NodePool.
 
@@ -86,7 +86,7 @@ export NODE_ROLE
 :::alert{header="What to observe in the NodePool definition" type="info"}
 When reviewing the output, pay attention to these key fields:
 - **instance-family: ["inf2"]**: constrains EKS Auto Mode to only provision AWS Inferentia instances for this NodePool
-- **instance-size: ["xlarge"]**: pins to `inf2.xlarge` (1 Inferentia2 chip with 2 NeuronCores)
+- **instance-size**: permits `xlarge` through `48xlarge`, so the NodePool itself is not pinned to one size. What actually gets provisioned is `inf2.xlarge` (1 Inferentia 2 chip, 2 NeuronCores), because the vLLM Deployment selects it explicitly with `nodeSelector: node.kubernetes.io/instance-type: inf2.xlarge` and requests `aws.amazon.com/neuroncore: 2`
 - **nodeSelector / tolerations**: pods must explicitly request this NodePool via matching labels and tolerations
 - **disruption policy**: controls how EKS Auto Mode handles node consolidation and expiry
 

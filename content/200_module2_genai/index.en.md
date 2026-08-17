@@ -3,7 +3,7 @@ title : "Module 2: Deploy Generative AI Chat application"
 weight : 200
 ---
 
-## Module Overview
+## Module overview
 
 In this module, you will configure and deploy A Generative-AI chatbot application on Kubernetes (Amazon EKS).
 - You will deploy a vLLM Pod and a WebUI Pod on an existing Amazon EKS cluster

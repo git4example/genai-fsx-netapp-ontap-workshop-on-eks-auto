@@ -3,7 +3,7 @@ title : "Module 6 (Optional): Dynamic Provisioning of PVCs using FSx for NetApp"
 weight : 600
 ---
 
-## Module Overview
+## Module overview
 
 Throughout this workshop, the storage that backs the model and agent data was provisioned for you, either created ahead of time and **imported** into Kubernetes, or set up during workshop provisioning. This optional module steps back to show the **dynamic provisioning** workflow directly: how the NetApp Astra Trident CSI driver automatically creates a brand-new FSx for NetApp ONTAP volume the moment you submit a `PersistentVolumeClaim`, with no manual PersistentVolume creation.
 
