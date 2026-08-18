@@ -65,7 +65,12 @@ SVM="arn:aws:fsx:${REGION}:${ACCOUNT}:storage-virtual-machine/svm-0123456789abcd
 CL="arn:aws:eks:${REGION}:${ACCOUNT}:cluster/${CLUSTER}"
 NG="arn:aws:eks:${REGION}:${ACCOUNT}:nodegroup/${CLUSTER}/ng-1/abcdef"
 STACK="arn:aws:cloudformation:${REGION}:${ACCOUNT}:stack/genaifsxworkshoponeks/abcdef"
-SECRET="arn:aws:secretsmanager:${REGION}:${ACCOUNT}:secret:trident-fsx-ontap-svm-abcdef"
+SEC_SVM="arn:aws:secretsmanager:${REGION}:${ACCOUNT}:secret:trident-fsx-ontap-svm-abcdef"
+SEC_GRAF="arn:aws:secretsmanager:${REGION}:${ACCOUNT}:secret:eksworkshop-oss-grafana20260101-abcdef"
+SEC_VSC="arn:aws:secretsmanager:${REGION}:${ACCOUNT}:secret:GenAIFSXWorkshopOnEKS-VSCodeSecret-abcdef"
+SEC_OTHER="arn:aws:secretsmanager:${REGION}:${ACCOUNT}:secret:prod-database-password-abcdef"
+ADDON="arn:aws:eks:${REGION}:${ACCOUNT}:addon/${CLUSTER}/vpc-cni/abcdef"
+OTHERCL="arn:aws:eks:${REGION}:${ACCOUNT}:cluster/someone-elses-cluster"
 
 # action | resource | expect-in-file-mode | expect-in-principal-mode | why
 CASES=(
@@ -86,7 +91,16 @@ CASES=(
   "ec2:DescribeNetworkInterfaces|*|allowed|allowed|Module 7 710: ENI discovery"
   "ec2:GetManagedResourceVisibility|*|allowed|allowed|EC2 console, Auto Mode nodes"
   "elasticloadbalancing:DescribeLoadBalancers|*|allowed|allowed|ALB console"
-  "secretsmanager:GetSecretValue|${SECRET}|allowed|allowed|SVM password, trident-fsx-* only"
+  "secretsmanager:GetSecretValue|${SEC_SVM}|allowed|allowed|SVM password in the Secrets Manager console"
+  "secretsmanager:GetSecretValue|${SEC_GRAF}|allowed|allowed|Grafana password in the Secrets Manager console"
+  "secretsmanager:GetSecretValue|${SEC_VSC}|allowed|allowed|VSCode password in the Secrets Manager console"
+  "secretsmanager:DescribeSecret|${SEC_GRAF}|allowed|allowed|Secrets Manager console detail page"
+  "eks:DescribeAddon|${ADDON}|allowed|allowed|EKS console Add-ons tab"
+  "eks:ListAccessEntries|${CL}|allowed|allowed|EKS console Access tab"
+  "eks:ListPodIdentityAssociations|${CL}|allowed|allowed|EKS console Pod Identity"
+  "eks:ListInsights|${CL}|allowed|allowed|EKS console Insights tab"
+  "eks:DescribeUpdate|${CL}|allowed|allowed|EKS console Update history"
+  "eks:DescribeAddonVersions|*|allowed|allowed|EKS console Add-ons version list"
   "sts:GetCallerIdentity|*|allowed|allowed|account id lookup"
 
   # --- console reads that come from ReadOnlyAccess, NOT from participant_policy.
@@ -106,6 +120,10 @@ CASES=(
   "fsx:TagResource|${VOL}|denied|denied|Trident, via trident-controller role"
   "ec2:ModifyManagedResourceVisibility|*|denied|denied|deploy script, VSCode server role"
   "sts:AssumeRole|*|denied|denied|nothing in the workshop assumes a role"
+  "secretsmanager:GetSecretValue|${SEC_OTHER}|denied|denied|control: an unrelated secret must stay unreadable"
+  "eks:AccessKubernetesApi|${OTHERCL}|denied|denied|control: another cluster must stay unreachable"
+  "eks:DeleteCluster|${CL}|denied|denied|control: participant must not delete the cluster"
+  "eks:UpdateClusterConfig|${CL}|denied|denied|control: participant must not reconfigure the cluster"
 )
 
 echo "Mode    : ${MODE}"

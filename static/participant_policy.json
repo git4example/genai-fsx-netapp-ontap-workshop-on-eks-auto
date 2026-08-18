@@ -2,33 +2,31 @@
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Sid": "EKSListClusters",
+            "Sid": "EKSAccountLevelList",
             "Effect": "Allow",
             "Action": [
-                "eks:ListClusters"
+                "eks:ListClusters",
+                "eks:DescribeAddonVersions"
             ],
             "Resource": "*"
         },
         {
-            "Sid": "EKSWorkshopClusterAccess",
+            "Sid": "EKSWorkshopConsoleFullRead",
             "Effect": "Allow",
             "Action": [
-                "eks:DescribeCluster",
-                "eks:AccessKubernetesApi",
-                "eks:ListNodegroups"
+                "eks:Describe*",
+                "eks:List*",
+                "eks:AccessKubernetesApi"
             ],
             "Resource": [
-                "arn:aws:eks:*:*:cluster/eksworkshop*"
-            ]
-        },
-        {
-            "Sid": "EKSWorkshopNodegroupRead",
-            "Effect": "Allow",
-            "Action": [
-                "eks:DescribeNodegroup"
-            ],
-            "Resource": [
-                "arn:aws:eks:*:*:nodegroup/eksworkshop*/*/*"
+                "arn:aws:eks:*:*:cluster/eksworkshop*",
+                "arn:aws:eks:*:*:nodegroup/eksworkshop*/*/*",
+                "arn:aws:eks:*:*:addon/eksworkshop*/*/*",
+                "arn:aws:eks:*:*:fargateprofile/eksworkshop*/*/*",
+                "arn:aws:eks:*:*:identityproviderconfig/eksworkshop*/*/*/*",
+                "arn:aws:eks:*:*:access-entry/eksworkshop*/*",
+                "arn:aws:eks:*:*:podidentityassociation/eksworkshop*/*",
+                "arn:aws:eks:*:*:insight/eksworkshop*/*/*"
             ]
         },
         {
@@ -147,12 +145,17 @@
             ]
         },
         {
-            "Sid": "SecretsManagerForTrident",
+            "Sid": "SecretsManagerWorkshopSecrets",
             "Effect": "Allow",
             "Action": [
-                "secretsmanager:GetSecretValue"
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret"
             ],
-            "Resource": "arn:aws:secretsmanager:*:*:secret:trident-fsx-*"
+            "Resource": [
+                "arn:aws:secretsmanager:*:*:secret:trident-fsx-ontap-svm-*",
+                "arn:aws:secretsmanager:*:*:secret:eksworkshop-oss-grafana*",
+                "arn:aws:secretsmanager:*:*:secret:*-VSCodeSecret-*"
+            ]
         },
         {
             "Sid": "STSCallerIdentity",
