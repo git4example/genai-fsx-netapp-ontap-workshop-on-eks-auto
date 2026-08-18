@@ -29,7 +29,7 @@ spec:
     - name: persistent-storage
       mountPath: /work-dir
   - name: hf-cli
-    image: public.ecr.aws/parikshit/huggingface-cli:slim
+    image: public.ecr.aws/parikshit/huggingface-cli@sha256:1b36b33204ac8e8b2868c98434d65a137a5df969563d432bb7b2197a9f48f675
     command: ["sh", "-c", "sleep infinity"]
     env:
     - name: HF_TOKEN
@@ -42,7 +42,7 @@ spec:
     - name: persistent-storage
       mountPath: /work-dir
   - name: s5cmd
-    image: public.ecr.aws/parikshit/s5cmd
+    image: public.ecr.aws/parikshit/s5cmd@sha256:235f72ce7c3971142aefd945e0da0b61079a0f44725181877bdf653d001cfe59
     command: ["sh", "-c", "sleep infinity"]
     volumeMounts:
       - name: persistent-storage

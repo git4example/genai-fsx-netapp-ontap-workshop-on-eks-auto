@@ -22,7 +22,7 @@ Each agent has its **own manifest file** (`finance-agent-deployment.yaml`, `itop
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
 cd /home/participant/environment/eks/agentic-agents
-export AGENT_IMAGE="public.ecr.aws/parikshit/fsxn-strands-agent:latest"
+export AGENT_IMAGE="public.ecr.aws/parikshit/fsxn-strands-agent@sha256:669629926b0b79ef14329e99c6d9824061cd8f4555cbcf5968581b3de99033b1"
 for manifest in finance-agent-deployment.yaml itops-agent-deployment.yaml malicious-agent-deployment.yaml; do
   envsubst '$AGENT_IMAGE' < "$manifest" | kubectl apply -f -
 done

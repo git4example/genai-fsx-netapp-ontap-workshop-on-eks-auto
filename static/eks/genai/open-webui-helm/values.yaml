@@ -8,7 +8,7 @@
 # ---- Image ----
 image:
   repository: public.ecr.aws/parikshit/openwebui
-  tag: latest-v0.9.1
+  tag: latest-v0.9.1@sha256:4578b57bc950ac7f93d9e120a5ce243478521064c426d4e7ea8539a09dbc0453
   pullPolicy: IfNotPresent
 
 # ---- Disable extras we don't need for this workshop ----

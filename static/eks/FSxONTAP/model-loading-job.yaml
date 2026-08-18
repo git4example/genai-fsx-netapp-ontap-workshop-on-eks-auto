@@ -13,7 +13,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: download
-        image: public.ecr.aws/parikshit/huggingface-cli:slim
+        image: public.ecr.aws/parikshit/huggingface-cli@sha256:1b36b33204ac8e8b2868c98434d65a137a5df969563d432bb7b2197a9f48f675
         command:
         - hf
         - download
